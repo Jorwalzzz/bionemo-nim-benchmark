@@ -164,3 +164,41 @@ class TestBenchmarkPipelineEndToEnd:
         assert flat_dict["complex_id"] == "test_01"
         assert flat_dict["is_smiles_valid"] is True
         assert "speedup_factor" in flat_dict
+
+
+class TestPdbUtils:
+    """Tests PDB fetching, atom filtering, and synthetic backbone generation."""
+
+    def test_sanitize_pdb_atom_records(self):
+        from src.pdb_utils import sanitize_pdb_atom_records
+
+        raw = "HEADER  TEST PROTEIN\nATOM      1  N   MET A   1      27.340  24.430   2.610  1.00  9.67           N\nHETATM 9999  O   HOH A 200      12.000  10.000   5.000  1.00 15.00           O\nEND\n"
+        sanitized = sanitize_pdb_atom_records(raw)
+        assert "ATOM" in sanitized
+        assert "HETATM" not in sanitized
+        assert "HEADER" not in sanitized
+        assert sanitized.strip().endswith("END")
+
+    def test_generate_synthetic_backbone(self):
+        from src.pdb_utils import generate_synthetic_backbone
+
+        seq = "MQIFVKTLTG"
+        pdb_str = generate_synthetic_backbone(seq)
+        lines = [l for l in pdb_str.splitlines() if l.startswith("ATOM")]
+        assert len(lines) == len(seq)
+        assert "CA" in lines[0]
+        assert pdb_str.strip().endswith("END")
+
+    def test_resolve_protein_structure_cached_or_synthetic(self):
+        from src.pdb_utils import resolve_protein_structure
+
+        # 1UBQ should be in cache or fetched
+        pdb_out = resolve_protein_structure(pdb_id="1UBQ", sequence="MQIFVKTLTG")
+        assert "ATOM" in pdb_out
+        assert len(pdb_out.splitlines()) > 5
+
+        # Synthetic fallback
+        synthetic_out = resolve_protein_structure(sequence="ACDEFGHIKL")
+        assert "ATOM" in synthetic_out
+        assert "CA" in synthetic_out
+

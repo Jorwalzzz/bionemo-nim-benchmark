@@ -20,6 +20,7 @@ from rdkit.Chem import Descriptors, rdMolDescriptors
 
 from src.client import NimBioClient, ESM2Response, DiffDockResponse
 from src.baseline import LocalCPUBaseline, BaselineProfileResult
+from src.pdb_utils import resolve_protein_structure
 
 logger = logging.getLogger(__name__)
 
@@ -258,16 +259,11 @@ class BenchmarkPipeline:
         # 4. NVIDIA NIM DiffDock Pose Prediction
         active_smiles = ligand_val.canonical_smiles if ligand_val.is_valid else raw_smiles
         pdb_id = sample.get("pdb_id", "")
-        pdb_content = None
-        if pdb_id:
-            import os
-            pdb_path = os.path.join("data", "pdbs", f"{pdb_id}.pdb")
-            if os.path.exists(pdb_path):
-                try:
-                    with open(pdb_path, "r", encoding="utf-8") as f:
-                        pdb_content = f.read()
-                except Exception as e:
-                    logger.warning("Could not read PDB file %s: %s", pdb_path, e)
+        try:
+            pdb_content = resolve_protein_structure(pdb_id=pdb_id, sequence=sequence)
+        except Exception as e:
+            logger.warning("Could not resolve PDB structure for %s: %s", complex_id, e)
+            pdb_content = None
 
         diffdock_resp: DiffDockResponse = self.client.dock_complex(
             protein_sequence=sequence,
