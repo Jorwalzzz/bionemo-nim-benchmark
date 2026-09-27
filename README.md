@@ -85,10 +85,14 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 ├── .env.example                # Template configuration for NVIDIA NIM API credentials
 ├── .gitignore                  # Git ignore rules for virtualenvs, caches, and artifacts
 ├── README.md                   # Technical documentation and executive benchmark report
+├── docs/
+│   ├── BENCHMARK_REPORT.md         # Empirical benchmark report, scaling analysis & visual embeds
+│   └── NVIDIA_DEVREL_SUBMISSIONS.md # Ready-to-copy submission copy for Forums, LinkedIn & Champions
 ├── requirements.txt            # Pinned dependency requirements
 ├── run_benchmark.py            # CLI entry point supporting both live and CI/CD mock execution
 ├── data/
-│   └── sample_complexes.json   # 5 diverse protein-ligand targets (76 - 850 aa + FDA drugs)
+│   ├── pdbs/                   # Experimental PDB coordinates for sample targets
+│   └── sample_complexes.json   # 5 diverse protein-ligand targets (76 - 932 aa + FDA drugs)
 ├── src/
 │   ├── __init__.py             # Source package root
 │   ├── client.py               # Robust NIM REST client (backoff, 429 retries, timers)
