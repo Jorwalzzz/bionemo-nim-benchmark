@@ -1,0 +1,29 @@
+# Python & Virtual Environments
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Secrets & Environment
+.env
+.env.local
+
+# Results & Artifacts
+results/*.png
+results/*.csv
+!results/.gitkeep
+
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
