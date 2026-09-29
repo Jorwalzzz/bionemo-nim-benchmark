@@ -15,3 +15,5 @@ Welcome to the NVIDIA BioNeMo Benchmark Suite workspace. When operating in this 
 3. Sanitize all SMILES via RDKit with explicit valence checking.
 4. Keep `NVIDIA_API_KEY` secure in `.env`; maintain `--mock` execution for zero-credit testing.
 5. Manage Python packages via `.venv` and verify changes with `pytest -v`.
+6. **Multi-Agent Orchestrator Directive**: Follow `.agents/rules/orchestrator-directive.md` strictly. Act as Lead Architect & Dispatcher, preserve parent context, and route tasks using model tiering (`pro`, `flash`, `flash_lite`).
+
