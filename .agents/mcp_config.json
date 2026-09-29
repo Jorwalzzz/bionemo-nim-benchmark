@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "bionemo-tools": {
+      "command": "C:/Users/jorwa/Documents/antigravity/BIONEMO/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/jorwa/Documents/antigravity/BIONEMO/.agents/tools/bionemo_mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/jorwa/Documents/antigravity/BIONEMO",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
