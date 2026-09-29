@@ -11,6 +11,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / ".agents" / "tools"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Gracefully skip in environments where mcp is not installed
+pytest.importorskip("mcp")
+
 from bionemo_mcp_server import (
     bionemo_validate_sequence,
     bionemo_sanitize_smiles,
