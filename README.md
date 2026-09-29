@@ -209,17 +209,21 @@ The generated artifacts are rendered at 300 DPI and stored in `results/`:
 
 ---
 
-## Acknowledgements & Developer Resources
+## 🧬 Architecture & Acknowledgements
 
-This benchmark suite is built to interface directly with NVIDIA's generative biology ecosystem:
-- **[NVIDIA BioNeMo](https://www.nvidia.com/en-us/clouder-computing/bionemo/)**: Generative AI platform for drug discovery, macromolecular design, and structural biology.
-- **[NVIDIA NIM (Inference Microservices)](https://build.nvidia.com)**: Optimized containers providing standardized, low-latency REST and gRPC endpoints for AI inference.
+**Architected and engineered by [Jorwalzzz](https://github.com/Jorwalzzz).**
+
+Special thanks to:
+- **[NVIDIA Developer Program & BioNeMo Team](https://build.nvidia.com/)**: For providing the GPU microservices (MolMIM, DiffDock, ESM-2) and cloud inference infrastructure.
 - **[DiffDock](https://github.com/gcorso/DiffDock)**: Targeted molecular docking via diffusion generative models over $SE(3)$ transformations.
 - **[ESM-2 (Evolutionary Scale Modeling)](https://github.com/facebookresearch/esm)**: Transformer protein language models trained on UniRef sequences.
 - **[RDKit](https://www.rdkit.org/)**: Open-source cheminformatics and machine learning toolkit.
+- **[RCSB Protein Data Bank](https://www.rcsb.org/)**: Open macromolecular crystallographic structures.
+- **[3Dmol.js](https://3dmol.csb.pitt.edu/)**: Accelerated WebGL molecular visualization.
 
 ---
 
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
