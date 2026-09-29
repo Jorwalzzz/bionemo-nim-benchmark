@@ -11,6 +11,8 @@ __pycache__/
 # Secrets & Environment
 .env
 .env.local
+*.trial_secret
+.trial_secret
 
 # Results & Artifacts
 results/*.png

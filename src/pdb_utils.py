@@ -143,3 +143,66 @@ def resolve_protein_structure(
         return generate_synthetic_backbone(sequence)
 
     raise ValueError("Neither a valid pdb_id nor sequence was provided to resolve protein structure.")
+
+
+CANONICAL_20_IUPAC = set("ACDEFGHIKLMNPQRSTVWY")
+
+AA3_TO_1 = {
+    "ALA": "A", "CYS": "C", "ASP": "D", "GLU": "E", "PHE": "F",
+    "GLY": "G", "HIS": "H", "ILE": "I", "LYS": "K", "LEU": "L",
+    "MET": "M", "ASN": "N", "PRO": "P", "GLN": "Q", "ARG": "R",
+    "SER": "S", "THR": "T", "VAL": "V", "TRP": "W", "TYR": "Y"
+}
+
+
+def validate_sequence(sequence: str) -> Tuple[bool, List[str]]:
+    """Validates sequence against the canonical 20 IUPAC residues."""
+    invalid = [char for char in sequence.upper() if char not in CANONICAL_20_IUPAC]
+    return (len(invalid) == 0, list(set(invalid)))
+
+
+def clean_pdb_structure(raw_pdb: str, keep_hetero: bool = False) -> str:
+    """
+    Cleans PDB file:
+    - Retains ATOM records
+    - Removes crystallographic water (HOH, WAT)
+    - Optionally retains non-ligand HETATM records
+    """
+    cleaned_lines = []
+    for line in raw_pdb.splitlines():
+        if line.startswith("ATOM"):
+            cleaned_lines.append(line)
+        elif line.startswith("HETATM") and keep_hetero:
+            res_name = line[17:20].strip()
+            if res_name not in ["HOH", "WAT", "SO4", "GOL", "EDO", "DMS"]:
+                cleaned_lines.append(line)
+        elif line.startswith("TER") or line.startswith("END"):
+            cleaned_lines.append(line)
+    return "\n".join(cleaned_lines)
+
+
+def extract_sequence_from_pdb(pdb_content: str, chain_id: str = "A") -> str:
+    """Extracts 1-letter canonical amino acid sequence from PDB ATOM lines."""
+    seen_residues = set()
+    seq_chars = []
+    
+    for line in pdb_content.splitlines():
+        if line.startswith("ATOM"):
+            res_chain = line[21]
+            if chain_id and res_chain != chain_id:
+                continue
+            res_seq_num = line[22:27].strip()
+            res_name = line[17:20].strip()
+            
+            key = (res_chain, res_seq_num)
+            if key not in seen_residues:
+                seen_residues.add(key)
+                one_letter = AA3_TO_1.get(res_name, "X")
+                seq_chars.append(one_letter)
+                
+    return "".join(seq_chars)
+
+
+def fetch_pdb_online_or_mock(pdb_id: str, cache_dir: str = "data/targets") -> str:
+    """Fetches PDB from RCSB or returns cached clean structure."""
+    return resolve_protein_structure(pdb_id=pdb_id, cache_dir=cache_dir)
