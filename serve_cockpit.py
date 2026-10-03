@@ -72,6 +72,15 @@ def get_client_identifiers(request: Request) -> tuple:
 @app.get("/", response_class=HTMLResponse)
 def get_cockpit(request: Request):
     session_id, signed_token, _, _, _ = get_client_identifiers(request)
+    
+    # VIP / Friend / Creator Passkey detection
+    is_vip = (
+        request.query_params.get("vip") in ("1", "true")
+        or request.query_params.get("creator") in ("1", "true")
+        or request.query_params.get("passkey") in ("1", "true", "vip", "tester")
+        or request.query_params.get("access") in ("unlimited", "vip")
+    )
+
     if os.path.exists(HTML_PATH):
         with open(HTML_PATH, "r", encoding="utf-8") as f:
             content = f.read()
@@ -83,6 +92,14 @@ def get_cockpit(request: Request):
             httponly=True,
             samesite="lax"
         )
+        if is_vip:
+            resp.set_cookie(
+                key="creator_mode",
+                value="1",
+                max_age=86400 * 365,
+                httponly=False,
+                samesite="lax"
+            )
         return resp
     return "<h1>Cockpit template not found.</h1>"
 
@@ -108,6 +125,9 @@ def get_trial_status(request: Request):
         client_ip in ("127.0.0.1", "localhost", "::1")
         or host.startswith(("localhost", "127.0.0.1"))
         or request.query_params.get("creator") in ("1", "true")
+        or request.query_params.get("vip") in ("1", "true")
+        or request.query_params.get("passkey") in ("1", "true", "vip", "tester")
+        or request.query_params.get("access") in ("unlimited", "vip")
         or request.cookies.get("creator_mode") == "1"
         or request.headers.get("x-creator") == "true"
     )
@@ -239,6 +259,9 @@ def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: 
         client_ip in ("127.0.0.1", "localhost", "::1")
         or host.startswith(("localhost", "127.0.0.1"))
         or request.query_params.get("creator") in ("1", "true")
+        or request.query_params.get("vip") in ("1", "true")
+        or request.query_params.get("passkey") in ("1", "true", "vip", "tester")
+        or request.query_params.get("access") in ("unlimited", "vip")
         or request.cookies.get("creator_mode") == "1"
         or request.headers.get("x-creator") == "true"
     )
