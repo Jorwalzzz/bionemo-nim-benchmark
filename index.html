@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+  <script src="results/pdb_data.js"></script>
   <style>
     :root {
       --nvidia-green: #76b900;
@@ -415,61 +416,68 @@
       if (!container || typeof $3Dmol === 'undefined') return;
       
       heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#070b12' });
-      
-      // Fetch 8AZV with multi-tier fallback (static repo file -> direct RCSB PDB)
-      fetch('results/8AZV.pdb')
-        .then(res => {
-          if (!res.ok) throw new Error("Local fallback required");
-          return res.text();
-        })
-        .catch(() => fetch('https://files.rcsb.org/download/8AZV.pdb').then(r => r.text()))
-        .then(pdbText => {
-          heroViewer.addModel(pdbText, "pdb");
-          
-          // 1. Protein Ribbon Backdrop
-          heroViewer.setStyle({}, { cartoon: { color: '#334155', opacity: 0.88 } });
 
-          // 2. Active Switch-II Pocket Residues (Asp12, Tyr96, Gln61, Gly60, Asp69)
-          heroViewer.setStyle({ resi: [12, 60, 61, 68, 69, 96] }, {
-            cartoon: { color: '#00f1fd', opacity: 0.95 },
-            stick: { colorscheme: 'cyanCarbon', radius: 0.18 }
-          });
+      function setup3DScene(pdbText) {
+        if (!pdbText || !heroViewer) return;
+        heroViewer.clear();
+        heroViewer.addModel(pdbText, "pdb");
+        
+        // 1. Protein Ribbon Backdrop
+        heroViewer.setStyle({}, { cartoon: { color: '#334155', opacity: 0.88 } });
 
-          // 3. Highlight Pan-KRAS Bound Inhibitor Ligand (HETATM OFU 205)
-          heroViewer.setStyle({ resn: 'OFU' }, {
-            stick: { colorscheme: 'greenCarbon', radius: 0.28 }
-          });
-
-          // 4. Draw Active Hydrogen Bond & Contact Vectors (Asp12 carboxylate to ligand amine)
-          const pocketLigandAtom = { x: 25.2, y: -0.8, z: 6.1 };
-          const asp12Carboxylate = { x: 26.6, y: -0.7, z: 14.2 };
-          const tyr96Phenol = { x: 21.6, y: -0.2, z: 5.8 };
-
-          heroViewer.addCylinder({
-            start: pocketLigandAtom,
-            end: tyr96Phenol,
-            radius: 0.10,
-            color: '#facc15', // Yellow dashed H-bond
-            dashed: true
-          });
-
-          heroViewer.addLabel("H-Bond (2.84Å)", {
-            position: tyr96Phenol,
-            backgroundColor: "rgba(15,23,42,0.9)",
-            fontColor: "#facc15",
-            fontSize: 10,
-            showBackground: true
-          });
-
-          // Auto-frame active pocket
-          heroViewer.zoomTo({ resn: 'OFU' });
-          heroViewer.render();
-          heroViewer.spin("y", 0.8);
-        })
-        .catch(err => {
-          console.error("3D render failed:", err);
+        // 2. Active Switch-II Pocket Residues (Asp12, Tyr96, Gln61, Gly60, Asp69)
+        heroViewer.setStyle({ resi: [12, 60, 61, 68, 69, 96] }, {
+          cartoon: { color: '#00f1fd', opacity: 0.95 },
+          stick: { colorscheme: 'cyanCarbon', radius: 0.18 }
         });
+
+        // 3. Highlight Pan-KRAS Bound Inhibitor Ligand (HETATM OFU 205)
+        heroViewer.setStyle({ resn: 'OFU' }, {
+          stick: { colorscheme: 'greenCarbon', radius: 0.28 }
+        });
+
+        // 4. Draw Active Hydrogen Bond & Contact Vectors (Asp12 carboxylate to ligand amine)
+        const pocketLigandAtom = { x: 25.2, y: -0.8, z: 6.1 };
+        const tyr96Phenol = { x: 21.6, y: -0.2, z: 5.8 };
+
+        heroViewer.addCylinder({
+          start: pocketLigandAtom,
+          end: tyr96Phenol,
+          radius: 0.10,
+          color: '#facc15',
+          dashed: true
+        });
+
+        heroViewer.addLabel("H-Bond (2.84Å)", {
+          position: tyr96Phenol,
+          backgroundColor: "rgba(15,23,42,0.9)",
+          fontColor: "#facc15",
+          fontSize: 10,
+          showBackground: true
+        });
+
+        // Auto-frame active pocket
+        heroViewer.zoomTo({ resn: 'OFU' });
+        heroViewer.render();
+        heroViewer.spin("y", 0.8);
+      }
+
+      // Priority 1: Instant memory from bundled JS script
+      if (window.PDB_8AZV) {
+        setup3DScene(window.PDB_8AZV);
+      } else {
+        // Priority 2 & 3: Multi-tier fallback fetch
+        fetch('results/8AZV.pdb')
+          .then(res => {
+            if (!res.ok) throw new Error("Fallback required");
+            return res.text();
+          })
+          .catch(() => fetch('https://files.rcsb.org/download/8AZV.pdb').then(r => r.text()))
+          .then(pdbText => setup3DScene(pdbText))
+          .catch(err => console.error("3D render failed:", err));
+      }
     });
+
 
     function toggleSpin() {
       if (!heroViewer) return;
