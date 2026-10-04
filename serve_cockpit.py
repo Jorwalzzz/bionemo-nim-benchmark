@@ -1023,6 +1023,13 @@ def get_hardware_speedup_benchmark():
     h100_hours_10k = round((total_h100_sec * 1000) / 3600.0, 2)
     time_saved_hours = round(cpu_hours_10k - h100_hours_10k, 1)
 
+    from src.nvidia_showcase import GreenComputeProfiler, MultiGpuScalingEngine
+    green_metrics = GreenComputeProfiler.calculate_campaign_impact(
+        cpu_time_sec=total_cpu_sec,
+        gpu_time_sec=total_h100_sec,
+        num_molecules=10000
+    )
+
     return {
         "status": "success",
         "cpu_hardware": cpu_info,
@@ -1032,6 +1039,7 @@ def get_hardware_speedup_benchmark():
         "total_cpu_latency_sec": total_cpu_sec,
         "total_h100_latency_sec": total_h100_sec,
         "time_saved_hours_10k_campaign": time_saved_hours,
+        "green_compute": green_metrics,
         "tasks": [
             {
                 "module": "ESM-2 (650M) Protein Language Model",
@@ -1056,6 +1064,30 @@ def get_hardware_speedup_benchmark():
             }
         ]
     }
+
+
+@app.get("/api/nvidia/multigpu")
+def get_nvidia_multigpu_scaling():
+    """Returns cluster scaling curves across 1x to 8x H100 SXM5 NVLink interconnects."""
+    from src.nvidia_showcase import MultiGpuScalingEngine
+    scaling_data = MultiGpuScalingEngine.simulate_cluster_scaling()
+    return JSONResponse({
+        "status": "success",
+        "interconnect": "NVLink 4 (900 GB/s bidirectional per GPU)",
+        "precision": "FP8 / FP16 Mixed Precision",
+        "scaling_nodes": scaling_data
+    })
+
+
+@app.get("/api/nvidia/blueprint")
+def get_bionemo_blueprint():
+    """Generates official NVIDIA NIM BioNeMo Blueprint spec and Docker Compose setup."""
+    from src.nvidia_showcase import BioNeMoBlueprintGenerator
+    return JSONResponse({
+        "status": "success",
+        "blueprint_spec": BioNeMoBlueprintGenerator.generate_blueprint_spec(),
+        "docker_compose_yml": BioNeMoBlueprintGenerator.generate_docker_compose()
+    })
 
 
 if __name__ == "__main__":

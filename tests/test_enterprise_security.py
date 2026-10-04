@@ -177,3 +177,60 @@ def test_biosecurity_target_query_rejection(client):
     data = resp.json()
     assert data["error"] == "VALIDATION_FAILED"
     assert "BIOSECURITY_RESTRICTION" in data["message"]
+
+
+# ==============================================================================
+# 6. NVIDIA SHOWCASE (GREEN COMPUTE, MULTI-GPU & NIM BLUEPRINTS)
+# ==============================================================================
+
+def test_green_compute_profiler_and_tco():
+    from src.nvidia_showcase import GreenComputeProfiler
+
+    impact = GreenComputeProfiler.calculate_campaign_impact(
+        cpu_time_sec=22.8,
+        gpu_time_sec=0.401,
+        num_molecules=10000
+    )
+    assert impact["num_molecules"] == 10000
+    assert impact["energy_reduction_pct"] > 90.0
+    assert impact["carbon_offset_gco2e"] > 0
+    assert impact["cost_saved_usd"] > 0
+    assert "NVIDIA H100 NIM slashes energy consumption" in impact["executive_summary"]
+
+
+def test_nvidia_multigpu_scaling_endpoint(client):
+    resp = client.get("/api/nvidia/multigpu")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "success"
+    assert "NVLink 4" in data["interconnect"]
+    assert len(data["scaling_nodes"]) == 4
+
+    # Verify linear-like scaling at 8 GPUs
+    eight_gpu = [n for n in data["scaling_nodes"] if n["gpu_count"] == 8][0]
+    assert eight_gpu["scaling_factor"] >= 7.0
+    assert eight_gpu["efficiency_pct"] >= 90.0
+
+
+def test_bionemo_blueprint_export_endpoint(client):
+    resp = client.get("/api/nvidia/blueprint")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "success"
+    spec = data["blueprint_spec"]
+    assert spec["framework"] == "NVIDIA NIM / BioNeMo"
+    assert "meta/esm2-650m" in [m["name"] for m in spec["microservices"]]
+
+    compose_yml = data["docker_compose_yml"]
+    assert "nvcr.io/nim/meta/esm2-650m" in compose_yml
+    assert "nvcr.io/nim/mit/diffdock" in compose_yml
+    assert "nvcr.io/nim/nvidia/molmim" in compose_yml
+    assert "capabilities: [gpu]" in compose_yml
+
+
+def test_benchmark_speedup_includes_green_compute(client):
+    resp = client.get("/api/benchmark/speedup")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "green_compute" in data
+    assert data["green_compute"]["energy_reduction_pct"] >= 90.0
