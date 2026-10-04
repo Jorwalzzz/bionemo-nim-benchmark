@@ -198,6 +198,20 @@ class TrialLimiter:
         ip_str: str
     ) -> Dict[str, Any]:
         """Check current trial usage without consuming."""
+        if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+            return {
+                "allowed": True,
+                "runs_used": 0,
+                "runs_remaining": 9999,
+                "max_runs": 9999,
+                "session_runs": 0,
+                "fp_runs": 0,
+                "ip_runs": 0,
+                "is_locked": False,
+                "circuit_breaker_active": False,
+                "reason": "Full Local App: Trial Limiter Disabled"
+            }
+
         with self._lock:
             today = time.strftime("%Y-%m-%d", time.gmtime())
             daily_count = self._ledger.get("daily_usage", {}).get(today, 0)
@@ -265,6 +279,16 @@ class TrialLimiter:
         user_agent: Optional[str] = None
     ) -> Tuple[bool, Dict[str, Any]]:
         """Atomically verify availability and consume 1 trial run."""
+        if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+            return True, {
+                "allowed": True,
+                "runs_used": 0,
+                "runs_remaining": 9999,
+                "max_runs": 9999,
+                "is_locked": False,
+                "message": "Full Local App: Unlimited Discovery Mode"
+            }
+
         # 1. Anti-Bot Filter
         if self.is_bot_user_agent(user_agent):
             return False, {
