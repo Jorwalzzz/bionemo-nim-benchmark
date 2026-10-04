@@ -143,3 +143,53 @@ class TestEnterpriseHardeningAndExploitProtection:
         # Must safely reject invalid identifier with 400 or 404, never execute path traversal
         assert resp.status_code in (400, 404)
 
+    def test_reset_trial_requires_admin_key(self):
+        from fastapi.testclient import TestClient
+        from serve_cockpit import app
+        import os
+        client = TestClient(app)
+
+        # 1. Unauthenticated reset attempt rejected
+        resp_unauth = client.post("/api/reset-trial")
+        assert resp_unauth.status_code == 403
+        assert resp_unauth.json()["error"] == "UNAUTHORIZED_ADMIN_KEY"
+
+        # 2. Wrong key rejected
+        resp_wrong = client.post("/api/reset-trial", headers={"X-Admin-Key": "wrong-key-1234"})
+        assert resp_wrong.status_code == 403
+
+        # 3. Valid key accepted
+        admin_key = os.environ.get("ADMIN_RESET_KEY", "bionemo-admin-prod-9821")
+        resp_valid = client.post("/api/reset-trial", headers={"X-Admin-Key": admin_key})
+        assert resp_valid.status_code == 200
+        assert resp_valid.json()["success"] is True
+
+    def test_installer_downloads_available(self):
+        from fastapi.testclient import TestClient
+        from serve_cockpit import app
+        client = TestClient(app)
+
+        # Windows installer
+        resp_win = client.get("/api/download/installer-windows")
+        assert resp_win.status_code == 200
+        assert "JORWALZZZ" in resp_win.text
+
+        # Unix installer
+        resp_unix = client.get("/api/download/installer-unix")
+        assert resp_unix.status_code == 200
+        assert "JORWALZZZ" in resp_unix.text
+
+    def test_csrf_origin_rejection(self):
+        from fastapi.testclient import TestClient
+        from serve_cockpit import app
+        client = TestClient(app)
+
+        # Cross-origin request from malicious site must be rejected
+        resp = client.post(
+            "/api/target/fetch",
+            headers={"Origin": "https://malicious-attacker-site.com"},
+            json={"target": "KRAS"}
+        )
+        assert resp.status_code == 403
+        assert resp.json()["error"] == "CSRF_ORIGIN_REJECTED"
+

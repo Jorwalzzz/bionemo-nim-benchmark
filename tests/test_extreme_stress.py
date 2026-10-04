@@ -50,9 +50,16 @@ class TestExtremeLoop1APIEndpointsAndBoundaryConditions:
         data = r2.json()
         assert "allowed" in data
 
-        r3 = client.post("/api/reset-trial")
-        assert r3.status_code == 200
-        assert r3.json()["success"] is True
+        # 1. Without admin key, reset must be rejected with 403 Forbidden (Anti-Exploit)
+        r3_unauth = client.post("/api/reset-trial")
+        assert r3_unauth.status_code == 403
+        assert r3_unauth.json()["error"] == "UNAUTHORIZED_ADMIN_KEY"
+
+        # 2. With valid admin key, reset succeeds
+        admin_key = os.environ.get("ADMIN_RESET_KEY", "bionemo-admin-prod-9821")
+        r3_auth = client.post("/api/reset-trial", headers={"X-Admin-Key": admin_key})
+        assert r3_auth.status_code == 200
+        assert r3_auth.json()["success"] is True
 
     def test_speedup_benchmark_endpoint(self, client):
         r = client.get("/api/benchmark/speedup")

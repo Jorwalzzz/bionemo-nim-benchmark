@@ -13,6 +13,7 @@ __pycache__/
 .env.local
 *.trial_secret
 .trial_secret
+data/.trial_secret
 data/trial_ledger.json
 trial_ledger.json
 

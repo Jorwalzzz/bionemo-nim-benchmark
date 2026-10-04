@@ -10,6 +10,7 @@ Serves the Premium Bio-Computational Cockpit with:
 import os
 import sys
 import re
+import secrets
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -28,17 +29,47 @@ from src.trial_limiter import TrialLimiter
 
 app = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
 
+MAX_PAYLOAD_SIZE = 128 * 1024  # 128 KB max request body size to prevent memory bloat DoS
+ADMIN_RESET_KEY = os.environ.get("ADMIN_RESET_KEY", "")
+import logging
+logger = logging.getLogger("CockpitSecurity")
+
 # Security Headers & Hardening Middleware
 @app.middleware("http")
 async def enterprise_security_headers_middleware(request: Request, call_next):
-    """Enforces enterprise defense-in-depth HTTP security headers on all responses."""
+    """Enforces enterprise defense-in-depth HTTP security headers and payload size limits."""
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_PAYLOAD_SIZE:
+        return JSONResponse(
+            status_code=413,
+            content={"error": "PAYLOAD_TOO_LARGE", "message": "Request payload exceeds 128KB limit."}
+        )
+
     response: Response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
+    if "server" in response.headers:
+        del response.headers["server"]
     return response
+
+
+@app.exception_handler(Exception)
+async def global_security_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to mask internal traces and prevent server info disclosure."""
+    import uuid
+    error_id = f"sec_{uuid.uuid4().hex[:10]}"
+    logger.error("Internal processing error [%s] on %s %s: %s", error_id, request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "INTERNAL_SERVER_ERROR",
+            "message": "A secure processing exception occurred. Incident logged.",
+            "incident_id": error_id
+        }
+    )
 
 
 def sanitize_target_query(query: str) -> str:
@@ -171,17 +202,34 @@ def get_trial_status(request: Request):
 
 @app.api_route("/api/reset-trial", methods=["GET", "POST"])
 def reset_trial(request: Request):
-    """Reset trial quota for the caller so creator can test repeatedly."""
+    """
+    Administrative Quota Reset Endpoint:
+    Strictly protected by ADMIN_RESET_KEY to prevent unauthorized quota resets.
+    """
+    admin_key = os.environ.get("ADMIN_RESET_KEY", "").strip()
+    provided_key = (
+        request.headers.get("X-Admin-Key", "").strip()
+        or request.query_params.get("key", "").strip()
+    )
+    if not admin_key or not secrets.compare_digest(provided_key, admin_key):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "UNAUTHORIZED_ADMIN_KEY",
+                "message": "Access denied. Valid administrator key required to reset quota."
+            }
+        )
+
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     trial_limiter.reset_caller(session_id, fp_hash, client_ip)
     resp = JSONResponse({
         "success": True,
-        "message": "Trial quota has been reset! You have fresh demo runs.",
+        "message": "Trial quota has been reset by administrator.",
         "trial_status": {
             "allowed": True,
             "runs_used": 0,
-            "runs_remaining": 2,
-            "max_runs": 2,
+            "runs_remaining": trial_limiter.max_runs,
+            "max_runs": trial_limiter.max_runs,
             "is_locked": False
         }
     })
@@ -192,27 +240,23 @@ def reset_trial(request: Request):
         httponly=True,
         samesite="lax"
     )
-    resp.set_cookie(
-        key="creator_mode",
-        value="1",
-        max_age=86400 * 365,
-        httponly=False,
-        samesite="lax"
-    )
+    resp.delete_cookie(key="creator_mode")
     return resp
 
 
 @app.get("/api/dossier")
 def get_dossier():
     dossier_path = os.path.join(RESULTS_DIR, "CANDIDATE_SELECTION_DOSSIER.md")
-    if os.path.exists(dossier_path):
-        with open(dossier_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        return Response(
-            content=content, media_type="text/markdown",
-            headers={"Content-Disposition": "attachment; filename=CANDIDATE_SELECTION_DOSSIER.md"}
-        )
-    return JSONResponse({"status": "pending", "content": "No active dossier yet. Trigger a run first."})
+    abs_dossier = os.path.abspath(dossier_path)
+    abs_results = os.path.abspath(RESULTS_DIR)
+    if not abs_dossier.startswith(abs_results) or not os.path.exists(abs_dossier):
+        return JSONResponse({"status": "pending", "content": "No active dossier yet. Trigger a run first."})
+    with open(abs_dossier, "r", encoding="utf-8") as f:
+        content = f.read()
+    return Response(
+        content=content, media_type="text/markdown",
+        headers={"Content-Disposition": "attachment; filename=CANDIDATE_SELECTION_DOSSIER.md"}
+    )
 
 
 @app.get("/api/download/installer-windows")
@@ -412,7 +456,7 @@ async def stream_council_run(request: Request, target: str = Query("KRAS G12D"),
         # Run campaign in background worker thread so SSE stream remains responsive
         future = loop.run_in_executor(
             None,
-            lambda: orch.run_discovery_campaign(target_query=target, num_candidates=candidates, output_dir=RESULTS_DIR)
+            lambda: orch.run_discovery_campaign(target_query=target, num_candidates=safe_candidates, output_dir=RESULTS_DIR)
         )
 
         while not future.done() or not queue.empty():
@@ -446,16 +490,26 @@ async def api_export_forum_post(request: Request):
     Compiles a publication-ready Markdown post containing candidate metrics,
     hardware speedup multipliers, and reproducible verification commands.
     """
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
     try:
         body = await request.json()
     except Exception:
         body = {}
 
-    target = body.get("target", "KRAS G12D")
-    lead_id = body.get("lead_id", "LEAD-001")
-    affinity = body.get("binding_affinity", -9.4)
-    smiles = body.get("smiles", "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5")
-    speedup = body.get("speedup", 58.4)
+    target = sanitize_target_query(body.get("target", "KRAS G12D"))
+    lead_id = re.sub(r'[^A-Za-z0-9_-]', '', str(body.get("lead_id", "LEAD-001")))[:30] or "LEAD-001"
+    try:
+        affinity = float(body.get("binding_affinity", -9.4))
+    except (ValueError, TypeError):
+        affinity = -9.4
+    raw_smiles = str(body.get("smiles", "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5"))
+    smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', raw_smiles)[:500]
+    try:
+        speedup = float(body.get("speedup", 58.4))
+    except (ValueError, TypeError):
+        speedup = 58.4
 
     forum_markdown = f"""### 🚀 [Showcase] Autonomous Drug Discovery Swarm Powered by NVIDIA BioNeMo & NIM
 
@@ -490,7 +544,7 @@ git clone https://github.com/Jorwalzzz/bionemo-agentic-scientist.git
 cd bionemo-agentic-scientist
 python serve_cockpit.py --port 8000
 ```
-*Validated with 43/43 passing hermetic tests. Built with NVIDIA BioNeMo & NIM Microservices.*
+*Validated with 53/53 passing hermetic tests. Built with NVIDIA BioNeMo & NIM Microservices.*
 """
     return JSONResponse({
         "status": "success",
@@ -503,6 +557,9 @@ python serve_cockpit.py --port 8000
 @app.post("/api/target/fetch")
 async def api_fetch_target(request: Request):
     """Universal Target Ingestion: fetches any RCSB PDB code or resolves query."""
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
     try:
         body = await request.json()
         query = sanitize_target_query(body.get("target", "KRAS G12D"))
@@ -549,7 +606,7 @@ def get_target_pdb(pdb_id: str):
             url = f"https://files.rcsb.org/download/{clean_id}.pdb"
             req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
             with urllib.request.urlopen(req, timeout=10) as r:
-                return Response(content=r.read().decode("utf-8", errors="replace"), media_type="chemical/x-pdb")
+                return Response(content=r.read(5 * 1024 * 1024).decode("utf-8", errors="replace"), media_type="chemical/x-pdb")
         except Exception:
             pass
     return JSONResponse(status_code=404, content={"error": f"PDB {clean_id} not found."})
@@ -557,6 +614,20 @@ def get_target_pdb(pdb_id: str):
 @app.post("/api/redock")
 async def api_redock(request: Request):
     """Interactive Chemical Workbench: Re-docks a human-edited molecule in real-time."""
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
+    session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
+    usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
+    if usage.get("is_locked", False):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "TRIAL_LIMIT_EXCEEDED",
+                "message": "Demo trial quota exhausted. Run the local version for unlimited redocking."
+            }
+        )
+
     try:
         body = await request.json()
         raw_smiles = body.get("smiles", "")
@@ -580,6 +651,9 @@ async def api_generate_ind_pdf(request: Request):
     Generate FDA IND Section 2 nonclinical pharmacology briefing dossier PDF.
     Extracts campaign candidate selection data and compiles a publication-grade PDF.
     """
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
     try:
         body = await request.json()
     except Exception:
@@ -622,7 +696,7 @@ async def api_generate_ind_pdf(request: Request):
     from src.ind_dossier import generate_ind_pdf
     pdf_bytes = generate_ind_pdf(dossier_data, benchmark_data)
 
-    target_clean = str(dossier_data.get("target", "Candidate")).replace(" ", "_")
+    target_clean = re.sub(r'[^A-Za-z0-9_-]', '_', str(dossier_data.get("target", "Candidate")))[:40] or "Candidate"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -638,6 +712,9 @@ async def api_robot_protocol(request: Request):
     Generate Opentrons OT-2 automated pipetting protocol (.py)
     and wet-lab SOP Card (.md) from retrosynthesis plan.
     """
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
     try:
         body = await request.json()
     except Exception:
@@ -646,8 +723,9 @@ async def api_robot_protocol(request: Request):
     from src.robot_protocol import generate_ot2_protocol, generate_lab_card
     from src.models import RetrosynthesisPlan, RetrosynthesisStep
 
-    lead_id = body.get("lead_id", "LEAD-001")
-    smiles = body.get("smiles", "CC(=O)N1CCNCC1")
+    lead_id = re.sub(r'[^A-Za-z0-9_-]', '', str(body.get("lead_id", "LEAD-001")))[:30] or "LEAD-001"
+    raw_smiles = str(body.get("smiles", "CC(=O)N1CCNCC1"))
+    smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', raw_smiles)[:500] or "CC(=O)N1CCNCC1"
     retro_data = body.get("retrosynthesis", {})
 
     steps_raw = retro_data.get("steps", [])
@@ -679,13 +757,13 @@ async def api_robot_protocol(request: Request):
         steps = [
             RetrosynthesisStep(
                 step_number=s.get("step", idx + 1),
-                reaction_type=s.get("reaction_type", "Coupling Transformation"),
+                reaction_type=re.sub(r'[^A-Za-z0-9\(\)\/\-\s★☆]', '', str(s.get("reaction_type", "Coupling Transformation")))[:100],
                 reaction_smarts="",
                 reactants=s.get("reactants", [{"name": f"Reactant {idx + 1}"}]),
                 reagents=s.get("reagents", ["Standard Reagents"]),
-                product_smiles=s.get("product_smiles", smiles),
+                product_smiles=re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', str(s.get("product_smiles", smiles)))[:500],
                 estimated_yield_pct=float(s.get("yield_pct", 75.0)),
-                difficulty=s.get("difficulty", "Routine (★☆☆)")
+                difficulty=str(s.get("difficulty", "Routine (★☆☆)"))[:50]
             )
             for idx, s in enumerate(steps_raw)
         ]
@@ -699,7 +777,7 @@ async def api_robot_protocol(request: Request):
         candidate_id=lead_id,
         target_smiles=smiles,
         num_steps=len(steps),
-        overall_feasibility=retro_data.get("feasibility", "Commercially Accessible (1-2 steps)"),
+        overall_feasibility=str(retro_data.get("feasibility", "Commercially Accessible (1-2 steps)"))[:100],
         steps=steps,
         starting_materials=starting_materials,
         estimated_turnaround_days=7
@@ -727,15 +805,32 @@ async def api_resistance_evolve(request: Request):
     Detects mutation hotspots via ESM-2, simulates clinical resistance mutations,
     and evolves an escape scaffold via NVIDIA MolMIM NIM.
     """
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
+    session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
+    usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
+    if usage.get("is_locked", False):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "TRIAL_LIMIT_EXCEEDED",
+                "message": "Demo trial quota exhausted. Run the local version for unlimited resistance scans."
+            }
+        )
+
     try:
         body = await request.json()
     except Exception:
         body = {}
 
-    lead_smiles = body.get("smiles", "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5")
-    lead_id = body.get("lead_id", "LEAD-001")
-    target_name = body.get("target", "KRAS G12D")
-    affinity = float(body.get("binding_affinity", -9.2))
+    lead_smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', str(body.get("smiles", "")))[:500] or "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5"
+    lead_id = re.sub(r'[^A-Za-z0-9_-]', '', str(body.get("lead_id", "LEAD-001")))[:30] or "LEAD-001"
+    target_name = sanitize_target_query(body.get("target", "KRAS G12D"))
+    try:
+        affinity = float(body.get("binding_affinity", -9.2))
+    except (ValueError, TypeError):
+        affinity = -9.2
 
     from src.resistance_engine import ResistanceEscapeEngine
     from src.models import MoleculeCandidate, TargetProfile
