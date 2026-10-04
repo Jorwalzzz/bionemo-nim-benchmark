@@ -1342,18 +1342,6 @@ function updateTrialUI(status) {
   const runBtn = document.getElementById('runBtn');
   const runLabel = document.getElementById('runLabel');
 
-  // Creator / Localhost bypass: Unlimited runs & never locked out
-  if (status.is_creator) {
-    if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse";
-    if (text) text.innerHTML = `<span class="text-emerald-400 font-bold">🟢 Creator Mode (Unlimited Runs)</span> • <a href="javascript:void(0)" onclick="resetTrialQuota()" class="text-xs text-gray-400 hover:text-emerald-300 underline ml-1">Reset Demo Quota</a>`;
-    if (runBtn && !isRunning) {
-      runBtn.onclick = runDiscovery;
-      runBtn.style.background = 'linear-gradient(135deg, #76b900, #4a7a00)';
-      runBtn.style.border = '';
-      if (runLabel) runLabel.textContent = '🚀 Run Agentic BioNeMo Swarm';
-    }
-    return;
-  }
 
   if (status.is_locked || status.runs_remaining === 0) {
     if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse";
@@ -1636,13 +1624,7 @@ async function runDiscovery() {
   document.getElementById('streamDot').style.background = '#76b900';
   isRunning = false;
 
-  if (trialState.is_creator) {
-    document.getElementById('runBtn').disabled = false;
-    document.getElementById('runBtn').onclick = runDiscovery;
-    document.getElementById('runBtn').style.background = 'linear-gradient(135deg, #76b900, #4a7a00)';
-    document.getElementById('runBtn').style.border = '';
-    document.getElementById('runLabel').textContent = '🚀 Run Agentic BioNeMo Swarm';
-  } else if (trialState.is_locked || trialState.runs_remaining === 0) {
+  if (trialState.is_locked || trialState.runs_remaining === 0) {
     document.getElementById('runBtn').disabled = false;
     document.getElementById('runBtn').onclick = () => openInstallModal(true);
     document.getElementById('runBtn').style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(118, 185, 0, 0.15))';

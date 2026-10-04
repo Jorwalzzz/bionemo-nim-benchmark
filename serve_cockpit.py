@@ -83,14 +83,6 @@ def get_landing(request: Request):
 def get_cockpit(request: Request):
     """Serves full interactive Autonomous Drug Discovery Cockpit with 3Dmol viewer."""
     session_id, signed_token, _, _, _ = get_client_identifiers(request)
-    
-    # VIP / Friend / Creator Passkey detection
-    is_vip = (
-        request.query_params.get("vip") in ("1", "true")
-        or request.query_params.get("creator") in ("1", "true")
-        or request.query_params.get("passkey") in ("1", "true", "vip", "tester")
-        or request.query_params.get("access") in ("unlimited", "vip")
-    )
 
     if os.path.exists(HTML_PATH):
         with open(HTML_PATH, "r", encoding="utf-8") as f:
@@ -103,14 +95,7 @@ def get_cockpit(request: Request):
             httponly=True,
             samesite="lax"
         )
-        if is_vip:
-            resp.set_cookie(
-                key="creator_mode",
-                value="1",
-                max_age=86400 * 365,
-                httponly=False,
-                samesite="lax"
-            )
+        resp.delete_cookie(key="creator_mode")
         return resp
     return "<h1>Cockpit template not found.</h1>"
 
@@ -131,31 +116,7 @@ def get_health():
 def get_trial_status(request: Request):
     """Check remaining trial runs for caller across session, fingerprint, IP, and global daily ceiling."""
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
-    host = request.headers.get("host", "").lower()
-    is_creator = (
-        client_ip in ("127.0.0.1", "localhost", "::1")
-        or host.startswith(("localhost", "127.0.0.1"))
-        or request.query_params.get("creator") in ("1", "true")
-        or request.query_params.get("vip") in ("1", "true")
-        or request.query_params.get("passkey") in ("1", "true", "vip", "tester")
-        or request.query_params.get("access") in ("unlimited", "vip")
-        or request.cookies.get("creator_mode") == "1"
-        or request.headers.get("x-creator") == "true"
-    )
-    
-    if is_creator:
-        usage = {
-            "allowed": True,
-            "runs_used": 0,
-            "runs_remaining": 9999,
-            "max_runs": 9999,
-            "is_locked": False,
-            "circuit_breaker_active": False,
-            "is_creator": True,
-            "reason": "Developer Local Instance: Unlimited Runs Enabled"
-        }
-    else:
-        usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
+    usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
 
     resp = JSONResponse(usage)
     resp.set_cookie(
@@ -165,14 +126,7 @@ def get_trial_status(request: Request):
         httponly=True,
         samesite="lax"
     )
-    if is_creator:
-        resp.set_cookie(
-            key="creator_mode",
-            value="1",
-            max_age=86400 * 365,
-            httponly=False,
-            samesite="lax"
-        )
+    resp.delete_cookie(key="creator_mode")
     return resp
 
 
@@ -264,38 +218,14 @@ def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: 
     # 1. Clamp candidates to prevent single-request resource exhaustion
     safe_candidates = min(max(candidates, 1), 10)
 
-    # 2. Strictly enforce trial limit & circuit breaker (Local Creator has Unlimited Runs)
-    host = request.headers.get("host", "").lower()
-    is_creator = (
-        client_ip in ("127.0.0.1", "localhost", "::1")
-        or host.startswith(("localhost", "127.0.0.1"))
-        or request.query_params.get("creator") in ("1", "true")
-        or request.query_params.get("vip") in ("1", "true")
-        or request.query_params.get("passkey") in ("1", "true", "vip", "tester")
-        or request.query_params.get("access") in ("unlimited", "vip")
-        or request.cookies.get("creator_mode") == "1"
-        or request.headers.get("x-creator") == "true"
+    # 2. Strictly enforce 2-trial limit & circuit breaker for all callers
+    allowed, trial_info = trial_limiter.consume_trial_run(
+        session_id=session_id,
+        fp_hash=fp_hash,
+        ip_str=client_ip,
+        target_name=target,
+        user_agent=user_agent
     )
-    
-    if is_creator:
-        allowed = True
-        trial_info = {
-            "allowed": True,
-            "runs_used": 0,
-            "runs_remaining": 9999,
-            "max_runs": 9999,
-            "is_locked": False,
-            "is_creator": True,
-            "message": "Creator Local Instance: Unlimited Runs Active"
-        }
-    else:
-        allowed, trial_info = trial_limiter.consume_trial_run(
-            session_id=session_id,
-            fp_hash=fp_hash,
-            ip_str=client_ip,
-            target_name=target,
-            user_agent=user_agent
-        )
 
     if not allowed:
         status_code = 429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
