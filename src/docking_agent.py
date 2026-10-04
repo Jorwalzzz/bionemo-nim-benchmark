@@ -38,7 +38,7 @@ class BiophysicsDockingAgent:
         eligible = [c for c in candidates if c.admet_verdict in ("PASS", "FLAGGED")]
         
         for cand in eligible:
-            # 1. 3D Conformer generation via RDKit ETKDGv3
+            # 1. 3D Conformer generation via RDKit ETKDGv3 & MMFF94 Force Field
             mol = Chem.MolFromSmiles(cand.smiles)
             if mol and mol.GetNumAtoms() > 0:
                 try:
@@ -51,14 +51,21 @@ class BiophysicsDockingAgent:
                             AllChem.MMFFOptimizeMolecule(mol, maxIters=200)
                         except Exception:
                             pass
+                        strain, clashes = self._evaluate_biophysics_conformer(mol)
+                        cand.strain_energy = strain
+                        cand.steric_clash_count = clashes
                         mol = Chem.RemoveHs(mol)
                         cand.pose_sdf = Chem.MolToMolBlock(mol)
                 except Exception as e:
                     logger.warning(f"3D conformer generation skipped for {cand.id}: {e}")
                     
-            # 2. Binding affinity & DiffDock confidence
+            # 2. Binding affinity & DiffDock confidence (penalized for physical strain/clashes)
             affinity, confidence, contacts = self._compute_diffdock_pose(cand, target)
-            cand.binding_affinity = affinity
+            if cand.steric_clash_count > 0:
+                affinity += 1.5 * cand.steric_clash_count
+            if cand.strain_energy > 120.0:
+                affinity += 0.8
+            cand.binding_affinity = round(affinity, 2)
             cand.diffdock_confidence = confidence
             cand.contact_residues = contacts
             docked_leads.append(cand)
@@ -83,6 +90,31 @@ class BiophysicsDockingAgent:
             status="SUCCESS"
         )
         return docked_leads, message
+
+    @staticmethod
+    def _evaluate_biophysics_conformer(mol) -> Tuple[float, int]:
+        """Calculates MMFF94 force-field strain energy (kcal/mol) and counts steric clashes."""
+        strain_energy = 0.0
+        clash_count = 0
+        try:
+            props = AllChem.MMFFGetMoleculeProperties(mol)
+            if props:
+                ff = AllChem.MMFFGetMoleculeForceField(mol, props)
+                if ff:
+                    strain_energy = round(float(ff.CalcEnergy()), 2)
+            conf = mol.GetConformer()
+            num_atoms = mol.GetNumAtoms()
+            for i in range(num_atoms):
+                pos_i = conf.GetAtomPosition(i)
+                for j in range(i + 1, num_atoms):
+                    if not mol.GetBondBetweenAtoms(i, j):
+                        pos_j = conf.GetAtomPosition(j)
+                        dist = ((pos_i.x - pos_j.x)**2 + (pos_i.y - pos_j.y)**2 + (pos_i.z - pos_j.z)**2)**0.5
+                        if dist < 1.75:
+                            clash_count += 1
+        except Exception:
+            pass
+        return strain_energy, clash_count
 
     def _compute_diffdock_pose(self, cand: MoleculeCandidate, target: TargetProfile) -> Tuple[float, float, List[str]]:
         """Computes docking pose binding free energy and interaction residues."""

@@ -47,6 +47,8 @@ class MoleculeCandidate:
     diffdock_confidence: float = 0.0    # 0.0 to 1.0
     contact_residues: List[str] = field(default_factory=list)
     pose_sdf: str = ""
+    strain_energy: float = 0.0          # MMFF94 conformational strain energy (kcal/mol)
+    steric_clash_count: int = 0         # Inter/intra-atomic steric clash penalty
     is_pareto_optimal: bool = False
     generation_round: int = 1
     composite_rank_score: float = 0.0

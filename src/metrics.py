@@ -45,6 +45,13 @@ def compute_summary_statistics(values: List[float]) -> Dict[str, float]:
     }
 
 
+def calculate_speedup(cpu_time: float, gpu_time: float) -> float:
+    """Calculates speedup multiplier of GPU over CPU baseline."""
+    if gpu_time <= 0:
+        return 0.0
+    return round(float(cpu_time) / float(gpu_time), 2)
+
+
 class BenchmarkReporter:
     """
     Manages benchmark data aggregation, tabular CSV reporting, and graphical charting.

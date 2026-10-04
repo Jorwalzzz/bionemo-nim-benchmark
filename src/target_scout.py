@@ -23,16 +23,32 @@ RESTRICTED_PATHOGEN_SIGNATURES = {
 def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
     """
     Evaluates sequence against GDM-100 / Select Agent biosecurity catalogs.
+    Implements multi-scale exact k-mer (12-mer) + fuzzy sliding-window homology (>=80% identity).
     Returns (is_safe: bool, flagged_agent: Optional[str]).
     """
     clean = re.sub(r'[^A-Z]', '', sequence.upper())
+    if not clean:
+        return True, None
+
     for agent_name, sig in RESTRICTED_PATHOGEN_SIGNATURES.items():
-        # Check direct 15-mer exact match or >75% sequence overlap
         sig_clean = sig.upper()
-        for i in range(0, len(sig_clean) - 15, 10):
-            kmer = sig_clean[i:i+15]
+        # 1. High-speed exact k-mer filter (12-mer)
+        for i in range(0, len(sig_clean) - 12, 6):
+            kmer = sig_clean[i:i+12]
             if kmer in clean:
                 return False, agent_name
+
+        # 2. Fuzzy homology sliding-window check (20-mer with >=80% identity, <=4 mismatches)
+        window_size = 20
+        max_mismatches = 4
+        if len(clean) >= window_size and len(sig_clean) >= window_size:
+            for i in range(0, len(sig_clean) - window_size, 10):
+                sig_window = sig_clean[i:i+window_size]
+                for j in range(0, len(clean) - window_size + 1, 5):
+                    target_window = clean[j:j+window_size]
+                    mismatches = sum(1 for a, b in zip(sig_window, target_window) if a != b)
+                    if mismatches <= max_mismatches:
+                        return False, f"{agent_name} (Homology Variant)"
     return True, None
 
 TARGET_REGISTRY: Dict[str, Dict] = {
