@@ -269,5 +269,7 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **Enforces Reciprocal Open Science**: Ensures all downstream improvements, algorithmic enhancements, and model integrations remain openly accessible to the scientific community.
 - **Guarantees Author Attribution**: Preserves copyright and original author credit across all distributions and derivatives.
 
-### ⚖️ Trademark & Brand Notice
-The names **"Jorwalzzz"**, **"Jorwalzzz™"**, **"Jorwalzzz™ NIM Swarm OS"**, and associated logos/vectors are proprietary common-law trademarks of **Jorwalzzz** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)). All trademark, trade name, and brand identity rights are strictly reserved. Re-distribution under AGPLv3 does not convey any rights to the trademark or brand identity.
+### ⚖️ Worldwide Trademark & Brand Notice
+The marks **"JORWAL"**, **"Jorwal"**, **"jorwal"**, **"Jorwalzzz"**, **"JORWAL™ NIM SWARM OS"**, **"JORWAL BIO™"**, and associated wordmarks, logos, and visual trade dress are exclusive proprietary common-law trademarks of **Jorwal (Jorwalzzz)** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)). 
+
+All trademark, trade name, and brand identity rights are strictly and worldwide reserved across all capitalizations and variations. Re-distribution of software under AGPLv3 explicitly does not grant or transfer any rights to the trademarks, trade names, or brand identity of Jorwal.

@@ -1,7 +1,8 @@
-# 🚀 [Showcase] Autonomous Multi-Agent AI Drug Discovery OS Powered by NVIDIA BioNeMo & NIM
+# 🚀 [Showcase] JORWAL™ NIM SWARM OS: Autonomous Multi-Agent AI Drug Discovery Powered by NVIDIA BioNeMo & NIM
 
-**Author:** [Jorwalzzz](https://github.com/Jorwalzzz)  
+**Author:** [Jorwal (@Jorwalzzz)](https://github.com/Jorwalzzz)  
 **Repository:** [github.com/Jorwalzzz/bionemo-nim-benchmark](https://github.com/Jorwalzzz/bionemo-nim-benchmark)  
+**Trademark:** JORWAL™ (Standard Character Mark, All Rights Reserved Worldwide)  
 **Target Hardware:** NVIDIA DGX H100 / NVIDIA NIM Microservices / TensorRT-LLM  
 
 ---
@@ -10,7 +11,7 @@
 
 Accelerating small-molecule hit-to-lead campaigns requires synthesizing diverse disciplines: macromolecular biophysics, generative organic chemistry, ADMET liability screening, and automated wet-lab validation.
 
-We present an **Autonomous Multi-Agent AI Drug Discovery Operating System** built natively on **NVIDIA BioNeMo & NIM (Inference Microservices)**. The system closes the entire pharmaceutical loop: taking an arbitrary target query (e.g. `KRAS G12D`), resolving structural pockets, sampling chemical latent space via **MolMIM**, simulating molecular docking conformations via **DiffDock**, and automatically compiling certified **FDA IND Section 2 Briefing Dossiers (PDF)** and executable **Opentrons OT-2 Robotic Pipetting Protocols** in under 45 seconds.
+We present the **JORWAL™ NIM SWARM OS** — an autonomous multi-agent drug discovery operating system built natively on **NVIDIA BioNeMo & NIM (Inference Microservices)**. The system closes the entire pharmaceutical loop: taking an arbitrary target query (e.g. `KRAS G12D`), resolving structural pockets, sampling chemical latent space via **MolMIM**, simulating molecular docking conformations via **DiffDock**, and automatically compiling certified **FDA IND Section 2 Briefing Dossiers (PDF)** and executable **Opentrons OT-2 Robotic Pipetting Protocols** in under 45 seconds.
 
 ---
 

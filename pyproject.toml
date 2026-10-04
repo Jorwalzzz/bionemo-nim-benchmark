@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jorwal-nim"
+version = "1.0.0"
+description = "JORWAL™ NIM SWARM OS: Autonomous multi-agent AI biocompute and drug discovery platform built natively on NVIDIA BioNeMo NIM microservices."
+readme = "README.md"
+authors = [
+  { name = "Jorwal", email = "contact@jorwal.dev" },
+  { name = "Jorwalzzz", email = "jorwalzzz@users.noreply.github.com" }
+]
+license = { text = "AGPL-3.0-only" }
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Healthcare Industry",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Scientific/Engineering :: Chemistry",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+]
+keywords = [
+  "jorwal",
+  "jorwalzzz",
+  "nvidia",
+  "bionemo",
+  "nim",
+  "diffdock",
+  "esmfold",
+  "molmim",
+  "drug-discovery",
+  "biophysics",
+  "cheminformatics"
+]
+dependencies = [
+  "requests>=2.31.0",
+  "rdkit>=2023.9.0",
+  "reportlab>=4.0.0",
+  "pydantic>=2.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/Jorwalzzz/bionemo-nim-benchmark"
+Documentation = "https://github.com/Jorwalzzz/bionemo-nim-benchmark#readme"
+Repository = "https://github.com/Jorwalzzz/bionemo-nim-benchmark.git"
+Issues = "https://github.com/Jorwalzzz/bionemo-nim-benchmark/issues"
+"Trademark Policy" = "https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/TRADEMARK.md"
+
+[project.scripts]
+jorwal = "serve_cockpit:main"
+jorwal-nim = "serve_cockpit:main"
