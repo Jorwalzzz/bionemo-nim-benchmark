@@ -1,6 +1,6 @@
 # Drug Candidate Selection Dossier: KRAS G12D
 **Target:** KRAS G12D (KRAS) | **UniProt:** P01116 | **PDB:** 8AZV  
-**Date of Selection:** 2026-09-29 11:29:58 UTC  
+**Date of Selection:** 2026-10-04 03:13:09 UTC  
 **Principal Investigator:** Agentic BioNeMo Autonomous Discovery System  
 
 ---

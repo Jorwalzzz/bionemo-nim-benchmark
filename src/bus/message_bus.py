@@ -4,8 +4,11 @@ Manages inter-agent communication, topic routing, debate history, and real-time 
 """
 from typing import Callable, List, Dict, Any, Optional
 import time
+import logging
 from datetime import datetime
 from src.models import CouncilMessage
+
+logger = logging.getLogger("SwarmMessageBus")
 
 class SwarmMessageBus:
     def __init__(self):
@@ -60,14 +63,14 @@ class SwarmMessageBus:
                 try:
                     cb(msg)
                 except Exception as e:
-                    print(f"Error in subscriber callback for {intent}: {e}")
+                    logger.exception(f"Error in subscriber callback for {intent}: {e}")
 
         # Notify global listeners (e.g. UI WebSocket / SSE stream)
         for g_cb in self.global_listeners:
             try:
                 g_cb(msg)
             except Exception as e:
-                print(f"Error in global listener callback: {e}")
+                logger.exception(f"Error in global listener callback: {e}")
 
         return msg
 

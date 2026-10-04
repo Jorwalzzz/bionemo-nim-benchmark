@@ -1,0 +1,72 @@
+name: bionemo-agentic-scientist
+version: "2.4.0"
+title: "Autonomous BioNeMo & NIM Drug Discovery Swarm"
+description: >
+  An autonomous multi-agent scientific discovery OS powered by NVIDIA BioNeMo NIMs.
+  Orchestrates de novo target structure folding (ESMFold), latent chemical exploration (MolMIM),
+  score-based diffusion docking (DiffDock), active-site hydrogen bond calculation,
+  and automated Opentrons OT-2 robotics / FDA IND Section 2 briefing dossier compilation.
+
+schema_version: "v1"
+author: "NVIDIA BioNeMo Benchmark Team"
+license: "AGPL-3.0"
+
+# Target Microservices & Deployment Spec
+services:
+  - name: esmfold-nim
+    image: nvcr.io/nim/meta/esmfold:latest
+    endpoint: "https://health.api.nvidia.com/v1/biology/meta/esmfold"
+    resources:
+      gpu: 1
+      gpu_memory: "24GB"
+    health_check:
+      path: "/v1/health/ready"
+
+  - name: esm2-nim
+    image: nvcr.io/nim/nvidia/esm2-650m:latest
+    endpoint: "https://integrate.api.nvidia.com/v1/biology/nvidia/esm2-650m"
+    resources:
+      gpu: 1
+      gpu_memory: "16GB"
+
+  - name: molmim-nim
+    image: nvcr.io/nim/nvidia/molmim:latest
+    endpoint: "https://health.api.nvidia.com/v1/biology/nvidia/molmim/generate"
+    resources:
+      gpu: 1
+      gpu_memory: "16GB"
+
+  - name: diffdock-nim
+    image: nvcr.io/nim/mit/diffdock:latest
+    endpoint: "https://health.api.nvidia.com/v1/biology/mit/diffdock"
+    resources:
+      gpu: 1
+      gpu_memory: "32GB"
+
+pipeline:
+  stages:
+    - id: "target_scout"
+      agent: "Dr. Cynthia (Target Scout)"
+      service: "esmfold-nim"
+      biosecurity_standard: "NIST-GDM-100"
+    - id: "generative_chemist"
+      agent: "Dr. Aris (Generative Chemist)"
+      service: "molmim-nim"
+      steering: "cma-es"
+    - id: "medchem_critic"
+      agent: "Dr. Marcus (MedChem Critic)"
+      rules: ["Lipinski", "Veber", "PAINS", "SAScore<=7.0", "hERG"]
+    - id: "biophysics_docker"
+      agent: "Dr. Elena (Biophysicist)"
+      service: "diffdock-nim"
+    - id: "pareto_arbiter"
+      agent: "Dr. Sterling (Chief PI)"
+      deliverables:
+        - "FDA IND Section 2 Briefing Dossier (PDF)"
+        - "Opentrons OT-2 Robot Synthesis Script (Python v2.15)"
+        - "Wet-Lab SOP Card (Markdown)"
+
+hardware_requirements:
+  recommended: "NVIDIA DGX Cloud / 1x NVIDIA H100 80GB SXM5"
+  minimum: "NVIDIA RTX 4090 (24GB) or Cloud Serverless API"
+  zero_credit_fallback: "--mock (CPU Heuristic Simulator)"

@@ -145,7 +145,16 @@ class AgenticScientistOrchestrator:
             # --- Sub-Agent 4: Biophysics Docking (Dr. Elena) ---
             dockable_leads = cleared_leads + flagged_leads
             if not dockable_leads:
-                dockable_leads = evaluated_candidates[:4]
+                self.bus.publish(
+                    agent_id="critic",
+                    persona_name="Dr. Marcus (MedChem Critic)",
+                    avatar="⛔",
+                    intent="CAMPAIGN_ABORT",
+                    content="CRITICAL SAFETY STOP: All candidate molecules were strictly VETOED due to severe PAINS/toxicity alerts. Halting docking to prevent screening of toxic artifacts.",
+                    metadata={"rejected_count": len(rejected_leads)}
+                )
+                logger.warning("All generated candidates were vetoed. Docking step aborted for this round.")
+                continue
 
             docked_leads, dock_msg = self.docking_agent.dock_candidates(dockable_leads, target_profile)
             self._emit(dock_msg)

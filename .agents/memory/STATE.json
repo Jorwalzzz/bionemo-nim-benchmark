@@ -1,0 +1,7 @@
+{
+  "active_architecture": "5-Tier Multi-Agent Council",
+  "lead_role": "Dispatcher & Architect",
+  "token_efficiency_mode": "Strict Line-Slicing",
+  "fallback_router_active": true,
+  "memory_size_cap_bytes": 40960
+}

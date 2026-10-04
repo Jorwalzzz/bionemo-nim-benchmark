@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity & BioNeMo - Complete Pocket Guide</title>
+  <style>
+    @page {
+      margin: 15mm;
+      size: A4 portrait;
+    }
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --border: #e2e8f0;
+      --bg-card: #f8fafc;
+      --code-bg: #f1f5f9;
+      --tag-bg: #e0f2fe;
+      --tag-color: #0369a1;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: #334155;
+        --bg-card: #1e293b;
+        --code-bg: #0f172a;
+        --tag-bg: rgba(56, 189, 248, 0.15);
+        --tag-color: #38bdf8;
+      }
+      body { background: #0f172a; color: #f8fafc; }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      color: var(--text);
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    header {
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 4px 0;
+      color: var(--primary);
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+    h2 {
+      font-size: 18px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-top: 28px;
+      margin-bottom: 14px;
+      color: var(--text);
+      page-break-after: avoid;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      page-break-inside: avoid;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--tag-bg);
+      color: var(--tag-color);
+      text-transform: uppercase;
+    }
+    .desc {
+      font-size: 13.5px;
+      margin-bottom: 6px;
+    }
+    .meta {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 6px;
+      margin-top: 6px;
+    }
+    .meta strong {
+      color: var(--text);
+    }
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12.5px;
+      background: var(--code-bg);
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--primary-dark);
+    }
+    @media (prefers-color-scheme: dark) {
+      code { color: #38bdf8; }
+    }
+    .summary-box {
+      background: var(--bg-card);
+      border-left: 4px solid var(--primary);
+      padding: 10px 14px;
+      margin: 16px 0;
+      border-radius: 0 8px 8px 0;
+      font-size: 13.5px;
+    }
+    footer {
+      margin-top: 40px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Antigravity & BioNeMo Guide</h1>
+    <p class="subtitle">Complete Universal Pocket Reference — Models, Commands, Tools & 100% Potential</p>
+  </header>
+
+  <div class="summary-box">
+    <strong>⚡ Golden Rule of Model Economics:</strong><br>
+    Route high-level architecture to <code>Claude Opus 5.5</code> or <code>Gemini 3.1 Pro</code>, daily coding to <code>Gemini 3.8 Flash</code>, UI styling to <code>Claude Sonnet 5.5</code>, and simple scans to <code>Flash-Lite</code>.
+  </div>
+
+  <h2>1. Which Model When? (The 7 Exact Models)</h2>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Gemini 3.8 Flash</span>
+      <span class="tag">⚡ Ultra Fast</span>
+    </div>
+    <div class="desc"><strong>The Daily Workhorse (80% of all tasks).</strong> Lowest latency, highest tool-calling throughput, and minimal token burn.</div>
+    <div class="meta">
+      <strong>Best For:</strong> Writing functions, running pytest, CLI benchmarks, high-volume file edits.<br>
+      <strong>Avoid For:</strong> Abstract mathematical architecture with 15+ circular dependencies.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Claude Sonnet 5.5</span>
+      <span class="tag" style="background:#fef3c7; color:#b45309;">🎨 Gold Standard UI</span>
+    </div>
+    <div class="desc"><strong>Unmatched frontend design & clean typed code.</strong> Creates stunning, modern, responsive web apps and pristine Python refactors.</div>
+    <div class="meta">
+      <strong>Best For:</strong> BioNeMo Cockpit UI, modern CSS/JS interfaces, clean architecture.<br>
+      <strong>Avoid For:</strong> Trivial shell loops or repetitive regex transforms.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Claude Opus 5.5</span>
+      <span class="tag" style="background:#ffe4e6; color:#be123c;">🧠 Maximum Logic</span>
+    </div>
+    <div class="desc"><strong>Supreme cognitive depth (S-Tier).</strong> Solves novel algorithmic challenges, high-stakes system redesigns, and difficult bug autopsies.</div>
+    <div class="meta">
+      <strong>Best For:</strong> Designing core algorithms from scratch, multi-module pipeline graphs.<br>
+      <strong>Avoid For:</strong> Fast back-and-forth chat or budget-limited sessions.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Gemini 3.1 Pro</span>
+      <span class="tag" style="background:#f3e8ff; color:#7e22ce;">🧠 Steady Logic</span>
+    </div>
+    <div class="desc"><strong>Deliberate multi-hop reasoning.</strong> Traces complex concurrency bugs, race conditions, memory leaks, and interface contracts.</div>
+    <div class="meta">
+      <strong>Best For:</strong> Diagnosing subtle pipeline crashes, security audits, schema boundaries.<br>
+      <strong>Avoid For:</strong> Simple one-line edits or trivial renames.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Gemini 3.7 Flash</span>
+      <span class="tag">⚡ Stable Fast</span>
+    </div>
+    <div class="desc"><strong>Rock-solid reliability.</strong> Proven schema following and stable tool calls without experimental drift.</div>
+    <div class="meta">
+      <strong>Best For:</strong> Structured BioNeMo API payloads, routine benchmark profiling.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Gemini 3.6 Flash</span>
+      <span class="tag">⚡ Legacy Fast</span>
+    </div>
+    <div class="desc"><strong>High-volume batch work.</strong> Predictable and fast for bulk automated tasks.</div>
+    <div class="meta">
+      <strong>Best For:</strong> Large-scale regex transforms, linting runs, batch script processing.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>GPT-OSS 120B</span>
+      <span class="tag" style="background:#ffedd5; color:#c2410c;">⚖️ Open Weight</span>
+    </div>
+    <div class="desc"><strong>Unbiased second opinion.</strong> Neutral open-source perspective free from proprietary API quirks.</div>
+    <div class="meta">
+      <strong>Best For:</strong> Neutral code reviews, cross-model verification, fallback when commercial APIs throttle.
+    </div>
+  </div>
+
+  <h2>2. Interactive Slash Commands (Chat UI)</h2>
+
+  <div class="card">
+    <div class="card-title"><code>/plan</code> <span class="tag">Blueprint</span></div>
+    <div class="desc">Creates an interactive, step-by-step blueprint before touching any code. Avoids circular work.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>/goal</code> <span class="tag">Autonomous Loop</span></div>
+    <div class="desc">Enables persistent, multi-hour execution loops that do not stop until the objective is 100% complete.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>/grill-me</code> <span class="tag">Interview</span></div>
+    <div class="desc">Agent acts as a Staff Engineer, questioning you on edge cases and constraints before coding starts.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>/learn</code> <span class="tag">Memory</span></div>
+    <div class="desc">Saves corrected behaviors, user rules, and workflows into persistent memory across all future sessions.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>/schedule</code> <span class="tag">Timer / Cron</span></div>
+    <div class="desc">Schedules one-shot timers or recurring cron triggers for background checks without busy-waiting.</div>
+  </div>
+
+  <h2>3. Core BioNeMo Tools</h2>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_query_diffdock</code> <span class="tag">Docking</span></div>
+    <div class="desc">Performs generative molecular docking between protein targets and small-molecule ligands.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_query_esmfold</code> <span class="tag">3D Structure</span></div>
+    <div class="desc">Predicts 3D atomic coordinates (.pdb) with pLDDT confidence scores from raw amino acid sequences.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_query_esm2_embedding</code> <span class="tag">Embeddings</span></div>
+    <div class="desc">Extracts high-dimensional protein language representations for downstream ML or variant analysis.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_sanitize_smiles</code> <span class="tag">RDKit</span></div>
+    <div class="desc">Sanitizes ligand SMILES strings with explicit RDKit valence, charge, and aromaticity verification.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_validate_sequence</code> <span class="tag">FASTA</span></div>
+    <div class="desc">Validates protein sequences against the 20 canonical IUPAC amino acid residues.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_fetch_rcsb_pdb</code> <span class="tag">PDB</span></div>
+    <div class="desc">Fetches, cleans, and strips water/heteroatoms from experimental crystal structures (e.g. 6LU7, 1HSG).</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><code>bionemo_run_benchmark</code> <span class="tag">Profiling</span></div>
+    <div class="desc">Profiles NIM inference latency, throughput, speedup multipliers, and generates 300 DPI publication plots.</div>
+  </div>
+
+  <h2>4. The 4 Mastery Levels: Unlocking 100% Potential</h2>
+
+  <div class="card">
+    <div class="card-title">🟢 Level 1: The Rookie (0% – 25%)</div>
+    <div class="desc">Stop copy-pasting code into chat. Reference exact file paths (e.g., <code>src/resistance_engine.py</code>). Use <code>/plan</code> upfront and <code>/learn</code> afterwards.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🟡 Level 2: The Intermediate (25% – 50%)</div>
+    <div class="desc">Closed-loop autonomous healing: instruct the agent to edit files, run <code>pytest</code>, inspect tracebacks, and fix errors automatically until all pass.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🟠 Level 3: The Pro (50% – 80%)</div>
+    <div class="desc">Multi-MCP chaining: chain RCSB fetch ➔ RDKit sanitization ➔ BioNeMo DiffDock ➔ GitHub Pull Request in a single command. Use <code>browser_subagent</code> for automated visual web testing.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔴 Level 4: The 100% Master (80% – 100%)</div>
+    <div class="desc">Lead Orchestrator Architecture: keep parent context clean. Match the exact model to the problem. Run batch campaigns with <code>/goal</code>. Monitor token consumption with <code>python scripts/token_tracker.py</code>.</div>
+  </div>
+
+  <footer>
+    Antigravity & BioNeMo Benchmark Suite • Generated for User Offline & Mobile Reading
+  </footer>
+
+</body>
+</html>

@@ -32,6 +32,10 @@ MAX_TRIAL_RUNS = int(os.environ.get("MAX_TRIAL_RUNS", "2"))
 MAX_SUBNET_RUNS = int(os.environ.get("MAX_SUBNET_RUNS", "4"))
 MAX_GLOBAL_DAILY_RUNS = int(os.environ.get("MAX_GLOBAL_DAILY_RUNS", "25"))
 
+# Token & Context Efficiency Guards (Anti-Exhaustion)
+MAX_TARGET_CHARS = int(os.environ.get("MAX_TARGET_CHARS", "1500"))
+MAX_POCKET_RESIDUES = int(os.environ.get("MAX_POCKET_RESIDUES", "30"))
+
 # Disallowed automated bot scrapers attempting to call /api/run
 BLOCKED_USER_AGENTS = (
     "curl", "python-requests", "aiohttp", "wget", "httpie",
@@ -267,6 +271,14 @@ class TrialLimiter:
                 "allowed": False,
                 "error": "BOT_REQUEST_FORBIDDEN",
                 "message": "Automated scripts are blocked on the trial demo to protect API credits. Launch the Local App for script access."
+            }
+
+        # 1b. Token & Context Length Guard (Max 1500 chars to prevent token exhaustion)
+        if target_name and len(target_name.strip()) > MAX_TARGET_CHARS:
+            return False, {
+                "allowed": False,
+                "error": "INPUT_TOKEN_LIMIT_EXCEEDED",
+                "message": f"Input query exceeds trial token budget ({len(target_name)} > {MAX_TARGET_CHARS} chars). Truncate to active domain."
             }
 
         with self._lock:

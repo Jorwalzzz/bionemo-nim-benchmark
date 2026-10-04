@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>The Complete Antigravity IDE Master Guide: 100% Potential Decoded</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --surface: #131b2e;
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-dark: #0284c7;
+      --primary-glow: rgba(56, 189, 248, 0.15);
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.15);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.15);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.15);
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      line-height: 1.6;
+      padding: 20px 16px 80px;
+      -webkit-font-smoothing: antialiased;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 30px 10px 24px;
+      border-bottom: 1px solid var(--surface-border);
+      margin-bottom: 28px;
+    }
+    .badge-hero {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--primary-glow);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.25;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Table of Contents */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 30px;
+    }
+    .toc-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+    .toc-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      font-size: 13.5px;
+    }
+    @media(min-width: 600px) {
+      .toc-list { grid-template-columns: 1fr 1fr; }
+    }
+    .toc-list a {
+      color: #cbd5e1;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toc-list a:hover { color: var(--primary); }
+
+    /* Section Headings */
+    h2 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      margin: 40px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 22px 0 10px;
+    }
+
+    /* Callout & Summary Cards */
+    .callout {
+      background: rgba(56, 189, 248, 0.08);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 12px 12px 0;
+      padding: 14px 16px;
+      margin: 16px 0;
+      font-size: 13.5px;
+    }
+    .callout.amber {
+      background: var(--amber-glow);
+      border-left-color: var(--amber);
+    }
+    .callout.purple {
+      background: var(--purple-glow);
+      border-left-color: var(--purple);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge.blue { background: var(--primary-glow); color: var(--primary); border: 1px solid rgba(56, 189, 248, 0.25); }
+    .badge.green { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.25); }
+    .badge.purple { background: var(--purple-glow); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.25); }
+    .badge.amber { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.25); }
+    .badge.rose { background: var(--rose-glow); color: var(--rose); border: 1px solid rgba(244, 63, 94, 0.25); }
+
+    .card-body {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+    .card-meta {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 8px;
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+    .card-meta strong { color: #f1f5f9; }
+
+    /* Code & Keyboard */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: #38bdf8;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    kbd {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    /* Tier Styling */
+    .tier-card {
+      border-left: 4px solid var(--primary);
+    }
+    .tier-rookie { border-left-color: var(--green); }
+    .tier-pro { border-left-color: var(--amber); }
+    .tier-master { border-left-color: var(--rose); }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 1px solid var(--surface-border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge-hero">Definitive Operating Manual</div>
+    <h1>The Antigravity IDE Master Guide</h1>
+    <p class="subtitle">An exhaustive breakdown of every surface, model, modality, tool, and 100% potential execution blueprint.</p>
+  </header>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <div class="toc-title">Table of Contents</div>
+    <ul class="toc-list">
+      <li><a href="#modalities">1. The 3 Core AI Modalities</a></li>
+      <li><a href="#models">2. The 7 Exact Models & Reasoning Tiers</a></li>
+      <li><a href="#canvas">3. Chat Canvas, @ Mentions & Slashes</a></li>
+      <li><a href="#settings">4. Settings, Policies & Sandboxes</a></li>
+      <li><a href="#subagents">5. Subagents & Background Execution</a></li>
+      <li><a href="#tools">6. Core Tools & MCP Server Suites</a></li>
+      <li><a href="#mastery">7. The 3 User Tiers: 0% to 100% Potential</a></li>
+      <li><a href="#tokens">8. Context Economics & Token Auditing</a></li>
+    </ul>
+  </div>
+
+  <!-- 1. CORE AI MODALITIES -->
+  <h2 id="modalities">1. The 3 Core AI Modalities in Antigravity IDE</h2>
+  <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 14px;">
+    Antigravity IDE gives you 3 distinct ways to interact with AI depending on whether you are writing lines, refactoring blocks, or orchestrating systems:
+  </p>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">A. Passive: Antigravity Tab (Autocomplete & Supercomplete)</span>
+      <span class="badge green">Next-Intent Prediction</span>
+    </div>
+    <div class="card-body">
+      A single keystroke prediction engine running continuously as you type. Predicts code insertions, multi-line blocks, deletions, and cursor jumps.
+    </div>
+    <div class="card-meta">
+      • <strong>Tab to Jump:</strong> Anticipates your next navigation point; hit <kbd>Tab</kbd> to jump straight there.<br>
+      • <strong>Tab to Import:</strong> Automatically resolves and inserts missing imports at the top of the file.<br>
+      • <strong>Supercomplete:</strong> Floats larger diffs (including refactorings and deletions) in an overlay.<br>
+      • <strong>Controls:</strong> Accept with <kbd>Tab</kbd>, reject with <kbd>Esc</kbd>, or accept word-by-word with <kbd>Ctrl</kbd>+<kbd>→</kbd>.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">B. Instructive: Inline Command (<kbd>Ctrl</kbd>+<kbd>I</kbd> / <kbd>Cmd</kbd>+<kbd>I</kbd>)</span>
+      <span class="badge blue">Localized In-Editor Edits</span>
+    </div>
+    <div class="card-body">
+      Surgical in-place code modification without switching context to the chat sidebar.
+    </div>
+    <div class="card-meta">
+      • <strong>Targeted Refactoring:</strong> Highlight a function or class, press <kbd>Ctrl</kbd>+<kbd>I</kbd>, and prompt: <em>"Vectorize with NumPy"</em> or <em>"Add type annotations"</em>. The AI modifies ONLY the selected lines.<br>
+      • <strong>Net-New Generation:</strong> Press <kbd>Ctrl</kbd>+<kbd>I</kbd> on a blank line to generate code directly at your cursor.<br>
+      • <strong>Localized Documentation:</strong> Generates Google/Sphinx docstrings for the selected block instantly.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">C. Collaborative: Sidebar Chat & Agent Mode</span>
+      <span class="badge purple">Full-Stack Pair Programmer</span>
+    </div>
+    <div class="card-body">
+      The full agentic engine. Capable of reading/writing files across your workspace, running terminal commands, executing pytest suites, calling MCP tools, and controlling headless browsers.
+    </div>
+    <div class="card-meta">
+      • <strong>Inline Code Lenses:</strong> Click action buttons floating above functions (e.g., <em>"Explain Code"</em>, <em>"Write Unit Tests"</em>).<br>
+      • <strong>Diagnostic Auto-Fix:</strong> Click on compiler/lint squiggly lines or the Problems pane to auto-heal errors directly.<br>
+      • <strong>Visual Diff Overlays:</strong> In-editor red/green diff review before accepting code changes.
+    </div>
+  </div>
+
+  <!-- 2. THE 7 EXACT MODELS -->
+  <h2 id="models">2. The 7 Exact Models & Reasoning Tiers</h2>
+  <div class="callout">
+    <strong>Decision Rule:</strong> Never burn heavy reasoning tokens on simple regexes, and never task a lightweight model with subtle race conditions.
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Gemini 3.8 Flash (Medium / Low)</span>
+      <span class="badge green">⚡ Ultra Fast Daily Driver</span>
+    </div>
+    <div class="card-body">
+      <strong>The Daily Workhorse (80% of all programming tasks).</strong> Sub-second latency, highest MCP tool execution speed, lowest token burn, and massive context capacity.
+    </div>
+    <div class="card-meta">
+      <strong>Best For:</strong> Writing functions, running pytest, CLI benchmarks, high-volume file edits.<br>
+      <strong>Avoid For:</strong> Abstract mathematical architecture with 15+ circular dependencies.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Claude Sonnet 5.5 (Medium)</span>
+      <span class="badge amber">🎨 Gold Standard UI & Clean Code</span>
+    </div>
+    <div class="card-body">
+      <strong>Unmatched frontend design aesthetics and idiomatic code taste.</strong> Produces stunning, modern web apps (CSS/JS) and pristine, typed Python refactors.
+    </div>
+    <div class="card-meta">
+      <strong>Best For:</strong> BioNeMo Cockpit UI, modern web frontends, pristine design patterns.<br>
+      <strong>Avoid For:</strong> Repetitive batch grep loops or simple shell test assertions.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Claude Opus 5.5 (Medium)</span>
+      <span class="badge rose">🧠 Maximum Cognitive Depth (S-Tier)</span>
+    </div>
+    <div class="card-body">
+      <strong>Supreme architectural and mathematical reasoning.</strong> Solves novel algorithmic challenges, high-stakes system redesigns, and hard bug autopsies.
+    </div>
+    <div class="card-meta">
+      <strong>Best For:</strong> Designing core algorithms from scratch, multi-module pipeline graphs.<br>
+      <strong>Avoid For:</strong> Fast back-and-forth chat or budget-limited sessions.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Gemini 3.1 Pro (Low)</span>
+      <span class="badge purple">🧠 Deliberate Logic & Concurrency</span>
+    </div>
+    <div class="card-body">
+      <strong>Deliberate multi-hop reasoning.</strong> Traces complex concurrency bugs, race conditions, memory leaks, and interface contracts.
+    </div>
+    <div class="card-meta">
+      <strong>Best For:</strong> Diagnosing subtle pipeline crashes, security audits, schema boundaries.<br>
+      <strong>Avoid For:</strong> Simple one-line edits or trivial renames.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Gemini 3.7 Flash & 3.6 Flash (Medium)</span>
+      <span class="badge blue">⚡ Rock-Solid Stability & Batch</span>
+    </div>
+    <div class="card-body">
+      Proven, stable instruction following. Consistent JSON schema adherence without bleeding-edge drift; great for repetitive batch scripts.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">GPT-OSS 120B (Medium)</span>
+      <span class="badge amber">⚖️ Open-Weight Second Opinion</span>
+    </div>
+    <div class="card-body">
+      Unbiased open-weights inference. Perfect for independent architectural reviews and cross-model code validation.
+    </div>
+  </div>
+
+  <div class="callout amber">
+    <strong>Reasoning Modifiers Explained:</strong><br>
+    • <code>Low</code>: Bypasses internal thinking scratchpad. Responds immediately. Saves maximum tokens and time.<br>
+    • <code>Medium</code>: Generates an internal chain-of-thought analysis before outputting code. Prevents logic regressions in complex diffs.
+  </div>
+
+  <!-- 3. CHAT CANVAS & CONTEXT -->
+  <h2 id="canvas">3. Chat Canvas, @ Mentions & Slash Commands</h2>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">The Power of @ Mentions</span>
+      <span class="badge blue">Context Injection</span>
+    </div>
+    <div class="card-body">
+      Type <code>@</code> in the chat input to inject precise context without copy-pasting:
+    </div>
+    <div class="card-meta">
+      • <code>@Files & Folders</code>: Attaches file paths so the agent reads surgical slices.<br>
+      • <code>@Previous Conversations</code>: Bridges context from past debugging sessions.<br>
+      • <code>@Terminal Sessions</code>: Injects terminal output without manual copying.<br>
+      • <code>@Rules</code>: Enforces specific coding guidelines on demand.<br>
+      • <code>@MCP Tools</code>: Explicitly targets a specific MCP tool suite.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Slash Commands (Workflows)</span>
+      <span class="badge green">Built-In Automations</span>
+    </div>
+    <div class="card-body">
+      Type <code>/</code> in chat to trigger specialized agent states:
+    </div>
+    <div class="card-meta">
+      • <code>/plan</code>: Interactive, phased blueprint before touching any code.<br>
+      • <code>/goal</code>: Autonomous endurance mode; runs continuous execution loops until finished.<br>
+      • <code>/grill-me</code>: Interviews you like a Staff Engineer to tease out edge cases.<br>
+      • <code>/learn</code>: Saves corrected rules and workflows into permanent memory across sessions.<br>
+      • <code>/schedule</code>: Configures one-shot timers or recurring cron triggers.
+    </div>
+  </div>
+
+  <!-- 4. SETTINGS & POLICIES -->
+  <h2 id="settings">4. Settings, Policies & Sandboxes</h2>
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Security & Execution Governance</span>
+      <span class="badge rose">Permissions</span>
+    </div>
+    <div class="card-body">
+      Configured globally or per-project in <code>.agents/</code>:
+    </div>
+    <div class="card-meta">
+      • <strong>Tool Execution Policy:</strong> Choose between <code>always-proceed</code> (max autonomy), <code>request-review</code>, or <code>proceed-in-sandbox</code>.<br>
+      • <strong>Terminal Sandbox:</strong> Runs shell commands in an isolated container to prevent accidental system changes.<br>
+      • <strong>Non-Workspace File Access:</strong> Controls whether the agent can read/write outside workspace root (<code>allow</code>, <code>ask</code>, <code>deny</code>).<br>
+      • <strong>Accidental Data Loss Prevention:</strong> Automatic safety guard blocking destructive commands (e.g. <code>DROP TABLE</code>, recursive wipes) without explicit user consent.
+    </div>
+  </div>
+
+  <!-- 5. SUBAGENTS & EXECUTION -->
+  <h2 id="subagents">5. Subagents & Background Execution</h2>
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Auxiliary Pane & Reactive Wakeup</span>
+      <span class="badge purple">Non-Blocking Fleet</span>
+    </div>
+    <div class="card-body">
+      Antigravity runs a multi-threaded reactive agent architecture:
+    </div>
+    <div class="card-meta">
+      • <strong>Reactive Wakeup:</strong> When running long jobs or tests, the agent does NOT busy-poll. The system automatically resumes execution when background processes complete.<br>
+      • <strong><code>browser_subagent</code>:</strong> Launches an isolated browser that navigates web apps, interacts with buttons/inputs, audits accessibility, and records WebP session videos.<br>
+      • <strong>Background Task Management:</strong> Control long-running servers and benchmarks using <code>manage_task</code> (<code>list</code>, <code>kill</code>, <code>status</code>, <code>send_input</code>).
+    </div>
+  </div>
+
+  <!-- 6. TOOLS & MCP -->
+  <h2 id="tools">6. Core Tools & MCP Server Suites</h2>
+  <div class="card">
+    <div class="card-body">
+      • <strong>Core I/O:</strong> <code>view_file</code> (line slicing), <code>replace_file_content</code>, <code>multi_replace_file_content</code>, <code>write_to_file</code>, <code>grep_search</code>, <code>run_command</code>.<br>
+      • <strong>BioNeMo NIM:</strong> <code>bionemo_query_diffdock</code> (docking), <code>bionemo_query_esmfold</code> (3D structure), <code>bionemo_query_esm2_embedding</code>, <code>bionemo_sanitize_smiles</code> (RDKit valence), <code>bionemo_run_benchmark</code> (profiler).<br>
+      • <strong>GitHub MCP:</strong> Full repository management, PR creation, review, and commit pushes.<br>
+      • <strong>Stitch MCP:</strong> Screen generation from text, UI design systems, and visual variants.<br>
+      • <strong>Chrome DevTools:</strong> Network inspection, Lighthouse audits, console monitoring, DOM evaluation.<br>
+      • <strong>Perplexity:</strong> Academic literature and web fact-checking with live citations.
+    </div>
+  </div>
+
+  <!-- 7. THE 3 USER TIERS (100% POTENTIAL) -->
+  <h2 id="mastery">7. The 3 User Tiers: Unlocking 100% Potential</h2>
+
+  <div class="card tier-card tier-rookie">
+    <div class="card-top">
+      <span class="card-title">🟢 Level 1: The Rookie (0% – 30% Potential)</span>
+      <span class="badge green">Getting Started</span>
+    </div>
+    <div class="card-body">
+      <strong>Mindset:</strong> Transition from passive copy-paster to interactive pair programmer.
+    </div>
+    <div class="card-meta">
+      1. <strong>Stop Pasting Files:</strong> Never paste 500 lines of code or error logs into chat. Mention the file name with <code>@</code>; the agent reads exact line slices.<br>
+      2. <strong>Adopt Single-Key Tab:</strong> Use <kbd>Tab</kbd> for auto-imports, insertions, and cursor jumps.<br>
+      3. <strong>Use <code>/plan</code>:</strong> Before any feature, review the agent's interactive blueprint.
+    </div>
+  </div>
+
+  <div class="card tier-card tier-pro">
+    <div class="card-top">
+      <span class="card-title">🟡 Level 2: The Pro (30% – 70% Potential)</span>
+      <span class="badge amber">Closed-Loop Operator</span>
+    </div>
+    <div class="card-body">
+      <strong>Mindset:</strong> Eliminate manual verification; automate tests, UI, and background processes.
+    </div>
+    <div class="card-meta">
+      1. <strong>Closed-Loop Healing:</strong> Always pair edits with terminal tests: <em>"Refactor X in <code>src/engine.py</code> and run <code>pytest -v</code>. Diagnose tracebacks and fix until all pass."</em><br>
+      2. <strong>Inline Transforms:</strong> Use <kbd>Ctrl</kbd>+<kbd>I</kbd> for localized refactoring without opening chat.<br>
+      3. <strong>Multi-Tool Chaining:</strong> Combine BioNeMo docking + RDKit sanitization + GitHub PR in one prompt.<br>
+      4. <strong>Automated QA:</strong> Deploy <code>browser_subagent</code> to verify webapps and record video proof.
+    </div>
+  </div>
+
+  <div class="card tier-card tier-master">
+    <div class="card-top">
+      <span class="card-title">🔴 Level 3: The Peak Master (70% – 100% Potential)</span>
+      <span class="badge rose">Fleet Orchestrator</span>
+    </div>
+    <div class="card-body">
+      <strong>Mindset:</strong> Act as Mission Director. Shield parent context, match model tiers, and govern multi-agent fleets.
+    </div>
+    <div class="card-meta">
+      1. <strong>Lead Architect Directive:</strong> The parent agent plans and reviews reports, never consuming bloated raw logs or large source files directly.<br>
+      2. <strong>Exact Model Matching:</strong> Sonnet 5.5 for UI styling, Opus 5.5 / Pro for deep architecture and race conditions, Flash 3.8 for high-speed execution.<br>
+      3. <strong>Autonomous Endurance with <code>/goal</code>:</strong> Run multi-hour benchmark sweeps or entire test suite refactors without stopping.<br>
+      4. <strong>Persistent Memory Engineering:</strong> Codify project guidelines into <code>.agents/rules/</code> so every session starts at 100% calibration.<br>
+      5. <strong>Token Economics:</strong> Track exact token burns via <code>python scripts/token_tracker.py</code> and eliminate polling waste.
+    </div>
+  </div>
+
+  <!-- 8. CONTEXT ECONOMICS -->
+  <h2 id="tokens">8. Context Economics & Token Auditing</h2>
+  <div class="card">
+    <div class="card-top">
+      <span class="card-title">Your Local Token Audit & Tracking Tool</span>
+      <span class="badge blue">Audited Analytics</span>
+    </div>
+    <div class="card-body">
+      Antigravity records every turn in <code>brain/&lt;conv-id&gt;/.system_generated/logs/transcript_full.jsonl</code>.
+    </div>
+    <div class="card-meta">
+      • Run anytime in terminal: <code>python scripts/token_tracker.py</code><br>
+      • <strong>Your All-Time Stats:</strong> 13 sessions, 10,695 conversation steps, <strong>3.63M tokens burned</strong>.<br>
+      • <strong>Input Efficiency:</strong> Only 11.3% prompt input vs 88.7% output generation.<br>
+      • <strong>Pro Tip:</strong> Use line-bounded slicing (<code>StartLine</code>/<code>EndLine</code>) to save 85% of input tokens on every turn.
+    </div>
+  </div>
+
+  <footer>
+    Antigravity IDE Complete Master Guide • Generated for Mobile & Offline Reading
+  </footer>
+
+</body>
+</html>

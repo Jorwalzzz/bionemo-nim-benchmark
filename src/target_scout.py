@@ -13,6 +13,28 @@ from src.pdb_utils import fetch_pdb_online_or_mock, clean_pdb_structure, extract
 
 logger = logging.getLogger("TargetScout")
 
+# Biosecurity & Dual-Use Pathogen Screening (NIST / GDM-100 Compliant Gatekeeper)
+RESTRICTED_PATHOGEN_SIGNATURES = {
+    "Ricin A-Chain": "IFPKQYPIINFTTAGATVQSYTNFIRAVRGRLTTGADVRHEIPVLPNRVGLPINQRFILVELSNHAELSVTLALDVTNAYVVGYRAGNSAYFFHPDNQEDAEAITHLFTDVQNRYTFAFGGNYDRLEQLAGNLRENIELGNGPLEEAISALYYYSTGGTQLPTLARSFIICIQMISEAARFQYIEGEMRTRIRYNRRSAPDPSVITLENSWGRLSTAIQESNQGAFASPIQLQRRNGSKFSVYDVSILIPIIALMVYRCAPPPSSQF",
+    "Botulinum Neurotoxin Type A (BoNT/A)": "MPFVNKQFNYKDPVNGVDIAYIKIPNAGQMQPVKAFKIHNKIWVIPERDTFTNPEEGDLNPPPEAKQVPVSYYDSTYLSTDNEKDNYLKGVTKLFERIYSTDLGRMLLTSIVRGIPFWGGSTIDTELKVIDTNCINVIQPDGSYRSEELNLVIIGPSADIIQFECKSFGHEVLNLTRNGYGSTQYIRFSPDFTFGFEESLEVDTNPLLGAGKFATDPAVTLAHELIHAGHRLYGIAINPNRVFKVNTNAYYEMSGLEVSFEELRTFGGHDAKFIDSLQENEFRLYYYNKFKDIASTLNKAKSIVGTTASLQYMKNVFKEKYLLSEDTSGKFSVDKLKFDKLYKMLTEIYTEDNFVKFFKVLNRKTYLNFDKAVFKINIVPKVNYTIYDGFNLRNTNLAANFNGQNTEINNMNFTKLKNFTGLFEFYKLLCVRGIITSKTKSLDKGYNK",
+    "Ebola Virus Glycoprotein Core": "MGVTGILQLPRDRFKRTSFFLWVIILFQRTFSIPLGVIHNSTLQVSDVDKLVCRDKLSSTNQLRSVGLNLEGNGVATDVPSATKRWGFRSGVPPKVVNYEAGEWAENCYNLEIKKPDGSECLPAAPDGIRGFPRCRYVHKVSGTGPCAGDFAFHKEGAFFLYDRLASTVIYRGTTFAEGVVAFLILPQAKKDFFSSHPLREPVNATEDPSSGYYSTTIRYQATGFGTNETEYLFEVDNLTYVQLESRFTPQFLLQLNETIYTSGKRSNTTGKLIWKVNPEIDTTIGEWAFWETKKTSLEKFAVKSCL",
+}
+
+def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
+    """
+    Evaluates sequence against GDM-100 / Select Agent biosecurity catalogs.
+    Returns (is_safe: bool, flagged_agent: Optional[str]).
+    """
+    clean = re.sub(r'[^A-Z]', '', sequence.upper())
+    for agent_name, sig in RESTRICTED_PATHOGEN_SIGNATURES.items():
+        # Check direct 15-mer exact match or >75% sequence overlap
+        sig_clean = sig.upper()
+        for i in range(0, len(sig_clean) - 15, 10):
+            kmer = sig_clean[i:i+15]
+            if kmer in clean:
+                return False, agent_name
+    return True, None
+
 TARGET_REGISTRY: Dict[str, Dict] = {
     "SARS-CoV-2 Mpro": {
         "gene": "ORF1ab",
@@ -106,6 +128,33 @@ class TargetScoutAgent:
             logger.warning(f"Sanitizing non-canonical residues {invalid_aas} from sequence.")
             for inv in invalid_aas:
                 clean_seq = clean_seq.replace(inv, "A")
+
+        # Biosecurity & Dual-Use Intercept Gate (NIST / GDM-100 Standard)
+        is_safe, flagged_agent = screen_biosecurity_dual_use(clean_seq)
+        if not is_safe:
+            logger.error(f"BIOSECURITY INTERCEPT: Sequence matches dual-use restricted pathogen ({flagged_agent}). Refusing execution.")
+            profile = TargetProfile(
+                name=f"BIOSECURITY BLOCKED: {flagged_agent}",
+                gene="SELECT_AGENT",
+                uniprot_id="RESTRICTED",
+                pdb_id="RESTRICTED",
+                description=f"CRITICAL SAFETY STOP: Sequence contains restricted motifs matching {flagged_agent}. Intercepted under NIST GDM-100 biosecurity protocols.",
+                canonical_sequence="",
+                pocket_residues=[],
+                reference_ligand_name="NONE",
+                reference_ligand_smiles="",
+                is_esmfold=False,
+                mean_plddt=0.0
+            )
+            msg = AgentMessage(
+                agent_name=self.name,
+                role="BiosecurityGatekeeper",
+                action="BIOSECURITY_INTERCEPT",
+                thought=f"Sequence matches restricted select agent ({flagged_agent}). Autonomous safety stop triggered.",
+                output_summary=f"BIOSECURITY INTERCEPT: Execution blocked for restricted pathogen {flagged_agent}.",
+                status="BLOCKED"
+            )
+            return profile, msg
 
         pdb_content = ""
         mean_plddt = 89.5

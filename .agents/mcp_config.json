@@ -9,6 +9,43 @@
         "PYTHONPATH": "C:/Users/jorwa/Documents/antigravity/BIONEMO",
         "PYTHONUNBUFFERED": "1"
       }
+    },
+    "StitchMCP": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://stitch.googleapis.com/mcp",
+        "--header",
+        "X-Goog-Api-Key: ${STITCH_API_KEY}"
+      ]
+    },
+    "chrome-devtools-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "github-mcp-server": {
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "command": "npx"
+    },
+    "perplexity-ask": {
+      "env": {
+        "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
+      },
+      "args": [
+        "-y",
+        "server-perplexity-ask"
+      ],
+      "command": "npx"
     }
   }
 }
