@@ -260,7 +260,7 @@ Special thanks to:
 
 ---
 
-## License
+## License & Trademark Ownership
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. See the [LICENSE](LICENSE) file for complete terms.
 
@@ -268,3 +268,6 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **Prevents Proprietary Cloud Forking (SaaS Loophole Closed)**: Under standard MIT or Apache 2.0 licenses, any commercial entity could take your entire code, host it as a closed proprietary cloud platform without sharing a single line of modifications. AGPLv3 **legally obligates** anyone running modified versions over a network to release their complete source code under the same copyleft license.
 - **Enforces Reciprocal Open Science**: Ensures all downstream improvements, algorithmic enhancements, and model integrations remain openly accessible to the scientific community.
 - **Guarantees Author Attribution**: Preserves copyright and original author credit across all distributions and derivatives.
+
+### ⚖️ Trademark & Brand Notice
+The names **"Jorwalzzz"**, **"Jorwalzzz™"**, **"Jorwalzzz™ NIM Swarm OS"**, and associated logos/vectors are proprietary common-law trademarks of **Jorwalzzz** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)). All trademark, trade name, and brand identity rights are strictly reserved. Re-distribution under AGPLv3 does not convey any rights to the trademark or brand identity.
