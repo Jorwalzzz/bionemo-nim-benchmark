@@ -18,22 +18,25 @@ This trademark reservation applies regardless of capitalization, typeface, font,
 2. **`Jorwal`** (Title Case Wordmark)
 3. **`jorwal`** (Lowercase Technical Identifier, CLI command, and Package Namespace)
 4. **`Jorwalzzz`** and **`Jorwalz`** (Founder Digital Identity, Handle, and Signature Mark)
-5. **`JORWAL™ NIM SWARM OS`**, **`JORWAL BIO™`**, **`JORWAL AI™`** (Flagship Platform Marks)
+5. **`JORWAL™ NIM SWARM OS`**, **`JORWAL TECH™`**, **`JORWAL AI™`**, **`JORWAL BIO™`**, **`JORWAL SOFTWARE™`**, **`JORWAL CLOUD™`**
 
 ---
 
-## 2. International Classification of Goods & Services (Nice Classification)
+## 2. Comprehensive Field of Use: Entire Technology & Computing Industry
 
-Under international intellectual property principles, the marks are claimed for exclusive use in commerce across the following classes:
+Under international trademark law and the **Nice Classification (WIPO)**, the mark **JORWAL** (and all casing variants) is claimed for exclusive, worldwide priority of use across the **entire technology, computer science, and digital engineering field**, including without limitation:
 
-- **International Class 9 (Software & Scientific Systems):**  
-  Computer software for artificial intelligence, molecular dynamics, machine learning, biological neural networks, protein structure prediction, molecular docking, and computational biophysics; downloadable software development kits (SDKs), command-line tools, and algorithms.
+- **International Class 9 (All Computer Software, AI & Computing Systems):**  
+  Any and all computer software, applications (web, desktop, mobile, cloud-native, embedded), operating systems, artificial intelligence (AI) models, large language models (LLMs), neural networks, generative AI engines, machine learning pipelines, deep learning weights and architectures; software development kits (SDKs), application programming interfaces (APIs), command-line tools (CLI), programming languages, compilers, container images; scientific, laboratory, and robotics automation software.
 
-- **International Class 42 (Cloud, AI & Technical Services):**  
-  Software as a Service (SaaS), Platform as a Service (PaaS), providing web-based application programming interfaces (APIs), cloud infrastructure microservices, GPU cluster orchestration, and high-performance computing services in biotechnology, life sciences, and chemistry.
+- **International Class 42 (All Cloud Computing, SaaS, Cybersecurity & IT Engineering):**  
+  Software as a Service (SaaS), Platform as a Service (PaaS), Infrastructure as a Service (IaaS), cloud computing services, microservice orchestration, GPU cluster management, serverless backend compute, database architecture; cybersecurity, encryption, vulnerability scanning; computer programming, custom software engineering, technical systems architecture, and technology research and development.
 
-- **International Class 44 (Biomedical & Informatics Informatics):**  
-  Computational drug discovery analytics, biopharmaceutical pipeline modeling, preclinical molecular screening data services, and automated target tractability evaluation.
+- **International Class 35 (Technology Commercialization & Digital Services):**  
+  Online platforms and marketplaces for software, AI models, algorithms, technical data processing, and technology consulting services.
+
+- **International Class 44 (Biotechnology, Bioinformatics & Life Sciences Tech):**  
+  Computational biology, drug discovery informatics, macromolecular structure prediction, cheminformatics pipelines, preclinical biopharmaceutical modeling, and genomic data analytics.
 
 ---
 
@@ -77,8 +80,9 @@ The source code in this repository is licensed under the **GNU Affero General Pu
 | **Contributing code via pull requests** | **YES** | Welcome; IP remains with the primary repository under AGPLv3. |
 | **Referencing the project in academic papers** | **YES** | Cite as: `Jorwal (@Jorwalzzz), JORWAL™ NIM Swarm OS, 2026`. |
 | **Re-branding or white-labeling the tool as "Jorwal"** | **STRICTLY NO** | Immediate trademark and passing-off infringement. |
-| **Registering "Jorwal" on PyPI / npm / Docker Hub for AI/Bio** | **STRICTLY NO** | Violates namespace priority and common-law trade name rights. |
-| **Using "Jorwal" in a commercial company or software name** | **STRICTLY NO** | Actionable under international commercial IP law. |
+| **Registering "Jorwal" on PyPI / npm / Docker Hub / Hugging Face / GitHub for any tech project** | **STRICTLY NO** | Violates namespace priority and common-law trade name rights. |
+| **Using "Jorwal" in any commercial tech company, startup, software, SaaS, or app name** | **STRICTLY NO** | Actionable under international commercial IP law & Paris Convention Art. 8. |
+| **Launching any AI model, developer tool, software library, or web platform under "Jorwal"** | **STRICTLY NO** | Direct infringement of established prior-use trademark in international commerce. |
 
 ---
 

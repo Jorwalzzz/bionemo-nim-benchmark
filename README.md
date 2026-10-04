@@ -269,7 +269,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **Enforces Reciprocal Open Science**: Ensures all downstream improvements, algorithmic enhancements, and model integrations remain openly accessible to the scientific community.
 - **Guarantees Author Attribution**: Preserves copyright and original author credit across all distributions and derivatives.
 
-### ⚖️ Worldwide Trademark & Brand Notice
-The marks **"JORWAL"**, **"Jorwal"**, **"jorwal"**, **"Jorwalzzz"**, **"JORWAL™ NIM SWARM OS"**, **"JORWAL BIO™"**, and associated wordmarks, logos, and visual trade dress are exclusive proprietary common-law trademarks of **Jorwal (Jorwalzzz)** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)). 
+### ⚖️ Worldwide Trademark & Tech Field Exclusivity Notice
+The marks **"JORWAL"**, **"Jorwal"**, **"jorwal"**, **"Jorwalzzz"**, **"JORWAL™ NIM SWARM OS"**, **"JORWAL TECH™"**, **"JORWAL AI™"**, and associated wordmarks, logos, and visual trade dress are exclusive proprietary common-law trademarks of **Jorwal (Jorwalzzz)** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)). 
 
-All trademark, trade name, and brand identity rights are strictly and worldwide reserved across all capitalizations and variations. Re-distribution of software under AGPLv3 explicitly does not grant or transfer any rights to the trademarks, trade names, or brand identity of Jorwal.
+All trademark, trade name, and brand identity rights are strictly and worldwide reserved across all capitalizations and variations for the **entire technology, computing, artificial intelligence, software, and cloud industry**. Re-distribution of software under AGPLv3 explicitly does not grant or transfer any rights to the trademarks, trade names, or brand identity of Jorwal.
+
+For full legal terms, international classifications (Classes 9, 35, 42, 44), and priority claims, see [TRADEMARK.md](TRADEMARK.md).
