@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="plateGlow" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#0f1923"/>
+      <stop offset="100%" stop-color="#05080c"/>
+    </radialGradient>
+
+    <!-- Emerald / NVIDIA Green to Quantum Cyan Gradient -->
+    <linearGradient id="helixGradA" x1="15%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#76B900"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <linearGradient id="helixGradB" x1="85%" y1="15%" x2="20%" y2="95%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="60%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#76B900"/>
+    </linearGradient>
+
+    <!-- Neon Rim Stroke Gradient -->
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#76B900" stop-opacity="0.8"/>
+      <stop offset="40%" stop-color="#10B981" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <!-- Glow Filter for active site -->
+    <filter id="coreGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base Squircle Plate -->
+  <rect x="6" y="6" width="108" height="108" rx="26" fill="url(#plateGlow)" stroke="url(#rimGrad)" stroke-width="1.75"/>
+
+  <!-- Subtle Hexagonal Ambient Grid Lines in Background -->
+  <path d="M60 20 L86 35 L86 65 L60 80 L34 65 L34 35 Z" stroke="#76B900" stroke-opacity="0.08" stroke-width="1.5" fill="none"/>
+  <path d="M60 28 L78 38.5 L78 59.5 L60 70 L42 59.5 L42 38.5 Z" stroke="#00F0FF" stroke-opacity="0.06" stroke-width="1" fill="none"/>
+
+  <!-- Chiral Macromolecular Fold (Continuous Tensor Ribbon Loop) -->
+  <!-- Loop Strand 1: Upper Right to Lower Left sweeping fold -->
+  <path d="M60 24 C78 24, 94 38, 94 56 C94 72, 82 86, 68 88 C54 90, 42 82, 38 72 C34 62, 40 50, 52 46 C64 42, 74 48, 76 58 C78 68, 70 76, 60 76 C50 76, 44 68, 44 60"
+        stroke="url(#helixGradA)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95"/>
+
+  <!-- Loop Strand 2: Overlapping Inverse Chiral Ribbon for 3D Depth -->
+  <path d="M60 24 C44 24, 26 38, 26 56 C26 70, 36 84, 52 88 C66 91, 78 84, 82 72 C86 60, 78 48, 66 44 C56 41, 46 48, 44 56"
+        stroke="url(#helixGradB)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85"/>
+
+  <!-- Precision Geometric Nodes (Macromolecular Catalytic Coordinate Vertices) -->
+  <!-- Top Node -->
+  <circle cx="60" cy="24" r="4.5" fill="#76B900" filter="url(#coreGlow)"/>
+  <circle cx="60" cy="24" r="2" fill="#FFFFFF"/>
+
+  <!-- Right Node -->
+  <circle cx="94" cy="56" r="4" fill="#10B981" filter="url(#coreGlow)"/>
+  <circle cx="94" cy="56" r="1.8" fill="#FFFFFF"/>
+
+  <!-- Left Node -->
+  <circle cx="26" cy="56" r="4" fill="#00F0FF" filter="url(#coreGlow)"/>
+  <circle cx="26" cy="56" r="1.8" fill="#FFFFFF"/>
+
+  <!-- Bottom Fold Intersect -->
+  <circle cx="60" cy="88" r="3.5" fill="#76B900" filter="url(#coreGlow)"/>
+  <circle cx="60" cy="88" r="1.5" fill="#FFFFFF"/>
+
+  <!-- Active Catalytic Site Core: Glowing Ligand Diamond in the pocket center -->
+  <g transform="translate(60, 58) rotate(45)">
+    <rect x="-5" y="-5" width="10" height="10" rx="2" fill="#00F0FF" filter="url(#coreGlow)" opacity="0.9"/>
+    <rect x="-2" y="-2" width="4" height="4" rx="0.5" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Micro Coordinate Crosshairs -->
+  <line x1="60" y1="46" x2="60" y2="50" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
+  <line x1="60" y1="66" x2="60" y2="70" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
+  <line x1="48" y1="58" x2="52" y2="58" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
+  <line x1="68" y1="58" x2="72" y2="58" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
+</svg>

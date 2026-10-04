@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <radialGradient id="prismPlate" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#0a1219"/>
+      <stop offset="100%" stop-color="#030609"/>
+    </radialGradient>
+
+    <!-- Facet Gradients: NVIDIA Green, Cyan, Cobalt -->
+    <linearGradient id="facetTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#76B900"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+
+    <linearGradient id="facetRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+
+    <linearGradient id="facetLeft" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Subtle rim border -->
+    <linearGradient id="prismRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#76B900" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.3"/>
+    </linearGradient>
+
+    <!-- Core Bloom -->
+    <filter id="prismBloom" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Squircle Base Frame -->
+  <rect x="6" y="6" width="108" height="108" rx="26" fill="url(#prismPlate)" stroke="url(#prismRim)" stroke-width="1.75"/>
+
+  <!-- Geometric Hexagonal Chiral Topology (Isometric Bio-Tensor) -->
+  <g transform="translate(60, 60)">
+    <!-- Top Facet / Beta Sheet Fold -->
+    <path d="M0 -34 L28 -18 L0 -2 L-28 -18 Z" fill="url(#facetTop)" opacity="0.95"/>
+    
+    <!-- Right Facet / Alpha Helix Tensor -->
+    <path d="M0 -2 L28 -18 L28 16 L0 32 Z" fill="url(#facetRight)" opacity="0.9"/>
+    
+    <!-- Left Facet / Catalytic Pocket Flange -->
+    <path d="M0 -2 L0 32 L-28 16 L-28 -18 Z" fill="url(#facetLeft)" opacity="0.92"/>
+
+    <!-- Central Pocket Cutout for Negative Space Active Site -->
+    <circle cx="0" cy="0" r="7.5" fill="#030609" stroke="#00F0FF" stroke-width="1.5"/>
+
+    <!-- Active Ligand Spark / Coordinate Seed -->
+    <circle cx="0" cy="0" r="3" fill="#FFFFFF" filter="url(#prismBloom)"/>
+
+    <!-- Dynamic Electron Trajectory Ring -->
+    <ellipse cx="0" cy="0" rx="36" ry="14" stroke="#76B900" stroke-width="1.75" stroke-dasharray="8 6" fill="none" opacity="0.8" transform="rotate(-25)"/>
+  </g>
+</svg>
