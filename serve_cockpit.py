@@ -147,17 +147,38 @@ def sanitize_target_query(query: str) -> str:
 
 
 def verify_request_origin(request: Request) -> bool:
-    """Verifies that API mutation requests originate from a legitimate origin (anti-CSRF)."""
+    """
+    Verifies that API mutation requests originate from a legitimate origin (anti-CSRF).
+    Enforces strict protocol and exact domain/port matching to prevent subdomain spoofing.
+    """
     origin = request.headers.get("origin")
     referer = request.headers.get("referer")
     host = request.headers.get("host")
     check_url = origin or referer or ""
     if not check_url:
         return True
-    if host and host in check_url:
-        return True
-    if any(trusted in check_url for trusted in ("localhost", "127.0.0.1", "huggingface.co", "hf.space")):
-        return True
+
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(check_url)
+        # Block non-HTTP(S) origins (e.g. data:, javascript:, file:)
+        if parsed.scheme not in ("http", "https"):
+            return False
+
+        hostname = (parsed.hostname or "").lower()
+        if host:
+            host_header_name = host.split(":")[0].lower()
+            if hostname == host_header_name:
+                return True
+
+        # Exact trusted domains or explicit suffixes (e.g. localhost, 127.0.0.1, *.hf.space, huggingface.co)
+        if hostname in ("localhost", "127.0.0.1", "testserver"):
+            return True
+        if hostname == "huggingface.co" or hostname.endswith(".hf.space") or hostname.endswith(".huggingface.co"):
+            return True
+    except Exception:
+        return False
+
     return False
 
 
@@ -553,17 +574,26 @@ async def stream_council_run(request: Request, target: str = Query("KRAS G12D"),
                 # Keep-alive heartbeat ping
                 yield ": keep-alive\n\n"
 
-        dossier = future.result()
-        done_payload = {
-            "event": "campaign_complete",
-            "target": dossier.target.name,
-            "pdb_id": dossier.target.pdb_id,
-            "nominated_lead": dossier.top_leads[0].id if dossier.top_leads else "None",
-            "binding_affinity": dossier.top_leads[0].binding_affinity if dossier.top_leads else 0.0,
-            "pareto_count": dossier.pareto_leads_count,
-            "screened": dossier.screened_count
-        }
-        yield f"data: {json.dumps(done_payload)}\n\n"
+        try:
+            dossier = future.result()
+            done_payload = {
+                "event": "campaign_complete",
+                "target": dossier.target.name,
+                "pdb_id": dossier.target.pdb_id,
+                "nominated_lead": dossier.top_leads[0].id if dossier.top_leads else "None",
+                "binding_affinity": dossier.top_leads[0].binding_affinity if dossier.top_leads else 0.0,
+                "pareto_count": dossier.pareto_leads_count,
+                "screened": dossier.screened_count
+            }
+            yield f"data: {json.dumps(done_payload)}\n\n"
+        except Exception as exc:
+            safe_msg = SecretScrubber.scrub(str(exc))
+            err_payload = {
+                "event": "campaign_error",
+                "error": "PROCESSING_ERROR",
+                "message": safe_msg
+            }
+            yield f"data: {json.dumps(err_payload)}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -796,7 +826,15 @@ async def api_generate_ind_pdf(request: Request):
         }
 
     from src.ind_dossier import generate_ind_pdf
-    pdf_bytes = generate_ind_pdf(dossier_data, benchmark_data)
+    try:
+        pdf_bytes = generate_ind_pdf(dossier_data, benchmark_data)
+    except Exception as exc:
+        safe_msg = SecretScrubber.scrub(str(exc))
+        logger.error("IND Dossier PDF compilation failed: %s", safe_msg)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "PDF_GENERATION_FAILED", "message": "Failed to compile IND Section 2 Dossier."}
+        )
 
     target_clean = re.sub(r'[^A-Za-z0-9_-]', '_', str(dossier_data.get("target", "Candidate")))[:40] or "Candidate"
     return Response(

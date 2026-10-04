@@ -139,15 +139,24 @@ class TrialLimiter:
         sig = hmac.new(self._secret_key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
         return f"{payload}:{sig}"
 
-    def verify_and_extract_session(self, token_str: Optional[str]) -> Optional[str]:
-        """Validate HMAC signature of incoming session token and extract session_id."""
+    def verify_and_extract_session(self, token_str: Optional[str], max_age_seconds: int = 86400 * 30) -> Optional[str]:
+        """Validate HMAC signature of incoming session token, check expiry, and extract session_id."""
         if not token_str or not isinstance(token_str, str):
             return None
         parts = token_str.strip().split(":")
         if len(parts) != 3:
             return None
-        session_id, ts, sig = parts
-        payload = f"{session_id}:{ts}"
+        session_id, ts_str, sig = parts
+        try:
+            ts = int(ts_str)
+            now = int(time.time())
+            # Enforce expiration and reject tokens from the future
+            if ts > now + 300 or (now - ts) > max_age_seconds:
+                return None
+        except (ValueError, TypeError):
+            return None
+
+        payload = f"{session_id}:{ts_str}"
         expected_sig = hmac.new(self._secret_key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
         if hmac.compare_digest(sig, expected_sig):
             return session_id
