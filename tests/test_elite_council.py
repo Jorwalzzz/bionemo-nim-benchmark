@@ -109,3 +109,37 @@ class TestApolloDevRelMetrics:
         gpu_time = 1.0
         speedup = calculate_speedup(cpu_time, gpu_time)
         assert speedup == pytest.approx(58.4, 0.1)
+
+
+class TestEnterpriseHardeningAndExploitProtection:
+    """Tests Alex Mercer's enterprise defense-in-depth and anti-exploit protections."""
+
+    def test_security_headers_present(self):
+        from fastapi.testclient import TestClient
+        from serve_cockpit import app
+        client = TestClient(app)
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.headers.get("X-Content-Type-Options") == "nosniff"
+        assert resp.headers.get("X-Frame-Options") == "SAMEORIGIN"
+        assert "geolocation=()" in resp.headers.get("Permissions-Policy", "")
+
+    def test_target_input_sanitization(self):
+        from serve_cockpit import sanitize_target_query
+        # XSS injection
+        assert "<script>" not in sanitize_target_query("<script>alert(1)</script>KRAS")
+        # Command injection
+        cleaned = sanitize_target_query("KRAS; rm -rf /; echo $FLAG | nc")
+        assert ";" not in cleaned
+        assert "|" not in cleaned
+        assert "$" not in cleaned
+        assert "KRAS" in cleaned
+
+    def test_pdb_path_traversal_blocked(self):
+        from fastapi.testclient import TestClient
+        from serve_cockpit import app
+        client = TestClient(app)
+        resp = client.get("/api/target/pdb/..%2F..%2Fetc%2Fpasswd")
+        # Must safely reject invalid identifier with 400 or 404, never execute path traversal
+        assert resp.status_code in (400, 404)
+

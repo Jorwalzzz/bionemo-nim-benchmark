@@ -9,6 +9,7 @@ Serves the Premium Bio-Computational Cockpit with:
 
 import os
 import sys
+import re
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -26,6 +27,44 @@ from src.orchestrator import AgenticScientistOrchestrator
 from src.trial_limiter import TrialLimiter
 
 app = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
+
+# Security Headers & Hardening Middleware
+@app.middleware("http")
+async def enterprise_security_headers_middleware(request: Request, call_next):
+    """Enforces enterprise defense-in-depth HTTP security headers on all responses."""
+    response: Response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
+    return response
+
+
+def sanitize_target_query(query: str) -> str:
+    """Sanitizes incoming biological target query against command injection and XSS."""
+    if not query:
+        return "KRAS G12D"
+    cleaned = re.sub(r'<[^>]*?>', '', str(query))
+    cleaned = re.sub(r'[;&|`$><\\/\n\r]', ' ', cleaned)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned[:1500] if cleaned else "KRAS G12D"
+
+
+def verify_request_origin(request: Request) -> bool:
+    """Verifies that API mutation requests originate from a legitimate origin (anti-CSRF)."""
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    host = request.headers.get("host")
+    check_url = origin or referer or ""
+    if not check_url:
+        return True
+    if host and host in check_url:
+        return True
+    if any(trusted in check_url for trusted in ("localhost", "127.0.0.1", "huggingface.co", "hf.space")):
+        return True
+    return False
+
 
 RESULTS_DIR = os.path.join(BASE_DIR, "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -213,6 +252,10 @@ def get_setup_guide():
 
 @app.post("/api/run")
 def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)):
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
+    target = sanitize_target_query(target)
     session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(request)
 
     # 1. Clamp candidates to prevent single-request resource exhaustion
@@ -317,6 +360,26 @@ async def stream_council_run(request: Request, target: str = Query("KRAS G12D"),
     Streams each council agent's thoughts, debates, vetoes, and docking scores
     in real time directly into the browser at 60 FPS.
     """
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+
+    target = sanitize_target_query(target)
+    safe_candidates = min(max(candidates, 1), 10)
+    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(request)
+
+    allowed, trial_info = trial_limiter.consume_trial_run(
+        session_id=session_id,
+        fp_hash=fp_hash,
+        ip_str=client_ip,
+        target_name=target,
+        user_agent=user_agent
+    )
+    if not allowed:
+        status_code = 429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
+        resp = JSONResponse(status_code=status_code, content=trial_info)
+        resp.set_cookie(key=COOKIE_NAME, value=signed_token, max_age=86400 * 365, httponly=True, samesite="lax")
+        return resp
+
     import asyncio
     import json
     from src.models import CouncilMessage
@@ -442,7 +505,7 @@ async def api_fetch_target(request: Request):
     """Universal Target Ingestion: fetches any RCSB PDB code or resolves query."""
     try:
         body = await request.json()
-        query = body.get("target", "KRAS G12D")
+        query = sanitize_target_query(body.get("target", "KRAS G12D"))
     except Exception:
         query = "KRAS G12D"
 
@@ -472,7 +535,9 @@ async def api_fetch_target(request: Request):
 @app.get("/api/target/pdb/{pdb_id}")
 def get_target_pdb(pdb_id: str):
     """Fetches PDB structure text for the 3D WebGL viewer."""
-    clean_id = pdb_id.strip().upper()
+    clean_id = re.sub(r'[^A-Z0-9_-]', '', pdb_id.strip().upper())[:10]
+    if not clean_id:
+        return JSONResponse(status_code=400, content={"error": "Invalid PDB identifier."})
     file_path = os.path.join(BASE_DIR, "data", "targets", f"{clean_id}.pdb")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -494,8 +559,10 @@ async def api_redock(request: Request):
     """Interactive Chemical Workbench: Re-docks a human-edited molecule in real-time."""
     try:
         body = await request.json()
-        modified_smiles = body.get("smiles", "")
-        target_name = body.get("target", "KRAS G12D")
+        raw_smiles = body.get("smiles", "")
+        # Strict chemical SMILES token validation
+        modified_smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', str(raw_smiles))[:500]
+        target_name = sanitize_target_query(body.get("target", "KRAS G12D"))
     except Exception as e:
         return JSONResponse(status_code=400, content={"error": f"Invalid request body: {str(e)}"})
 
