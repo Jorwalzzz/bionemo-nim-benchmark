@@ -32,6 +32,7 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
 HTML_PATH = os.path.join(BASE_DIR, "stitch_cockpit.html")
+LANDING_PATH = os.path.join(BASE_DIR, "landing_portal.html")
 
 COOKIE_NAME = "bionemo_trial_session"
 trial_limiter = TrialLimiter()
@@ -70,7 +71,17 @@ def get_client_identifiers(request: Request) -> tuple:
 
 
 @app.get("/", response_class=HTMLResponse)
+def get_landing(request: Request):
+    """Serves high-impact executive showcase landing portal."""
+    if os.path.exists(LANDING_PATH):
+        with open(LANDING_PATH, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return get_cockpit(request)
+
+
+@app.get("/cockpit", response_class=HTMLResponse)
 def get_cockpit(request: Request):
+    """Serves full interactive Autonomous Drug Discovery Cockpit with 3Dmol viewer."""
     session_id, signed_token, _, _, _ = get_client_identifiers(request)
     
     # VIP / Friend / Creator Passkey detection

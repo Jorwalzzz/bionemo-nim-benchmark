@@ -603,6 +603,100 @@ tailwind.config = {
 </head>
 <body class="dark bg-grid">
 
+<!-- ═══════════════════════════════════════════════ CYBERNETIC BOOTLOADER ══════ -->
+<div id="biosBootloader" class="fixed inset-0 z-[9999] bg-[#05080c] flex flex-col items-center justify-center font-mono select-none transition-opacity duration-700 ease-out">
+  <!-- Glowing Hex Background Orb -->
+  <div class="absolute w-96 h-96 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none"></div>
+
+  <div class="relative z-10 w-full max-w-lg p-6 space-y-4">
+    <!-- NVIDIA Logo & Header -->
+    <div class="flex items-center gap-3 pb-3 border-b border-surface-border">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#76b900] to-[#3a5d00] flex items-center justify-center shadow-lg shadow-emerald-500/30">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      </div>
+      <div>
+        <div class="text-sm font-bold text-white tracking-wider flex items-center gap-2">
+          <span>NVIDIA BIONEMO™ AGENTIC SCIENTIST</span>
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">BOOT V2.4</span>
+        </div>
+        <div class="text-[10px] text-gray-400">Autonomous Molecular Intelligence & NIM Orchestration</div>
+      </div>
+    </div>
+
+    <!-- Diagnostic Terminal Log Output -->
+    <div class="space-y-1.5 text-xs text-gray-300 bg-[#090d14]/90 p-4 rounded-xl border border-surface-border min-h-[140px]">
+      <div id="bootLine1" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
+        <span class="text-emerald-400 font-bold">▶ [SYSTEM]</span>
+        <span>Initializing TensorRT-LLM Microservice Handshakes...</span>
+      </div>
+      <div id="bootLine2" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
+        <span class="text-cyan-400 font-bold">▶ [ESMFOLD]</span>
+        <span>Loading 3D Alpha-Carbon Backbone De Novo Kernel...</span>
+      </div>
+      <div id="bootLine3" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
+        <span class="text-purple-400 font-bold">▶ [MOLMIM]</span>
+        <span>Calibrating Latent CMA-ES Property Steering Embeddings...</span>
+      </div>
+      <div id="bootLine4" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
+        <span class="text-amber-400 font-bold">▶ [DIFFDOCK]</span>
+        <span>Mounting SE(3) Equivariant Diffusion Score Network...</span>
+      </div>
+      <div id="bootLine5" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
+        <span class="text-emerald-400 font-bold">▶ [SECURITY]</span>
+        <span class="text-emerald-300 font-semibold">NIST GDM-100 Dual-Use Biosecurity Gate: ENGAGED [SAFE]</span>
+      </div>
+    </div>
+
+    <!-- Animated Progress Bar -->
+    <div class="space-y-1.5">
+      <div class="flex justify-between text-[10px] text-gray-400">
+        <span id="bootProgressLabel">Booting Swarm Sub-Agents...</span>
+        <span id="bootProgressPct" class="text-emerald-400 font-bold">0%</span>
+      </div>
+      <div class="w-full bg-gray-800/80 rounded-full h-1.5 overflow-hidden">
+        <div id="bootProgressBar" class="h-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-[#76b900] transition-all duration-300 ease-out" style="width: 0%;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Cybernetic Bios Boot Sequence Script
+document.addEventListener("DOMContentLoaded", () => {
+  const bootloader = document.getElementById("biosBootloader");
+  if (!bootloader) return;
+
+  const steps = [
+    { id: "bootLine1", pct: 25, label: "Connecting NVIDIA NIM endpoints..." },
+    { id: "bootLine2", pct: 50, label: "Calibrating 3Dmol WebGL Engine..." },
+    { id: "bootLine3", pct: 75, label: "Mounting RDKit MedChem Veto Rules..." },
+    { id: "bootLine4", pct: 90, label: "Synchronizing Robot Protocol Generators..." },
+    { id: "bootLine5", pct: 100, label: "All Swarm Sub-Agents Online!" }
+  ];
+
+  let currentStep = 0;
+  const interval = setInterval(() => {
+    if (currentStep < steps.length) {
+      const step = steps[currentStep];
+      const el = document.getElementById(step.id);
+      if (el) el.classList.remove("opacity-0");
+      document.getElementById("bootProgressBar").style.width = step.pct + "%";
+      document.getElementById("bootProgressPct").textContent = step.pct + "%";
+      document.getElementById("bootProgressLabel").textContent = step.label;
+      currentStep++;
+    } else {
+      clearInterval(interval);
+      setTimeout(() => {
+        bootloader.style.opacity = "0";
+        setTimeout(() => {
+          bootloader.remove();
+        }, 700);
+      }, 400);
+    }
+  }, 220);
+});
+</script>
+
 <!-- ═══════════════════════════════════════════════ HEADER ══════════════ -->
 <header class="glass sticky top-0 z-50 border-b border-surface-border">
   <div class="flex items-center justify-between px-6 h-14">
