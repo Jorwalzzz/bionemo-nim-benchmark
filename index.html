@@ -416,9 +416,13 @@
       
       heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#070b12' });
       
-      // Fetch 8AZV (KRAS G12D with ligand)
-      fetch('/api/target/pdb/8AZV')
-        .then(res => res.text())
+      // Fetch 8AZV with multi-tier fallback (static repo file -> direct RCSB PDB)
+      fetch('results/8AZV.pdb')
+        .then(res => {
+          if (!res.ok) throw new Error("Local fallback required");
+          return res.text();
+        })
+        .catch(() => fetch('https://files.rcsb.org/download/8AZV.pdb').then(r => r.text()))
         .then(pdbText => {
           heroViewer.addModel(pdbText, "pdb");
           
