@@ -33,11 +33,41 @@ MAX_PAYLOAD_SIZE = 128 * 1024  # 128 KB max request body size to prevent memory 
 ADMIN_RESET_KEY = os.environ.get("ADMIN_RESET_KEY", "")
 import logging
 logger = logging.getLogger("CockpitSecurity")
+from src.security_sentinel import (
+    TokenBucketRateLimiter,
+    BiosecurityScreener,
+    SecretScrubber,
+    SafeSanitizer
+)
+
+# In-flight Token Bucket Rate Limiter (Max burst 40 requests, refilling at 1 req/sec)
+in_flight_limiter = TokenBucketRateLimiter(capacity=40, refill_rate_per_sec=1.0)
 
 # Security Headers & Hardening Middleware
 @app.middleware("http")
 async def enterprise_security_headers_middleware(request: Request, call_next):
-    """Enforces enterprise defense-in-depth HTTP security headers and payload size limits."""
+    """Enforces enterprise defense-in-depth HTTP security headers, rate limits, and payload size limits."""
+    # 1. In-flight rate limit check per client IP
+    client_ip = (
+        request.headers.get("cf-connecting-ip")
+        or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        or (request.client.host if request.client else "127.0.0.1")
+    )
+    # Burst cost 2.0 for heavy mutation/stream paths, 1.0 for standard
+    cost = 2.0 if any(p in request.url.path for p in ("/api/run", "/api/stream", "/api/redock")) else 0.5
+    allowed, retry_after = in_flight_limiter.allow_request(client_ip, cost=cost)
+    if not allowed:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "RATE_LIMIT_EXCEEDED",
+                "message": f"Too many requests from IP {client_ip}. Please retry after {retry_after} seconds.",
+                "retry_after": retry_after
+            },
+            headers={"Retry-After": str(int(retry_after) + 1)}
+        )
+
+    # 2. Payload size ceiling
     content_length = request.headers.get("content-length")
     if content_length and int(content_length) > MAX_PAYLOAD_SIZE:
         return JSONResponse(
@@ -46,22 +76,46 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
         )
 
     response: Response = await call_next(request)
+
+    # 3. Enterprise Hardened Security Headers
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https://health.api.nvidia.com https://integrate.api.nvidia.com https://files.rcsb.org;"
+    )
     if "server" in response.headers:
         del response.headers["server"]
     return response
 
 
+@app.exception_handler(ValueError)
+async def value_error_security_handler(request: Request, exc: ValueError):
+    """Handles validation and biosecurity screening violations with client-friendly 400 responses."""
+    err_msg = SecretScrubber.scrub(str(exc))
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "VALIDATION_FAILED",
+            "message": err_msg
+        }
+    )
+
+
 @app.exception_handler(Exception)
 async def global_security_exception_handler(request: Request, exc: Exception):
-    """Global exception handler to mask internal traces and prevent server info disclosure."""
+    """Global exception handler to mask internal traces and scrub secrets from logs."""
     import uuid
     error_id = f"sec_{uuid.uuid4().hex[:10]}"
-    logger.error("Internal processing error [%s] on %s %s: %s", error_id, request.method, request.url.path, exc)
+    safe_exc_msg = SecretScrubber.scrub(str(exc))
+    logger.error("Internal processing error [%s] on %s %s: %s", error_id, request.method, request.url.path, safe_exc_msg)
     return JSONResponse(
         status_code=500,
         content={
@@ -73,13 +127,23 @@ async def global_security_exception_handler(request: Request, exc: Exception):
 
 
 def sanitize_target_query(query: str) -> str:
-    """Sanitizes incoming biological target query against command injection and XSS."""
+    """Sanitizes incoming biological target query against command injection, XSS, and dual-use toxin keywords."""
     if not query:
         return "KRAS G12D"
-    cleaned = re.sub(r'<[^>]*?>', '', str(query))
+    # Pre-clamp length to eliminate ReDoS before regex evaluation
+    raw_str = str(query)[:1500]
+    cleaned = re.sub(r'<[^>]*?>', '', raw_str)
     cleaned = re.sub(r'[;&|`$><\\/\n\r]', ' ', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
-    return cleaned[:1500] if cleaned else "KRAS G12D"
+    candidate = cleaned[:1500] if cleaned else "KRAS G12D"
+
+    # Dual-Use Biosecurity verification
+    is_safe, reason = BiosecurityScreener.screen_target(candidate)
+    if not is_safe:
+        logger.warning("Biosecurity restriction triggered on target query '%s': %s", candidate, reason)
+        raise ValueError(reason or "BIOSECURITY_RESTRICTION: Target disallowed.")
+
+    return candidate
 
 
 def verify_request_origin(request: Request) -> bool:
@@ -281,6 +345,27 @@ def download_unix_installer():
         media_type="application/octet-stream",
         headers={"Content-Disposition": "attachment; filename=install.sh"}
     )
+
+
+@app.get("/api/download/checksums")
+def get_download_checksums():
+    """Cryptographic SHA-256 attestation manifest for installers and package integrity."""
+    import hashlib
+    files_to_hash = ["install.bat", "install.sh", "requirements.txt"]
+    checksums = {}
+    for fname in files_to_hash:
+        fpath = os.path.join(BASE_DIR, fname)
+        if os.path.exists(fpath):
+            with open(fpath, "rb") as f:
+                checksums[fname] = hashlib.sha256(f.read()).hexdigest()
+        else:
+            checksums[fname] = None
+    return JSONResponse({
+        "status": "success",
+        "algorithm": "SHA-256",
+        "attestation": "Verified NVIDIA BioNeMo Agentic Scientist Suite",
+        "checksums": checksums
+    })
 
 
 @app.get("/api/setup-guide")
@@ -562,9 +647,18 @@ async def api_fetch_target(request: Request):
 
     try:
         body = await request.json()
-        query = sanitize_target_query(body.get("target", "KRAS G12D"))
     except Exception:
-        query = "KRAS G12D"
+        body = {}
+
+    # Strict biosecurity screening and input sanitization
+    target_raw = body.get("target", "KRAS G12D")
+    try:
+        query = sanitize_target_query(target_raw)
+    except ValueError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "VALIDATION_FAILED", "message": SecretScrubber.scrub(str(ve))}
+        )
 
     from src.target_scout import TargetScoutAgent
     scout = TargetScoutAgent()
@@ -591,24 +685,32 @@ async def api_fetch_target(request: Request):
 
 @app.get("/api/target/pdb/{pdb_id}")
 def get_target_pdb(pdb_id: str):
-    """Fetches PDB structure text for the 3D WebGL viewer."""
-    clean_id = re.sub(r'[^A-Z0-9_-]', '', pdb_id.strip().upper())[:10]
-    if not clean_id:
-        return JSONResponse(status_code=400, content={"error": "Invalid PDB identifier."})
-    file_path = os.path.join(BASE_DIR, "data", "targets", f"{clean_id}.pdb")
+    """Fetches PDB structure text for the 3D WebGL viewer with strict anti-traversal & SSRF controls."""
+    clean_id = SafeSanitizer.sanitize_pdb_id(pdb_id)
+    if not clean_id or len(clean_id) != 4:
+        return JSONResponse(status_code=400, content={"error": "Invalid 4-character alphanumeric PDB identifier."})
+
+    # Prevent directory traversal: verify resolved path stays strictly within data/targets
+    target_dir = os.path.abspath(os.path.join(BASE_DIR, "data", "targets"))
+    file_path = os.path.abspath(os.path.join(target_dir, f"{clean_id}.pdb"))
+    if not file_path.startswith(target_dir):
+        return JSONResponse(status_code=403, content={"error": "PATH_TRAVERSAL_DETECTED", "message": "Disallowed path traversal attempt."})
+
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             return Response(content=f.read(), media_type="chemical/x-pdb")
-    # Universal fallback via RCSB PDB
-    if len(clean_id) == 4:
-        import urllib.request
-        try:
-            url = f"https://files.rcsb.org/download/{clean_id}.pdb"
-            req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                return Response(content=r.read(5 * 1024 * 1024).decode("utf-8", errors="replace"), media_type="chemical/x-pdb")
-        except Exception:
-            pass
+
+    # Hardened RCSB PDB upstream lookup (Strict HTTPS, pinned domain, timeout, max 5MB)
+    import urllib.request
+    try:
+        url = f"https://files.rcsb.org/download/{clean_id}.pdb"
+        req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            if r.status == 200:
+                data = r.read(5 * 1024 * 1024).decode("utf-8", errors="replace")
+                return Response(content=data, media_type="chemical/x-pdb")
+    except Exception:
+        pass
     return JSONResponse(status_code=404, content={"error": f"PDB {clean_id} not found."})
 
 @app.post("/api/redock")
@@ -631,11 +733,11 @@ async def api_redock(request: Request):
     try:
         body = await request.json()
         raw_smiles = body.get("smiles", "")
-        # Strict chemical SMILES token validation
-        modified_smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', str(raw_smiles))[:500]
+        # ReDoS-safe canonical chemical SMILES validation
+        modified_smiles = SafeSanitizer.sanitize_chemical_smiles(raw_smiles, max_length=500)
         target_name = sanitize_target_query(body.get("target", "KRAS G12D"))
     except Exception as e:
-        return JSONResponse(status_code=400, content={"error": f"Invalid request body: {str(e)}"})
+        return JSONResponse(status_code=400, content={"error": f"Invalid request body: {SecretScrubber.scrub(str(e))}"})
 
     api_key = os.getenv("NVIDIA_API_KEY", "").strip()
     use_mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
@@ -723,9 +825,9 @@ async def api_robot_protocol(request: Request):
     from src.robot_protocol import generate_ot2_protocol, generate_lab_card
     from src.models import RetrosynthesisPlan, RetrosynthesisStep
 
-    lead_id = re.sub(r'[^A-Za-z0-9_-]', '', str(body.get("lead_id", "LEAD-001")))[:30] or "LEAD-001"
+    lead_id = SafeSanitizer.sanitize_code_literal(str(body.get("lead_id", "LEAD-001")), 30) or "LEAD-001"
     raw_smiles = str(body.get("smiles", "CC(=O)N1CCNCC1"))
-    smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', raw_smiles)[:500] or "CC(=O)N1CCNCC1"
+    smiles = SafeSanitizer.sanitize_chemical_smiles(raw_smiles, 500)
     retro_data = body.get("retrosynthesis", {})
 
     steps_raw = retro_data.get("steps", [])

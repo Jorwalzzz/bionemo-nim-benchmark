@@ -229,19 +229,21 @@ class NimBioClient:
 
             except (requests.RequestException, requests.Timeout) as e:
                 attempt += 1
+                from src.security_sentinel import SecretScrubber
+                safe_err = SecretScrubber.scrub(str(e))
                 if attempt > self.max_retries:
-                    raise
+                    raise RuntimeError(f"NIM upstream communication failed: {safe_err}")
                 sleep_time = self.backoff_factor * (2 ** attempt) + random.uniform(0.1, 0.5)
                 logger.warning(
                     "Network error (%s) on attempt %d/%d. Retrying after %.2fs...",
-                    str(e),
+                    safe_err,
                     attempt,
                     self.max_retries,
                     sleep_time,
                 )
                 time.sleep(sleep_time)
 
-        raise RuntimeError(f"Exceeded max retries ({self.max_retries}) contacting {url}")
+        raise RuntimeError(f"Exceeded max retries ({self.max_retries}) contacting NVIDIA NIM endpoint.")
 
     def _simulate_esm2_response(self, clean_seq: str, seq_len: int) -> ESM2Response:
         """Generates realistic GPU TensorRT simulation profile for ESM-2."""

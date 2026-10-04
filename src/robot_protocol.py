@@ -103,19 +103,28 @@ def generate_ot2_protocol(
             starting_materials=["Precursor Scaffold A", "Commercial Reagent B"]
         )
 
+    from src.security_sentinel import SafeSanitizer
+
+    safe_candidate_id = SafeSanitizer.sanitize_code_literal(plan.candidate_id, 40)
+    safe_feasibility = SafeSanitizer.sanitize_code_literal(plan.overall_feasibility, 60)
+
     step_blocks = []
     
     for idx, step in enumerate(plan.steps, start=1):
+        safe_rxn_type = SafeSanitizer.sanitize_code_literal(step.reaction_type, 60)
+        safe_difficulty = SafeSanitizer.sanitize_code_literal(step.difficulty, 40)
+
         lines = []
         lines.append(f"\n    # ----------------------------------------------------")
-        lines.append(f"    # STEP {step.step_number}: {step.reaction_type.upper()}")
-        lines.append(f"    # Difficulty: {step.difficulty} | Expected Yield: {step.estimated_yield_pct:.0f}%")
+        lines.append(f"    # STEP {step.step_number}: {safe_rxn_type.upper()}")
+        lines.append(f"    # Difficulty: {safe_difficulty} | Expected Yield: {step.estimated_yield_pct:.0f}%")
         lines.append(f"    # ----------------------------------------------------")
-        lines.append(f"    protocol.comment('Executing Step {step.step_number}: {step.reaction_type}')")
+        lines.append(f"    protocol.comment('Executing Step {step.step_number}: {safe_rxn_type}')")
         
         # Add reactants
         for r_idx, reactant in enumerate(step.reactants, start=1):
-            r_name = reactant.get("name", f"Reactant_{r_idx}")
+            raw_r_name = reactant.get("name", f"Reactant_{r_idx}")
+            r_name = SafeSanitizer.sanitize_code_literal(raw_r_name, 50)
             res_well = f"A{((idx - 1) * 2 + r_idx) % 12 + 1}"
             lines.append(f"    # Liquid addition: {r_name} from Reservoir {res_well}")
             lines.append(f"    p300.pick_up_tip()")
@@ -126,7 +135,8 @@ def generate_ot2_protocol(
 
         # Add reagents
         for rg_idx, reagent in enumerate(step.reagents, start=1):
-            lines.append(f"    # Catalyst/Reagent dosing: {reagent}")
+            safe_reagent = SafeSanitizer.sanitize_code_literal(reagent, 50)
+            lines.append(f"    # Catalyst/Reagent dosing: {safe_reagent}")
             lines.append(f"    p300.pick_up_tip()")
             lines.append(f"    p300.aspirate(50, reagents['A{min(12, rg_idx + 6)}'])")
             lines.append(f"    p300.dispense(50, rxn_block['A{idx}'])")
@@ -145,9 +155,9 @@ def generate_ot2_protocol(
         all_steps_text = "    protocol.comment('Single-step verified commercial precursor ready.')"
 
     return OT2_TEMPLATE.format(
-        candidate_id=plan.candidate_id,
+        candidate_id=safe_candidate_id,
         num_steps=plan.num_steps,
-        feasibility=plan.overall_feasibility,
+        feasibility=safe_feasibility,
         timestamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         step_commands=all_steps_text
     )
