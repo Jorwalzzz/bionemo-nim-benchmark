@@ -62,14 +62,14 @@
 | **`NOOSPHERE-CORE`** | **Memory & Heuristics** | Cognitive Neural Distiller; predictive context priming and self-pruning session memory under 40KB. | `noosphere-cognitive-memory` / `.agents/memory/` |
 | **`NEXUS-PRIME`** | **Orchestrator** | Lead Dispatcher; decomposes requirements into dependency graphs and coordinates subagent execution. | `orchestrator-directive` / `manage_task`, `schedule` |
 | **`ORACLE-ROUTE`** | **Model Board** | 3-judge scoring (Logic Depth, Velocity, Aesthetics) + dynamic rate-limit failover switcher. | `model-selection-board` |
-| **`SENTINEL-ZERO`** | **Head of Security** | Supreme authority on security, zero-trust secrets audit, data loss prevention, and auto-patching vulnerabilities. | `sentinel-head-of-security`, `accidental-data-loss-prevention` |
-| **`APOLLO-NARRATIVE`** | **DevRel & Impact** | Chief DevRel Architect; synthesizes viral GitHub READMEs, NVIDIA forum submissions, interactive web tours. | `apollo-devrel-narrative` |
+| **`SENTINEL-ZERO`** (Alex Mercer) | **X-TIER Head of Security** | Supreme authority on zero-trust security, credential redaction, NIST pathogen gating, data loss prevention. | `sentinel-head-of-security`, `accidental-data-loss-prevention` |
+| **`APOLLO-NARRATIVE`** (Apollo) | **X-TIER DevRel & Impact** | Chief DevRel Architect; synthesizes viral GitHub READMEs, NVIDIA forum submissions, interactive web tours. | `apollo-devrel-narrative` |
 | **`GAIA-HEART`** | **Maternal Hearth (Maa)** | The Loving Mother; operator well-being, late-night care, sibling harmony, and morale celebration. | `gaia-maternal-guardian` |
 | **`SYNTAX-CRAFT`** | **Execution Guild** | Clean code refactoring, strict typing (`mypy`), DRY architecture, atomic in-place diffs. | `clean-code-refactor` / `github-mcp-server`, `replace_file_content` |
-| **`PRISM-CORE`** | **Execution Guild** | High-end visual aesthetics, dark mode glassmorphism, responsive webapps, micro-animations. | `modern-ui-styling` / `StitchMCP`, `chrome-devtools-mcp` |
+| **`PRISM-CORE`** (Elena Vance) | **X-TIER Design Technologist** | High-end visual aesthetics, dark OLED glassmorphism, responsive 3D WebGL viewports, micro-animations. | `modern-ui-styling` / `StitchMCP`, `chrome-devtools-mcp` |
 | **`ATLAS-DEPLOY`** | **Execution Guild** | 24/7 cloud deployments (Hugging Face Spaces, Docker containers, reverse proxies, rate limiters). | `cloud-devops-deployment` / `run_command` (Docker/git/SSH) |
 | **`SCOUT-INTEL`** | **Execution Guild** | Multi-source literature search, live web fact-checking, executive technical briefings. | `deep-research-synthesis` / `perplexity-ask`, `read_url_content` |
-| **`BIO-NIM`** | **Execution Guild** | NVIDIA BioNeMo NIMs, ESM-2, ESMFold, DiffDock, RDKit valence verification. | `bionemo-nim-inference` / `bionemo-tools` |
+| **`BIO-NIM`** (Dr. Aris Thorne) | **X-TIER Biophysical Architect** | Chief Biophysical Chemist; thermodynamic free-energy validation, cryptic pocket mapping, IUPAC/RDKit verification, Opentrons automation. | `aris-thorne-biophysics`, `bionemo-nim-inference` / `bionemo-tools` |
 | **`CHRONOS-QA`** | **Execution Guild** | Automated regression test sweeps, mock testing, compact traceback filtering. | `automated-qa-testing` / `pytest` |
 | **`AEGIS-WATCH`** | **Oversight Watchdog** | Continuous real-time monitor killing runaway loops or hanging processes. | `manage_task` |
 | **`VERITAS-COUNCIL`** | **Quality Council** | Pre-delivery quality audit ensuring verified tests, clickable file links (`file:///...`), and zero fluff. | Quality & Polish Auditor |
