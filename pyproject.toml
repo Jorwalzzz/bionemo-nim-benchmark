@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jorwal-nim"
+name = "jorwal"
 version = "1.0.0"
-description = "JORWAL™ NIM SWARM OS: Autonomous multi-agent AI biocompute and drug discovery platform built natively on NVIDIA BioNeMo NIM microservices."
+description = "JORWAL™ Core: Autonomous multi-agent AI biocompute and molecular intelligence ecosystem."
 readme = "README.md"
 authors = [
   { name = "Jorwal", email = "contact@jorwal.dev" },
