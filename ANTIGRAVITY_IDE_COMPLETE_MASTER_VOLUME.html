@@ -171,6 +171,34 @@
     }
     .callout.amber { background: var(--amber-glow); border-left-color: var(--amber); }
     .callout.rose { background: var(--rose-glow); border-left-color: var(--rose); }
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+    .nav-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(118, 185, 0, 0.4);
+    }
     footer {
       text-align: center;
       margin-top: 60px;
@@ -184,6 +212,10 @@
 <body>
 
   <header>
+    <div class="top-nav">
+      <a href="index.html" class="nav-btn">← Home Portal</a>
+      <a href="cockpit.html" class="nav-btn" style="border-color: rgba(118, 185, 0, 0.4); color: #76b900;">🚀 Discovery Cockpit →</a>
+    </div>
     <div class="badge-hero">Definitive 100% Operating Manual</div>
     <h1>The Antigravity IDE Master Volume</h1>
     <p class="subtitle">Complete Exhaustive Documentation: Every Surface, Model, Modality, Tool, All 33 MCP Servers (373 Tools), and All 57 Skills.</p>

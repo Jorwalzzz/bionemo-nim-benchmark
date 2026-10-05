@@ -7,9 +7,10 @@
 <meta name="description" content="Autonomous multi-agent AI platform for target-to-lead drug discovery powered by NVIDIA BioNeMo NIMs (MolMIM, DiffDock, ESM-2)."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+<script src="results/pdb_data.js"></script>
 <script>
 let selectedRounds = 2;
 let currentCustomPdb = null;
@@ -528,12 +529,14 @@ tailwind.config = {
     --surface-border: #21262d;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: var(--surface-base); color: #e6edf3; min-height: 100vh; overflow-x: hidden; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--surface-base); color: #e6edf3; min-height: 100vh; overflow-x: hidden; }
   body.modal-open { overflow: hidden; }
+  h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
 
-  /* Glassmorphism */
-  .glass { background: rgba(13,17,23,0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(33,38,45,0.8); }
-  .glass-bright { background: rgba(22,27,34,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(118,185,0,0.15); }
+  /* Glassmorphism 2.0 */
+  .glass { background: rgba(13,17,23,0.78); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+  .glass-bright { background: rgba(22,27,34,0.9); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(118,185,0,0.25); box-shadow: 0 10px 40px -10px rgba(118,185,0,0.15); }
 
   /* NVIDIA glow effects */
   .glow-green { box-shadow: 0 0 15px rgba(118,185,0,0.25), 0 0 40px rgba(118,185,0,0.08); }
@@ -805,23 +808,27 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
         Mock Mode Active
       </div>
+      <a href="index.html" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
+        <span>← Home Portal</span>
+      </a>
       <button onclick="startInteractiveTour()" class="px-3 py-2 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: 1px solid rgba(236, 72, 153, 0.5); box-shadow: 0 0 15px rgba(236, 72, 153, 0.25);">
-        <span>🧭 10-Step Interactive Guide</span>
+        <span>🧭 10-Step Guide</span>
+      </button>
+      <button onclick="exportForumPostModal()" class="hidden md:flex px-3 py-2 rounded-lg text-xs font-bold text-white items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, rgba(168,85,247,0.3), rgba(99,102,241,0.2)); border: 1px solid rgba(168,85,247,0.5);">
+        <span>📋 DevRel Showcase</span>
       </button>
       <button onclick="openResistanceModal()" class="px-3 py-2 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, rgba(239,68,68,0.25), rgba(168,85,247,0.15)); border: 1px solid rgba(239,68,68,0.5);">
         <span class="w-2 h-2 rounded-full bg-red-400 animate-pulse"></span>
-        <span>🧬 Resistance Lab</span>
-        <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/30">ESM-2 / MolMIM</span>
+        <span>🧬 Resistance</span>
       </button>
       <button onclick="openBenchmarkModal()" class="px-3 py-2 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105 glow-green" style="background: linear-gradient(135deg, rgba(118,185,0,0.25), rgba(0,241,253,0.15)); border: 1px solid rgba(118,185,0,0.6);">
         <span class="w-2 h-2 rounded-full bg-nvidia-green animate-pulse"></span>
         <span>⚡ Hardware Benchmark</span>
-        <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-nvidia-green/20 text-nvidia-green border border-nvidia-green/30">H100 vs CPU</span>
       </button>
 
       <button onclick="openInstallModal()" class="btn-cta text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-2 glow-green">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.81 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.95 2.55 2 6.82 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.81 18 5 15.21 5 12c0-4.08 3.05-7.44 7-7.93V2.05z"/></svg>
-        ⚡ Get Full App — 1 Click
+        <span>⚡ Get Full App</span>
       </button>
     </div>
   </div>
@@ -1053,7 +1060,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <span>Architected & engineered by <strong class="text-nvidia-green">Aarav Jorwal (@Jorwalzzz)</strong></span>
   </div>
   <p class="text-gray-500 text-[10px] leading-normal">
-    Special thanks to the <a href="https://developer.nvidia.com" target="_blank" class="text-gray-400 hover:text-nvidia-green underline">NVIDIA Developer Program</a> & <a href="https://www.nvidia.com/cloudecosystem/bionemo/" target="_blank" class="text-gray-400 hover:text-nvidia-green underline">BioNeMo team</a> for providing the GPU microservices (MolMIM, DiffDock, ESM-2), and the open-source scientific community (RDKit, RCSB PDB, 3Dmol.js).
+    Special thanks to the <a href="https://developer.nvidia.com" target="_blank" class="text-gray-400 hover:text-nvidia-green underline">NVIDIA Developer Program</a> & <a href="https://build.nvidia.com/explore/discover" target="_blank" class="text-gray-400 hover:text-nvidia-green underline">BioNeMo team</a> for providing the GPU microservices (MolMIM, DiffDock, ESM-2), and the open-source scientific community (RDKit, RCSB PDB, 3Dmol.js).
   </p>
   <div class="mt-2 flex items-center gap-2 text-[10px] text-gray-500 font-mono">
     <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">AGPLv3 Copyleft</span>
@@ -2850,6 +2857,8 @@ function executeTourAction() {
     </div>
   </div>
 </div>
+
+
 
 <!-- ═══════════════════════════════════════════════ FORUM SHOWCASE MODAL ══════ -->
 <div id="forumPostModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeForumModal()">

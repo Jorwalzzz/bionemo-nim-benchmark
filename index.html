@@ -5,219 +5,274 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>JORWAL™ NIM SWARM OS — Autonomous Multi-Agent AI Drug Discovery</title>
   <meta name="description" content="JORWAL™ NIM SWARM OS: Autonomous AI Molecular Scientist powered by NVIDIA BioNeMo NIM Microservices. Architected by Aarav Jorwal (@Jorwalzzz)."/>
+  
+  <!-- High-End Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
   <script src="results/pdb_data.js"></script>
+
   <style>
     :root {
       --nvidia-green: #76b900;
       --nvidia-bright: #93d900;
       --cyan-neon: #00f1fd;
-      --bg-dark: #06090e;
-      --card-bg: rgba(14, 20, 32, 0.85);
+      --violet-neon: #a855f7;
+      --amber-neon: #f59e0b;
+      --bg-dark: #03060a;
+      --card-bg: rgba(10, 16, 26, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
     }
+    
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: var(--bg-dark);
       color: #e2e8f0;
       overflow-x: hidden;
     }
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
     
-    /* Cyber Bio Grid */
-    .bg-grid {
+    h1, h2, h3, .font-heading {
+      font-family: 'Outfit', sans-serif;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Dynamic Cosmic Mesh Grid */
+    .bg-cosmic-mesh {
+      background-color: #03060a;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.12) 0%, transparent 60%),
-        linear-gradient(rgba(118, 185, 0, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(118, 185, 0, 0.04) 1px, transparent 1px);
-      background-size: 100% 100%, 48px 48px, 48px 48px;
+        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.15) 0%, transparent 55%),
+        radial-gradient(circle at 85% 30%, rgba(0, 241, 253, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 15% 60%, rgba(168, 85, 247, 0.06) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
     }
     
-    .glass-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    /* Glassmorphism 2.0 */
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(14, 22, 36, 0.75) 0%, rgba(8, 13, 22, 0.85) 100%);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
-
-    .glass-card:hover {
+    
+    .glass-panel:hover {
       border-color: rgba(118, 185, 0, 0.35);
-      box-shadow: 0 20px 50px rgba(118, 185, 0, 0.12);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(118, 185, 0, 0.12);
+    }
+    
+    /* Neon Glow Badges */
+    .glow-badge {
+      background: linear-gradient(135deg, rgba(118, 185, 0, 0.12) 0%, rgba(0, 241, 253, 0.06) 100%);
+      border: 1px solid rgba(118, 185, 0, 0.35);
+      box-shadow: 0 0 20px rgba(118, 185, 0, 0.2);
+    }
+    
+    /* Primary NVIDIA Button */
+    .btn-nvidia-glow {
+      background: linear-gradient(135deg, #76b900 0%, #4b7700 100%);
+      color: #03060a;
+      font-weight: 800;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 30px rgba(118, 185, 0, 0.45);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-nvidia-glow::after {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+      transform: rotate(25deg) translateY(-100%);
+      transition: transform 0.6s ease;
+    }
+    .btn-nvidia-glow:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 40px rgba(118, 185, 0, 0.65);
+      background: linear-gradient(135deg, #8bee00 0%, #68a300 100%);
+    }
+    .btn-nvidia-glow:hover::after {
+      transform: rotate(25deg) translateY(100%);
     }
 
-    .btn-nvidia {
-      background: linear-gradient(135deg, #76b900 0%, #528200 100%);
-      color: #05080c;
-      font-weight: 700;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 25px rgba(118, 185, 0, 0.4);
+    /* Luxury Shortcut Cards */
+    .shortcut-card-luxury {
+      position: relative;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.008) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .btn-nvidia:hover {
-      transform: translateY(-2px);
-      background: linear-gradient(135deg, #8cee00 0%, #76b900 100%);
-      box-shadow: 0 8px 35px rgba(118, 185, 0, 0.6);
+    .shortcut-card-luxury:hover {
+      transform: translateY(-3px) scale(1.015);
     }
-
-    .glow-pill {
-      background: rgba(118, 185, 0, 0.1);
-      border: 1px solid rgba(118, 185, 0, 0.3);
-      color: var(--nvidia-bright);
+    .card-emerald:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.03) 100%);
+      border-color: rgba(16, 185, 129, 0.6);
+      box-shadow: 0 16px 35px -8px rgba(16, 185, 129, 0.35);
+    }
+    .card-blue:hover {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.03) 100%);
+      border-color: rgba(59, 130, 246, 0.6);
+      box-shadow: 0 16px 35px -8px rgba(59, 130, 246, 0.35);
+    }
+    .card-amber:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.03) 100%);
+      border-color: rgba(245, 158, 11, 0.6);
+      box-shadow: 0 16px 35px -8px rgba(245, 158, 11, 0.35);
+    }
+    .card-purple:hover {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(168, 85, 247, 0.03) 100%);
+      border-color: rgba(168, 85, 247, 0.6);
+      box-shadow: 0 16px 35px -8px rgba(168, 85, 247, 0.35);
     }
 
     /* 3D Viewport Controls */
-    .ctrl-btn {
-      background: rgba(22, 30, 46, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+    .ctrl-pill {
+      background: rgba(18, 26, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: #94a3b8;
       font-size: 11px;
-      font-weight: 600;
-      padding: 6px 12px;
-      border-radius: 8px;
-      transition: all 0.2s;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      transition: all 0.25s ease;
     }
-    .ctrl-btn:hover, .ctrl-btn.active {
-      color: #ffffff;
-      border-color: var(--nvidia-green);
-      background: rgba(118, 185, 0, 0.15);
+    .ctrl-pill:hover, .ctrl-pill.active {
+      color: #03060a;
+      background: #76b900;
+      border-color: #8cee00;
+      box-shadow: 0 0 15px rgba(118, 185, 0, 0.5);
+    }
+
+    /* Swarm Live Beacon */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.25); opacity: 0.3; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-glow {
+      animation: pulse-ring 2.5s infinite ease-in-out;
     }
   </style>
 </head>
-<body class="bg-grid min-h-screen flex flex-col selection:bg-emerald-500/30">
+<body class="bg-cosmic-mesh min-h-screen flex flex-col selection:bg-emerald-500/30">
 
-  <!-- TOP NAVBAR -->
-  <header class="sticky top-0 z-50 glass-card border-b border-white/5">
-    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl overflow-hidden border border-emerald-500/40 shadow-lg shadow-emerald-500/20 flex items-center justify-center bg-[#04070c]">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
-  <defs>
-    <!-- Background Gradient -->
-    <radialGradient id="plateGlow" cx="50%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#0f1923"/>
-      <stop offset="100%" stop-color="#05080c"/>
-    </radialGradient>
-
-    <!-- Emerald / NVIDIA Green to Quantum Cyan Gradient -->
-    <linearGradient id="helixGradA" x1="15%" y1="10%" x2="85%" y2="90%">
-      <stop offset="0%" stop-color="#76B900"/>
-      <stop offset="50%" stop-color="#10B981"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
-    </linearGradient>
-
-    <linearGradient id="helixGradB" x1="85%" y1="15%" x2="20%" y2="95%">
-      <stop offset="0%" stop-color="#00F0FF"/>
-      <stop offset="60%" stop-color="#10B981"/>
-      <stop offset="100%" stop-color="#76B900"/>
-    </linearGradient>
-
-    <!-- Neon Rim Stroke Gradient -->
-    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#76B900" stop-opacity="0.8"/>
-      <stop offset="40%" stop-color="#10B981" stop-opacity="0.3"/>
-      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.6"/>
-    </linearGradient>
-
-    <!-- Glow Filter for active site -->
-    <filter id="coreGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-
-  <!-- Base Squircle Plate -->
-  <rect x="6" y="6" width="108" height="108" rx="26" fill="url(#plateGlow)" stroke="url(#rimGrad)" stroke-width="1.75"/>
-
-  <!-- Subtle Hexagonal Ambient Grid Lines in Background -->
-  <path d="M60 20 L86 35 L86 65 L60 80 L34 65 L34 35 Z" stroke="#76B900" stroke-opacity="0.08" stroke-width="1.5" fill="none"/>
-  <path d="M60 28 L78 38.5 L78 59.5 L60 70 L42 59.5 L42 38.5 Z" stroke="#00F0FF" stroke-opacity="0.06" stroke-width="1" fill="none"/>
-
-  <!-- Chiral Macromolecular Fold (Continuous Tensor Ribbon Loop) -->
-  <!-- Loop Strand 1: Upper Right to Lower Left sweeping fold -->
-  <path d="M60 24 C78 24, 94 38, 94 56 C94 72, 82 86, 68 88 C54 90, 42 82, 38 72 C34 62, 40 50, 52 46 C64 42, 74 48, 76 58 C78 68, 70 76, 60 76 C50 76, 44 68, 44 60"
-        stroke="url(#helixGradA)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95"/>
-
-  <!-- Loop Strand 2: Overlapping Inverse Chiral Ribbon for 3D Depth -->
-  <path d="M60 24 C44 24, 26 38, 26 56 C26 70, 36 84, 52 88 C66 91, 78 84, 82 72 C86 60, 78 48, 66 44 C56 41, 46 48, 44 56"
-        stroke="url(#helixGradB)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85"/>
-
-  <!-- Precision Geometric Nodes (Macromolecular Catalytic Coordinate Vertices) -->
-  <!-- Top Node -->
-  <circle cx="60" cy="24" r="4.5" fill="#76B900" filter="url(#coreGlow)"/>
-  <circle cx="60" cy="24" r="2" fill="#FFFFFF"/>
-
-  <!-- Right Node -->
-  <circle cx="94" cy="56" r="4" fill="#10B981" filter="url(#coreGlow)"/>
-  <circle cx="94" cy="56" r="1.8" fill="#FFFFFF"/>
-
-  <!-- Left Node -->
-  <circle cx="26" cy="56" r="4" fill="#00F0FF" filter="url(#coreGlow)"/>
-  <circle cx="26" cy="56" r="1.8" fill="#FFFFFF"/>
-
-  <!-- Bottom Fold Intersect -->
-  <circle cx="60" cy="88" r="3.5" fill="#76B900" filter="url(#coreGlow)"/>
-  <circle cx="60" cy="88" r="1.5" fill="#FFFFFF"/>
-
-  <!-- Active Catalytic Site Core: Glowing Ligand Diamond in the pocket center -->
-  <g transform="translate(60, 58) rotate(45)">
-    <rect x="-5" y="-5" width="10" height="10" rx="2" fill="#00F0FF" filter="url(#coreGlow)" opacity="0.9"/>
-    <rect x="-2" y="-2" width="4" height="4" rx="0.5" fill="#FFFFFF"/>
-  </g>
-
-  <!-- Micro Coordinate Crosshairs -->
-  <line x1="60" y1="46" x2="60" y2="50" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
-  <line x1="60" y1="66" x2="60" y2="70" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
-  <line x1="48" y1="58" x2="52" y2="58" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
-  <line x1="68" y1="58" x2="72" y2="58" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="1"/>
-</svg>
+  <!-- TOP SOVEREIGN NAVBAR -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-white/5 backdrop-blur-2xl">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- Brand & Trademark Plate -->
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl overflow-hidden border border-emerald-500/40 shadow-xl shadow-emerald-500/25 flex items-center justify-center bg-[#03060a] p-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" class="w-full h-full">
+            <defs>
+              <radialGradient id="plateGlow" cx="50%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#0f1923"/>
+                <stop offset="100%" stop-color="#05080c"/>
+              </radialGradient>
+              <linearGradient id="helixGradA" x1="15%" y1="10%" x2="85%" y2="90%">
+                <stop offset="0%" stop-color="#76B900"/>
+                <stop offset="50%" stop-color="#10B981"/>
+                <stop offset="100%" stop-color="#06B6D4"/>
+              </linearGradient>
+              <linearGradient id="helixGradB" x1="85%" y1="15%" x2="20%" y2="95%">
+                <stop offset="0%" stop-color="#00F0FF"/>
+                <stop offset="60%" stop-color="#10B981"/>
+                <stop offset="100%" stop-color="#76B900"/>
+              </linearGradient>
+              <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#76B900" stop-opacity="0.8"/>
+                <stop offset="40%" stop-color="#10B981" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.6"/>
+              </linearGradient>
+              <filter id="coreGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            <rect x="6" y="6" width="108" height="108" rx="26" fill="url(#plateGlow)" stroke="url(#rimGrad)" stroke-width="1.75"/>
+            <path d="M60 20 L86 35 L86 65 L60 80 L34 65 L34 35 Z" stroke="#76B900" stroke-opacity="0.1" stroke-width="1.5" fill="none"/>
+            <path d="M60 24 C78 24, 94 38, 94 56 C94 72, 82 86, 68 88 C54 90, 42 82, 38 72 C34 62, 40 50, 52 46 C64 42, 74 48, 76 58 C78 68, 70 76, 60 76 C50 76, 44 68, 44 60"
+                  stroke="url(#helixGradA)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.95"/>
+            <path d="M60 24 C44 24, 26 38, 26 56 C26 70, 36 84, 52 88 C66 91, 78 84, 82 72 C86 60, 78 48, 66 44 C56 41, 46 48, 44 56"
+                  stroke="url(#helixGradB)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85"/>
+            <circle cx="60" cy="24" r="4.5" fill="#76B900" filter="url(#coreGlow)"/>
+            <circle cx="60" cy="24" r="2" fill="#FFFFFF"/>
+            <circle cx="94" cy="56" r="4" fill="#10B981" filter="url(#coreGlow)"/>
+            <circle cx="94" cy="56" r="1.8" fill="#FFFFFF"/>
+            <circle cx="26" cy="56" r="4" fill="#00F0FF" filter="url(#coreGlow)"/>
+            <circle cx="26" cy="56" r="1.8" fill="#FFFFFF"/>
+            <circle cx="60" cy="88" r="3.5" fill="#76B900" filter="url(#coreGlow)"/>
+            <circle cx="60" cy="88" r="1.5" fill="#FFFFFF"/>
+            <g transform="translate(60, 58) rotate(45)">
+              <rect x="-5" y="-5" width="10" height="10" rx="2" fill="#00F0FF" filter="url(#coreGlow)" opacity="0.9"/>
+              <rect x="-2" y="-2" width="4" height="4" rx="0.5" fill="#FFFFFF"/>
+            </g>
+          </svg>
         </div>
         <div>
-          <div class="font-extrabold text-base tracking-wide text-white flex items-center gap-2">
+          <div class="font-heading font-extrabold text-lg tracking-wide text-white flex items-center gap-2.5">
             <span>JORWAL™ NIM</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">SWARM OS</span>
+            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase tracking-wider">SWARM OS</span>
           </div>
-          <div class="text-[10px] text-gray-400 font-mono">Autonomous BioNeMo™ Multi-Agent Swarm &bull; Architected by Jorwal (@Jorwalzzz)</div>
+          <div class="text-[11px] text-gray-400 font-mono flex items-center gap-2">
+            <span>Autonomous Molecular Discovery</span>
+            <span class="text-gray-600">•</span>
+            <span class="text-emerald-400 font-semibold">Aarav Jorwal (@Jorwalzzz)</span>
+          </div>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white transition-colors">
-          <span>GitHub</span>
-          <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white/10">v2.4</span>
+      <!-- Action Nav Items -->
+      <div class="flex items-center gap-4">
+        <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" class="hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 transition-all">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span>Star on GitHub</span>
+          <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">v2.5</span>
         </a>
-        <a href="cockpit.html" class="btn-nvidia px-5 py-2 rounded-xl text-xs flex items-center gap-2 tracking-wide uppercase">
-          <span>Launch Cockpit</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+        
+        <a href="cockpit.html" class="btn-nvidia-glow px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2">
+          <span>Launch Cockpit Swarm</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
         </a>
       </div>
     </div>
   </header>
 
-  <!-- HERO SECTION -->
-  <main class="max-w-7xl mx-auto px-6 py-12 flex-1 flex flex-col justify-center">
+  <!-- HERO MAIN SECTION -->
+  <main class="max-w-7xl mx-auto px-6 py-10 flex-1 flex flex-col justify-center">
 
-    <!-- Header Badge & Title -->
+    <!-- Header Hero Callout -->
     <div class="text-center space-y-4 max-w-4xl mx-auto mb-10">
-      <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full glow-pill text-xs font-mono font-semibold">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Powered by NVIDIA BioNeMo & NIM Inference Microservices</span>
+      
+      <!-- High-Bench Status Pill -->
+      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glow-badge text-xs font-mono font-semibold">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-glow"></span>
+        <span class="text-emerald-300 font-bold">NVIDIA BioNeMo & NIM Accelerated</span>
+        <span class="text-gray-500">•</span>
+        <span class="text-gray-300">Multi-Agent Swarm v2.5</span>
       </div>
 
-      <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08] font-heading">
         Autonomous Molecular Discovery <br/>
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#76b900] via-cyan-400 to-[#bbf451]">
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#76b900] via-[#00f1fd] to-[#cbfb60]">
           From Raw Sequence to Wet-Lab Robotics
         </span>
       </h1>
 
-      <p class="text-gray-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-        Watch the multi-sub-agent council fold de novo oncogenic targets, explore chemical latent space, perform score-based diffusion docking, and compile certified <strong>FDA IND Section 2 Dossiers</strong> with <strong>Opentrons OT-2 Python scripts</strong> in 45 seconds.
+      <p class="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto leading-relaxed">
+        Watch the 25-member sovereign agent council fold de novo oncogenic targets, explore chemical latent space with <strong>MolMIM</strong>, perform diffusion docking with <strong>DiffDock</strong>, and compile certified <strong>FDA IND Section 2 Dossiers</strong> with <strong>Opentrons OT-2 Robot Scripts</strong> in under 45 seconds.
       </p>
     </div>
 
@@ -225,181 +280,319 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
 
       <!-- LEFT: Cinema 3D Viewport (8 Columns) -->
-      <div class="lg:col-span-8 glass-card rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden">
+      <div class="lg:col-span-8 glass-panel rounded-3xl p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden">
         
         <!-- Viewport Top Bar -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-3">
-          <div class="flex items-center gap-2.5">
-            <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-3.5 h-3.5 rounded-full bg-emerald-400 pulse-glow"></div>
             <div>
-              <div class="text-sm font-bold text-white flex items-center gap-2">
+              <div class="text-base font-bold text-white flex items-center gap-2.5">
                 <span>KRAS G12D Switch-II Pocket</span>
-                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">PDB: 8AZV</span>
+                <span class="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">PDB: 8AZV</span>
               </div>
-              <div class="text-[11px] text-gray-400">Bound to MRTX1133 Pan-KRAS Inhibitor Scaffold</div>
+              <div class="text-xs text-gray-400 mt-0.5">Bound to MRTX1133 Pan-KRAS Inhibitor Scaffold • SE(3) Equivariant Pose</div>
             </div>
           </div>
 
-          <!-- Interactive 3D Camera & Style Controls -->
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button onclick="toggleSpin()" id="btnSpin" class="ctrl-btn active">🔄 Rotate</button>
-            <button onclick="focusPocket()" class="ctrl-btn">🎯 Focus Pocket</button>
-            <button onclick="toggleSurface()" id="btnSurf" class="ctrl-btn">🎨 Surface</button>
-            <button onclick="resetCam()" class="ctrl-btn">🔍 Reset</button>
+          <!-- Interactive 3D Camera Controls -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="toggleSpin()" id="btnSpin" class="ctrl-pill active">🔄 Auto-Rotate</button>
+            <button onclick="focusPocket()" class="ctrl-pill">🎯 Focus Pocket</button>
+            <button onclick="toggleSurface()" id="btnSurf" class="ctrl-pill">🎨 Molecular Surface</button>
+            <button onclick="resetCam()" class="ctrl-pill">🔍 Reset</button>
           </div>
         </div>
 
         <!-- WebGL 3D Container -->
-        <div id="hero3DStage" class="w-full h-[400px] rounded-xl relative overflow-hidden bg-[#070b12] border border-white/5">
-          <!-- Floating Legend HUD inside 3D Viewport -->
-          <div class="absolute bottom-3 left-3 z-10 glass-card px-3.5 py-2 rounded-xl text-[11px] font-mono space-y-1 bg-[#090d16]/90 border border-white/10">
-            <div class="flex items-center gap-2 text-gray-300">
+        <div id="hero3DStage" class="w-full h-[420px] rounded-2xl relative overflow-hidden bg-[#040810] border border-white/10 shadow-inner">
+          
+          <!-- Floating Legend HUD -->
+          <div class="absolute bottom-4 left-4 z-10 glass-panel px-4 py-2.5 rounded-2xl text-[11px] font-mono space-y-1.5 bg-[#060a14]/90 border border-white/10 shadow-2xl">
+            <div class="flex items-center gap-2 text-gray-200">
               <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
               <span>Pocket Residues (Asp12, Tyr96, Gln61)</span>
             </div>
-            <div class="flex items-center gap-2 text-gray-300">
+            <div class="flex items-center gap-2 text-gray-200">
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-              <span>NIM DiffDock Docked Ligand Pose</span>
+              <span>NIM DiffDock Ligand Pose (MRTX1133)</span>
             </div>
             <div class="flex items-center gap-2 text-yellow-300 font-bold">
               <span class="w-2.5 h-1 bg-yellow-400 rounded-sm"></span>
-              <span>Active H-Bond Vector: 2.84Å</span>
+              <span>H-Bond Vector: 2.84Å (Salt Bridge)</span>
             </div>
           </div>
 
-          <div class="absolute top-3 right-3 z-10 font-mono text-xs px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold backdrop-blur-md">
-            ΔG: -9.40 kcal/mol
+          <!-- Affinity Metric Callout -->
+          <div class="absolute top-4 right-4 z-10 font-mono text-xs px-3.5 py-1.5 rounded-xl bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-bold backdrop-blur-xl shadow-lg">
+            ⚡ Estimated ΔG: -9.40 kcal/mol
           </div>
         </div>
 
         <!-- Telemetry Metrics Bar Under 3D Viewer -->
-        <div class="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div class="p-2 rounded-xl bg-white/5">
-            <div class="text-[10px] text-gray-400 font-mono uppercase">DiffDock Poses</div>
-            <div class="text-lg font-bold text-white font-mono">10 / Complex</div>
+        <div class="mt-5 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-center">
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/5">
+            <div class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">DiffDock Poses</div>
+            <div class="text-xl font-extrabold text-white font-mono mt-1">10 / Complex</div>
           </div>
-          <div class="p-2 rounded-xl bg-white/5">
-            <div class="text-[10px] text-gray-400 font-mono uppercase">Drug-Likeness (QED)</div>
-            <div class="text-lg font-bold text-cyan-400 font-mono">0.78 / 1.0</div>
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/5">
+            <div class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Drug-Likeness (QED)</div>
+            <div class="text-xl font-extrabold text-cyan-400 font-mono mt-1">0.78 / 1.0</div>
           </div>
-          <div class="p-2 rounded-xl bg-white/5">
-            <div class="text-[10px] text-gray-400 font-mono uppercase">Synthesis (SAScore)</div>
-            <div class="text-lg font-bold text-emerald-400 font-mono">2.7 (Easy)</div>
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/5">
+            <div class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Synthesizability</div>
+            <div class="text-xl font-extrabold text-emerald-400 font-mono mt-1">SAScore 2.7</div>
           </div>
-          <div class="p-2 rounded-xl bg-white/5">
-            <div class="text-[10px] text-gray-400 font-mono uppercase">Biosecurity Gate</div>
-            <div class="text-lg font-bold text-emerald-400 font-mono">NIST-GDM100 ✓</div>
+          <div class="p-3 rounded-2xl bg-white/5 border border-white/5">
+            <div class="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Biosecurity Gate</div>
+            <div class="text-xl font-extrabold text-emerald-400 font-mono mt-1">NIST-GDM100 ✓</div>
           </div>
         </div>
 
       </div>
 
-      <!-- RIGHT: Benchmarks, Autonomous Swarm & Actions (4 Columns) -->
-      <div class="lg:col-span-4 space-y-5 flex flex-col justify-between">
+      <!-- RIGHT: Benchmarks, Deliverables & Launch (4 Columns) -->
+      <div class="lg:col-span-4 space-y-6 flex flex-col justify-between">
         
         <!-- Hardware Speedup & Green Compute Card -->
-        <div id="benchmark-card" class="glass-card rounded-2xl p-5 border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-transparent">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">NVIDIA H100 vs Host CPU</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Measured Live</span>
+        <div id="benchmark-card" class="glass-panel rounded-3xl p-6 border border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 to-transparent shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
+              <span>🚀</span> NVIDIA H100 vs Host CPU
+            </span>
+            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 font-bold">Empirical</span>
           </div>
-          <div class="text-4xl font-extrabold text-white font-mono flex items-baseline gap-2">
+          
+          <div class="text-4xl sm:text-5xl font-extrabold text-white font-mono flex items-baseline gap-2">
             <span>58.4×</span>
-            <span class="text-xs font-sans text-gray-300 font-normal">Faster Than Host CPU</span>
+            <span class="text-xs font-sans text-gray-300 font-normal">Throughput Acceleration</span>
           </div>
-          <div class="mt-3 space-y-1 text-xs text-gray-300">
+
+          <div class="mt-4 space-y-2 text-xs text-gray-300 font-mono">
             <div class="flex justify-between py-1 border-b border-white/5">
               <span class="text-gray-400">Host CPU (PyTorch/RDKit):</span>
-              <span class="font-mono text-gray-300">32.4s / complex</span>
+              <span class="text-gray-300 font-bold">32.4s / complex</span>
             </div>
             <div class="flex justify-between py-1 border-b border-white/5">
               <span class="text-gray-400">NVIDIA H100 NIM Cloud:</span>
-              <span class="font-mono text-emerald-400 font-bold">0.55s / complex</span>
+              <span class="text-emerald-400 font-extrabold">0.55s / complex</span>
             </div>
-            <div class="flex justify-between py-1 border-b border-white/5 font-semibold text-emerald-300">
+            <div class="flex justify-between py-1 border-b border-white/5 text-emerald-300 font-semibold">
               <span>Time Saved (10k Campaign):</span>
-              <span class="font-mono font-bold">~82 Hours</span>
+              <span class="font-bold">~82 Hours</span>
             </div>
-            <div class="flex justify-between pt-1 text-[11px] text-emerald-400">
+            <div class="flex justify-between pt-1.5 text-[11px] text-emerald-400">
               <span>🌱 Green Compute (ESG):</span>
-              <span class="font-mono font-bold">98.4% Energy Cut • 48kg CO₂e</span>
+              <span class="font-bold">98.4% Energy Cut • 48kg CO₂e</span>
             </div>
           </div>
         </div>
 
         <!-- 4 Verified End-to-End Deliverables & Blueprints -->
-        <div class="glass-card rounded-2xl p-5 space-y-2.5">
-          <div class="text-[11px] font-mono uppercase tracking-wider text-gray-400 font-bold mb-1">Production Deliverables & Architecture</div>
+        <div class="glass-panel rounded-3xl p-6 space-y-3.5 shadow-xl">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[11px] font-mono uppercase tracking-wider text-gray-300 font-bold flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-glow"></span>
+              Certified Deliverables
+            </span>
+            <span class="text-[10px] font-mono text-emerald-400 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 font-bold">Ready</span>
+          </div>
 
           <!-- NVIDIA NIM Blueprint -->
-          <a href="blueprint.yaml" target="_blank" download="blueprint.yaml" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-emerald-500/50 hover:bg-white/10 transition-all cursor-pointer group">
-            <div class="flex items-center gap-3">
-              <span class="text-lg">📦</span>
+          <a href="blueprint.yaml" target="_blank" download="blueprint.yaml" class="shortcut-card-luxury card-emerald flex items-center justify-between p-3.5 cursor-pointer group">
+            <div class="flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-lg group-hover:scale-110 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-300 shadow-sm">
+                📦
+              </div>
               <div>
-                <div class="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">NVIDIA BioNeMo Blueprint</div>
-                <div class="text-[10px] text-gray-400 font-mono">DGX Cloud & Compose Spec</div>
+                <div class="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                  NVIDIA BioNeMo Blueprint
+                  <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </div>
+                <div class="text-[10px] text-gray-400 font-mono mt-0.5">DGX Cloud & Compose Spec</div>
               </div>
             </div>
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 group-hover:bg-emerald-500/40 border border-emerald-500/30 font-bold">YAML</span>
+            <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 group-hover:bg-emerald-500/30 border border-emerald-500/30 font-bold">YAML</span>
           </a>
 
           <!-- FDA IND Section 2 Dossier -->
-          <a href="results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf" target="_blank" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/50 hover:bg-white/10 transition-all cursor-pointer group">
-            <div class="flex items-center gap-3">
-              <span class="text-lg">📄</span>
+          <a href="results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf" target="_blank" class="shortcut-card-luxury card-blue flex items-center justify-between p-3.5 cursor-pointer group">
+            <div class="flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-lg group-hover:scale-110 group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-all duration-300 shadow-sm">
+                📄
+              </div>
               <div>
-                <div class="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">FDA IND Section 2 Dossier</div>
-                <div class="text-[10px] text-gray-400 font-mono">21 CFR Part 312 Certified PDF</div>
+                <div class="text-xs font-bold text-white group-hover:text-blue-300 transition-colors flex items-center gap-1.5">
+                  FDA IND Section 2 Dossier
+                  <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </div>
+                <div class="text-[10px] text-gray-400 font-mono mt-0.5">21 CFR Part 312 Certified PDF</div>
               </div>
             </div>
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 group-hover:bg-blue-500/40 border border-blue-500/30 font-bold">PDF</span>
+            <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-300 group-hover:bg-blue-500/30 border border-blue-500/30 font-bold">PDF</span>
           </a>
 
           <!-- Opentrons OT-2 Protocol -->
-          <a href="results/ot2_synthesis_protocol_KRAS_G12D.py" target="_blank" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-amber-500/50 hover:bg-white/10 transition-all cursor-pointer group">
-            <div class="flex items-center gap-3">
-              <span class="text-lg">🤖</span>
+          <a href="results/ot2_synthesis_protocol_KRAS_G12D.py" target="_blank" class="shortcut-card-luxury card-amber flex items-center justify-between p-3.5 cursor-pointer group">
+            <div class="flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-lg group-hover:scale-110 group-hover:bg-amber-500/20 group-hover:border-amber-500/40 transition-all duration-300 shadow-sm">
+                🤖
+              </div>
               <div>
-                <div class="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">Opentrons OT-2 Protocol</div>
-                <div class="text-[10px] text-gray-400 font-mono">Automated Python v2.15 Script</div>
+                <div class="text-xs font-bold text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                  Opentrons OT-2 Protocol
+                  <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </div>
+                <div class="text-[10px] text-gray-400 font-mono mt-0.5">Automated Python v2.15 Script</div>
               </div>
             </div>
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 group-hover:bg-amber-500/40 border border-amber-500/30 font-bold">Python</span>
+            <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 group-hover:bg-amber-500/30 border border-amber-500/30 font-bold">Python</span>
           </a>
 
           <!-- Multi-GPU Scaling Profiler -->
-          <a href="#benchmark-card" onclick="document.getElementById('benchmark-card')?.scrollIntoView({behavior:'smooth'});" class="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/50 hover:bg-white/10 transition-all cursor-pointer group">
-            <div class="flex items-center gap-3">
-              <span class="text-lg">⚡</span>
+          <a href="#benchmark-card" onclick="document.getElementById('benchmark-card')?.scrollIntoView({behavior:'smooth'});" class="shortcut-card-luxury card-purple flex items-center justify-between p-3.5 cursor-pointer group">
+            <div class="flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-lg group-hover:scale-110 group-hover:bg-purple-500/20 group-hover:border-purple-500/40 transition-all duration-300 shadow-sm">
+                ⚡
+              </div>
               <div>
-                <div class="text-xs font-bold text-white group-hover:text-purple-300 transition-colors">Multi-GPU NVLink Profiler</div>
-                <div class="text-[10px] text-gray-400 font-mono">1x to 8x H100 Linear Scaling</div>
+                <div class="text-xs font-bold text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5">
+                  Multi-GPU NVLink Profiler
+                  <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </div>
+                <div class="text-[10px] text-gray-400 font-mono mt-0.5">1x to 8x H100 Linear Scaling</div>
               </div>
             </div>
-            <span class="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 group-hover:bg-purple-500/40 border border-purple-500/30 font-bold">Telemetry</span>
+            <span class="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-purple-500/15 text-purple-300 group-hover:bg-purple-500/30 border border-purple-500/30 font-bold">Telemetry</span>
           </a>
         </div>
 
         <!-- Launch CTA Button -->
-        <a href="cockpit.html" class="btn-nvidia w-full py-4 rounded-xl text-center text-sm flex items-center justify-center gap-2">
+        <a href="cockpit.html" class="btn-nvidia-glow w-full py-4 rounded-2xl text-center text-sm flex items-center justify-center gap-3 tracking-wide">
           <span>⚡ Enter Discovery Cockpit Swarm</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
         </a>
 
       </div>
 
+    </div>
+
+    <!-- DOCUMENTATION & KNOWLEDGE VAULT SUITE -->
+    <div class="mt-14 pt-10 border-t border-white/10 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glow-badge text-[11px] font-mono font-semibold text-emerald-400 mb-2">
+            <span>📚</span>
+            <span>Comprehensive Architecture & Knowledge Vault</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Full Sovereign Documentation Suite</h2>
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">Direct access to the 4 comprehensive operational manuals, command reference cards, and pocket guides.</p>
+        </div>
+        <div class="text-[11px] font-mono text-gray-400 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-glow"></span>
+          <span>4 Master Volumes Synchronized</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Doc 1: Master Volume -->
+        <a href="ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html" class="shortcut-card-luxury card-emerald p-5 flex flex-col justify-between group">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">🏛️</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Master Volume</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">
+                Master Volume 100%
+                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">Exhaustive manual covering all 3 modalities, 7 models, 33 MCP servers, and 57 skills.</p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-400">
+            <span>3,340 Lines</span>
+            <span class="text-emerald-400 font-bold group-hover:underline">Read Volume →</span>
+          </div>
+        </a>
+
+        <!-- Doc 2: Master Guide -->
+        <a href="ANTIGRAVITY_COMPLETE_MASTER_GUIDE.html" class="shortcut-card-luxury card-blue p-5 flex flex-col justify-between group">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📖</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">Master Guide</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-blue-300 transition-colors flex items-center gap-1.5">
+                Complete IDE Guide
+                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">Deep-dive into IDE configuration, sandboxing policies, context economics, and workflows.</p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-400">
+            <span>590 Lines</span>
+            <span class="text-blue-400 font-bold group-hover:underline">Read Guide →</span>
+          </div>
+        </a>
+
+        <!-- Doc 3: Command Reference Guide -->
+        <a href="COMMAND_REFERENCE_GUIDE.html" class="shortcut-card-luxury card-amber p-5 flex flex-col justify-between group">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">⚡</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Searchable</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                Command Reference
+                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">Instant real-time searchable command deck with speed metrics, keyboard binds, and filters.</p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-400">
+            <span>Interactive</span>
+            <span class="text-amber-400 font-bold group-hover:underline">Open Deck →</span>
+          </div>
+        </a>
+
+        <!-- Doc 4: Pocket Guide -->
+        <a href="Antigravity_Pocket_Guide.html" class="shortcut-card-luxury card-purple p-5 flex flex-col justify-between group">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-2xl">📱</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Pocket Sheet</span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5">
+                Universal Pocket Guide
+                <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-all text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </h3>
+              <p class="text-[11px] text-gray-400 mt-1 leading-relaxed">High-density cheat sheet optimized for rapid mobile lookup, model selection, and slash keys.</p>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-400">
+            <span>Printable A4</span>
+            <span class="text-purple-400 font-bold group-hover:underline">View Cheat Sheet →</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
   </main>
 
   <!-- FOOTER TRADEMARK & COPYRIGHT OWNERSHIP -->
-  <footer class="border-t border-white/5 bg-[#04070c]/80 py-6 mt-8">
+  <footer class="border-t border-white/5 bg-[#03060a]/90 py-8 mt-12 backdrop-blur-xl">
     <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-      <div class="flex items-center gap-2">
-        <span class="font-bold text-gray-300">JORWAL™ NIM SWARM OS</span>
+      <div class="flex items-center gap-3">
+        <span class="font-extrabold text-gray-300 tracking-wider">JORWAL™ NIM SWARM OS</span>
         <span>&bull;</span>
-        <span>© 2026 <a href="https://github.com/Jorwalzzz" target="_blank" class="text-gray-300 hover:text-emerald-400 font-semibold underline">Jorwal (@Jorwalzzz)</a>. All Rights Reserved.</span>
+        <span>© 2026 <a href="https://github.com/Jorwalzzz" target="_blank" class="text-gray-300 hover:text-emerald-400 font-bold underline transition-colors">Jorwal (@Jorwalzzz)</a>. All Rights Reserved.</span>
       </div>
-      <div class="text-[11px] text-gray-400 text-center sm:text-right">
-        <span>"JORWAL", "Jorwal", "jorwal", and "Jorwalzzz" are exclusive proprietary common-law trademarks of Jorwal. Software licensed under AGPLv3.</span>
+      <div class="text-[11px] text-gray-400 text-center sm:text-right font-mono">
+        <span>Architected with NVIDIA BioNeMo & NIM Inference Microservices • Open Source AGPLv3</span>
       </div>
     </div>
   </footer>
@@ -415,25 +608,25 @@
       const container = document.getElementById('hero3DStage');
       if (!container || typeof $3Dmol === 'undefined') return;
       
-      heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#070b12' });
+      heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#040810' });
 
       function setup3DScene(pdbText) {
         if (!pdbText || !heroViewer) return;
         heroViewer.clear();
         heroViewer.addModel(pdbText, "pdb");
         
-        // 1. Protein Ribbon Backdrop
+        // 1. Protein Ribbon Backdrop with cinematic slate depth
         heroViewer.setStyle({}, { cartoon: { color: '#334155', opacity: 0.88 } });
 
         // 2. Active Switch-II Pocket Residues (Asp12, Tyr96, Gln61, Gly60, Asp69)
         heroViewer.setStyle({ resi: [12, 60, 61, 68, 69, 96] }, {
           cartoon: { color: '#00f1fd', opacity: 0.95 },
-          stick: { colorscheme: 'cyanCarbon', radius: 0.18 }
+          stick: { colorscheme: 'cyanCarbon', radius: 0.20 }
         });
 
         // 3. Highlight Pan-KRAS Bound Inhibitor Ligand (HETATM OFU 205)
         heroViewer.setStyle({ resn: 'OFU' }, {
-          stick: { colorscheme: 'greenCarbon', radius: 0.28 }
+          stick: { colorscheme: 'greenCarbon', radius: 0.30 }
         });
 
         // 4. Draw Active Hydrogen Bond & Contact Vectors (Asp12 carboxylate to ligand amine)
@@ -443,14 +636,14 @@
         heroViewer.addCylinder({
           start: pocketLigandAtom,
           end: tyr96Phenol,
-          radius: 0.10,
+          radius: 0.12,
           color: '#facc15',
           dashed: true
         });
 
         heroViewer.addLabel("H-Bond (2.84Å)", {
           position: tyr96Phenol,
-          backgroundColor: "rgba(15,23,42,0.9)",
+          backgroundColor: "rgba(10,16,26,0.92)",
           fontColor: "#facc15",
           fontSize: 10,
           showBackground: true
@@ -459,14 +652,14 @@
         // Auto-frame active pocket
         heroViewer.zoomTo({ resn: 'OFU' });
         heroViewer.render();
-        heroViewer.spin("y", 0.8);
+        heroViewer.spin("y", 0.7);
       }
 
       // Priority 1: Instant memory from bundled JS script
       if (window.PDB_8AZV) {
         setup3DScene(window.PDB_8AZV);
       } else {
-        // Priority 2 & 3: Multi-tier fallback fetch
+        // Multi-tier fallback
         fetch('results/8AZV.pdb')
           .then(res => {
             if (!res.ok) throw new Error("Fallback required");
@@ -478,11 +671,10 @@
       }
     });
 
-
     function toggleSpin() {
       if (!heroViewer) return;
       isSpinning = !isSpinning;
-      heroViewer.spin(isSpinning ? "y" : false, 0.8);
+      heroViewer.spin(isSpinning ? "y" : false, 0.7);
       document.getElementById('btnSpin').classList.toggle('active', isSpinning);
     }
 

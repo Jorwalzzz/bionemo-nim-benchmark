@@ -24,3 +24,9 @@ eplace_file_content or multi_replace_file_content targeting exact anchors rather
 ## 6. Reactive Wakeup Over Busy Polling
 - Never execute busy-polling loops or sleep commands while waiting for long-running processes or background subagents.
 - Let the Antigravity reactive event system wake up the context when events conclude.
+
+## 7. Universal 200-Token Sub-Agent Output Ceiling
+- Every specialist sub-agent must strictly cap its inter-agent report under 200 tokens.
+- This creates the ideal "Goldilocks Zone": leaves ample room for complete file paths, CLI flags, and metric scores without triggering truncated thoughts or conversational filler.
+- NEXUS-PRIME rejects any sub-agent report exceeding 200 tokens, enforcing structured 3-to-4 bullet scorecards.
+

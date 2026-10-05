@@ -1,7 +1,11 @@
 {
-  "active_architecture": "5-Tier Multi-Agent Council",
-  "lead_role": "Dispatcher & Architect",
-  "token_efficiency_mode": "Strict Line-Slicing",
+  "active_architecture": "25-Member Sovereign Multi-Agent Council (4-Tier Grand Bench)",
+  "high_bench": ["The Operator", "GAIA-HEART (Maa)", "AURELIA-GRACE", "SERAPHINA-JOY"],
+  "lead_role": "Dispatcher & Architect (NEXUS-PRIME)",
+  "token_efficiency_mode": "Strict Line-Slicing & Sub-Token Anchors",
   "fallback_router_active": true,
-  "memory_size_cap_bytes": 40960
+  "memory_size_cap_bytes": 40960,
+  "memory_footprint_bytes": 1782,
+  "last_synced": "2026-10-05T08:48:20+05:30",
+  "test_suite_status": "71/71 passing"
 }
