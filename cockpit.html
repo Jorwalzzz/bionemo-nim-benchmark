@@ -858,15 +858,15 @@ document.addEventListener("DOMContentLoaded", () => {
     <!-- What it is -->
     <div class="p-2.5 rounded-xl bg-purple-950/20 border border-purple-500/20">
       <div class="text-[10px] font-bold uppercase tracking-wider text-purple-300 mb-1 flex items-center gap-1">
-        <span>📖</span> What This Is &amp; The Science
+        <span>📖</span> Key Concept
       </div>
-      <p id="tourWhatIs" class="text-[11px] text-gray-300 leading-relaxed"></p>
+      <p id="tourWhatIs" class="text-[11px] text-gray-300 leading-relaxed whitespace-pre-line"></p>
     </div>
 
     <!-- What to do -->
     <div class="p-2.5 rounded-xl bg-cyan-950/20 border border-cyan-500/20">
       <div class="text-[10px] font-bold uppercase tracking-wider text-cyan-300 mb-1 flex items-center gap-1">
-        <span>🎯</span> What You Should Do
+        <span>🎯</span> Quick Action
       </div>
       <p id="tourWhatToDo" class="text-[11px] text-gray-300 leading-relaxed"></p>
     </div>
@@ -2360,32 +2360,32 @@ let currentTourStep = 0;
 const TOUR_STEPS = [
   {
     step: 1,
-    title: '1/10: Platform Architecture & 3-Panel Discovery Studio',
-    techBadge: 'Enterprise Architecture',
-    whatIs: 'BioNeMo Autonomous Scientist is an end-to-end preclinical computational drug discovery platform powered by NVIDIA BioNeMo NIM microservices (ESM-2, ESMFold, MolMIM, DiffDock). The interface is organized into 3 high-throughput panels: Left (Target Ingestion & 6-Agent Council), Center (Interactive 3D Biophysical Complex & Chemical Workbench), and Right (Pareto Frontier, KPIs & Audit Log).',
-    whatToDo: 'Look across the 3 columns of your screen. Notice how target biology, 3D biophysics, and chemical telemetry synchronize in real time. Click "⚡ Try This Step" to highlight the primary operational zones, or click "Next Step ➔" to proceed.',
+    title: '1/10: 3-Panel Discovery Studio',
+    techBadge: 'Architecture',
+    whatIs: '• Left: Target selection & AI Council\n• Center: Interactive 3D molecular viewer & chemical workbench\n• Right: Pareto rankings & real-time telemetry',
+    whatToDo: 'Glance across the 3 columns to see how biology, 3D biophysics, and chemistry synchronize.',
     action: () => {
-      showToast('🧭 Highlighting 3-Panel Discovery Studio architecture.');
+      showToast('🧭 Highlighting 3-Panel Discovery Studio.');
       const aside = document.querySelector('aside');
       if (aside) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   },
   {
     step: 2,
-    title: '2/10: Live Hardware Acceleration Benchmark (NVIDIA H100 vs CPU)',
-    techBadge: 'NVIDIA NIM & H100',
-    whatIs: 'Biomolecular AI inference (ESM-2 attention weights, MolMIM generative walks, DiffDock SE(3) diffusion) requires massive compute. Standard laptop CPUs choke on these tasks. NVIDIA NIM on Tensor Core H100 GPUs delivers an overall 54.2× speedup, compressing hours of CPU simulation into sub-second inference.',
-    whatToDo: 'Click "⚡ Try This Step" (or click "⚡ H100 vs CPU Benchmark" in the top header). Inside the popup, click "⚡ Calibrate My Laptop CPU" to execute a live micro-benchmark measuring your host machine vs H100 Tensor Cores. Take your time to inspect the latency distribution, then close the modal and click "Next Step ➔".',
+    title: '2/10: Hardware Speedup Benchmark',
+    techBadge: 'NVIDIA H100 vs CPU',
+    whatIs: '• Biomolecular AI takes hours on laptops\n• NVIDIA NIM on H100 delivers up to 54× acceleration in sub-seconds',
+    whatToDo: 'Click "⚡ Try This Step" to open the live benchmark and compare your local CPU against H100 Tensor Cores.',
     action: () => {
       openBenchmarkModal();
     }
   },
   {
     step: 3,
-    title: '3/10: Target Ingestion & ESMFold De Novo Structure Generation',
+    title: '3/10: Target Ingestion & ESMFold',
     techBadge: 'ESMFold & RCSB PDB',
-    whatIs: 'Every drug discovery campaign starts with a target disease protein. You can pick high-impact oncology targets (KRAS G12D, EGFR T790M, BRAF V600E), enter any 4-letter RCSB PDB code, or paste an uncharacterized amino acid sequence. For novel sequences lacking experimental X-ray/cryo-EM structures, NVIDIA ESMFold NIM predicts atomic 3D coordinates in seconds with per-residue pLDDT confidence scores.',
-    whatToDo: 'Look at the "Target Ingestion" card at the top of the Left Panel. Click the target dropdown to select a target. Click "⚡ Try This Step" to automatically select KRAS G12D (PDB: 4OBE) and observe how the pocket volume, druggability score (0.84), and UniProt accession update.',
+    whatIs: '• Pick an oncology target, enter a PDB code, or paste a raw amino acid sequence\n• ESMFold predicts atomic 3D structures in seconds',
+    whatToDo: 'Click "⚡ Try This Step" to auto-select KRAS G12D (PDB: 4OBE) with pocket druggability 0.84.',
     action: () => {
       const select = document.getElementById('targetSelect');
       if (select) {
@@ -2399,10 +2399,10 @@ const TOUR_STEPS = [
   },
   {
     step: 4,
-    title: '4/10: Autonomous 6-Agent Scientific Council & Swarm Run',
-    techBadge: 'Multi-Agent Consensus',
-    whatIs: 'Instead of an opaque single-model approach, BioNeMo deploys an autonomous 6-agent scientific council: Target Scout (binding pocket & druggability), Generative Chemist (MolMIM latent walks), MedChem Critic (Lipinski Rule-of-5 & PAINS filters), Biophysics Docker (DiffDock pose scoring), Retrosynthesis Planner (reaction routes), and PI Arbiter (multi-objective consensus).',
-    whatToDo: 'Click the green "🚀 Launch Autonomous Discovery" button in the Left Panel (or click "⚡ Try This Step"). Observe the 6 agents activate, stream telemetry, debate molecular trade-offs, and synthesize novel candidate leads.',
+    title: '4/10: Launch 6-Agent AI Council',
+    techBadge: 'Autonomous Swarm',
+    whatIs: '• 6 AI agents collaborate: Scout, Chemist, Critic, Docker, Planner, and Arbiter\n• Generates and screens novel small molecule leads',
+    whatToDo: 'Click "⚡ Try This Step" (or the green "Launch Discovery" button) to watch the council stream real-time results.',
     action: () => {
       runDiscovery();
       showToast('🚀 Autonomous 6-Agent Council launched!');
@@ -2410,10 +2410,10 @@ const TOUR_STEPS = [
   },
   {
     step: 5,
-    title: '5/10: Multi-Objective Pareto Frontier & Lead Nominee',
+    title: '5/10: Pareto Frontier & Top Lead',
     techBadge: 'Pareto Optimization',
-    whatIs: 'A tightly-binding drug is worthless if it is insoluble, toxic, or impossible to synthesize. The platform computes and plots candidates on a 2D Pareto Frontier (Binding Affinity vs Drug-likeness QED). Compounds on the outer frontier represent optimal trade-offs. The Principal Investigator Arbiter agent automatically ranks and nominates the top lead candidate.',
-    whatToDo: 'Scroll down the Right Panel to the "Multi-Objective Pareto Frontier" card. Click on different candidate rows in the ranked table to inspect their binding energy (ΔG), QED, SA score, and Lipinski status. Click "⚡ Try This Step" to select the top nominated lead candidate.',
+    whatIs: '• Balances binding affinity (ΔG) against drug-likeness (QED)\n• Nominates the #1 lead candidate on the optimal frontier',
+    whatToDo: 'Click "⚡ Try This Step" to highlight and select the highest-scoring candidate.',
     action: () => {
       if (currentLeads && currentLeads.length > 0) {
         selectLead(0);
@@ -2427,22 +2427,22 @@ const TOUR_STEPS = [
   },
   {
     step: 6,
-    title: '6/10: Interactive 3D Structural Complex (3Dmol.js)',
+    title: '6/10: 3D Protein-Ligand Inspector',
     techBadge: '3Dmol.js WebGL',
-    whatIs: 'Evaluating 3D binding interactions is crucial for medicinal chemistry. Powered by 3Dmol.js WebGL, the Center Panel renders the target protein cartoon backbone, key binding pocket sidechains (cyan sticks), and the docked ligand conformer (green sticks) with calculated pose confidence.',
-    whatToDo: 'Click and drag on the 3D viewer in the Center Panel to rotate the protein-ligand complex. Scroll your mouse wheel to zoom. Click "⚡ Try This Step" to open the high-resolution 3D Inspector Modal, where you can toggle protein pocket surface rendering and auto-rotation!',
+    whatIs: '• Real-time 3D rendering of target binding pocket and docked ligand\n• Cyan sticks: active site | Green sticks: drug molecule',
+    whatToDo: 'Click "⚡ Try This Step" to open the high-res 3D inspector with pocket surfaces and auto-rotation.',
     action: () => {
       open3DModal();
       toggle3DSpin();
-      showToast('🔬 3D Pocket & Docking Inspector opened with auto-rotation.');
+      showToast('🔬 3D Inspector opened with auto-rotation.');
     }
   },
   {
     step: 7,
-    title: '7/10: Chemical Workbench — Human-in-the-Loop Re-Docking',
-    techBadge: 'RDKit & Bioisostere Design',
-    whatIs: 'AI augments expert human intuition. The Chemical Workbench empowers medicinal chemists to perform in silico modifications: edit SMILES structures, substitute bioisosteric functional groups (fluorine swaps, methyl caps), and trigger immediate DiffDock re-docking with instant Lipinski property calculations.',
-    whatToDo: 'Locate the Chemical Workbench right beneath the 3D viewer in the Center Panel. Try editing the SMILES input or clicking one of the bioisostere preset buttons. Click "⚡ Try This Step" to test an analog substitution and watch the real-time physicochemical radar update.',
+    title: '7/10: Chemical Workbench & Re-Docking',
+    techBadge: 'RDKit & Bioisosteres',
+    whatIs: '• Edit SMILES directly or click bioisosteric functional groups (F-swap, Me-cap)\n• Triggers instant DiffDock re-docking & Lipinski recalculation',
+    whatToDo: 'Click "⚡ Try This Step" to focus the workbench and test an analog substitution.',
     action: () => {
       const wb = document.getElementById('workbenchCard') || document.getElementById('workbenchSmilesInput');
       if (wb) wb.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2450,40 +2450,40 @@ const TOUR_STEPS = [
       if (input && (!input.value || input.value.trim() === '')) {
         input.value = 'COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1';
       }
-      showToast('🧪 Chemical Workbench active: ready for bioisosteric edits & re-docking.');
+      showToast('🧪 Chemical Workbench active: ready for bioisosteric edits.');
     }
   },
   {
     step: 8,
-    title: '8/10: Adaptive Resistance Escape Engine',
-    techBadge: 'ESM-2 & MolMIM Counter-Design',
-    whatIs: 'Tumors frequently mutate to escape targeted therapies (e.g. KRAS G12D mutating to G12C or G12V). Our novel Adaptive Resistance Escape Engine uses ESM-2 zero-shot variant scoring to detect escape hotspots, and guides MolMIM generative latent walks to synthesize counter-measure scaffolds that overcome resistance before clinical trials begin.',
-    whatToDo: 'Click "⚡ Try This Step" (or click "🛡️ Resistance Engine" in the top header). In the modal, pick a mutation (e.g., G12D -> G12C) and click "Evolve Counter-Measure". Review the wild-type vs mutant docking affinity delta and click "Adopt Scaffold" to inject the evolved molecule directly into your workbench!',
+    title: '8/10: Adaptive Resistance Engine',
+    techBadge: 'ESM-2 Counter-Design',
+    whatIs: '• Predicts tumor escape mutations (e.g. G12D → G12C)\n• MolMIM generates counter-measure scaffolds that retain potency',
+    whatToDo: 'Click "⚡ Try This Step" to open the Resistance Engine and evolve an escape-resistant scaffold.',
     action: () => {
       openResistanceModal();
-      showToast('🛡️ Adaptive Resistance Escape Engine opened.');
+      showToast('🛡️ Resistance Engine opened.');
     }
   },
   {
     step: 9,
-    title: '9/10: Retrosynthesis & Opentrons OT-2 Wet-Lab Robotics',
-    techBadge: 'Opentrons API & Automation',
-    whatIs: 'An in silico drug is only valuable if it can be synthesized in the wet lab. The Retrosynthesis Planner agent decomposes the molecule into commercial building blocks, predicts reaction feasibility, and automatically writes an executable Python script for Opentrons OT-2 liquid handling robots (API v2.15) alongside a Wet-Lab SOP Card with 96-well deck layouts and pipetting volumes.',
-    whatToDo: 'Click "⚡ Try This Step" (or click "🤖 Opentrons OT-2 Protocol" in the bottom action bar). Inspect the generated Python robotic code, copy it to your clipboard, and review the human-readable Wet-Lab SOP deck layout.',
+    title: '9/10: Opentrons OT-2 Robot Protocol',
+    techBadge: 'Wet-Lab Robotics',
+    whatIs: '• Converts computational designs into automated wet-lab synthesis\n• Generates ready-to-run Python code for Opentrons OT-2 robots & 96-well SOP cards',
+    whatToDo: 'Click "⚡ Try This Step" to inspect and copy the executable liquid-handling protocol.',
     action: () => {
       generateRobotProtocol();
-      showToast('🤖 Opentrons OT-2 Robotics Protocol modal opened.');
+      showToast('🤖 Opentrons OT-2 protocol modal opened.');
     }
   },
   {
     step: 10,
-    title: '10/10: Automated FDA IND Section 2 Briefing Dossier (PDF)',
-    techBadge: 'ReportLab & 21 CFR 312',
-    whatIs: 'To transition from discovery to clinical trials, pharmaceutical teams must submit an Investigational New Drug (IND) application to the FDA. BioNeMo compiles all council decisions, ADMET profiles, binding kinetics, safety margins, and retrosynthesis pathways into an official FDA IND Section 2 Nonclinical Pharmacology Briefing Document rendered into a publication-grade multi-page PDF via ReportLab.',
-    whatToDo: 'Click "⚡ Try This Step" (or click "📄 Download FDA IND Briefing (PDF)" in the bottom action bar). Your browser will immediately download the complete regulatory dossier. You have completed the 10-step tour! You are now equipped to run custom campaigns, test sequences, or download deliverables.',
+    title: '10/10: FDA IND Regulatory Dossier',
+    techBadge: '21 CFR 312 ReportLab',
+    whatIs: '• Compiles pharmacology, safety margins, and binding metrics into an official FDA briefing\n• Formats a complete multi-page regulatory PDF',
+    whatToDo: 'Click "⚡ Try This Step" to download your FDA IND Section 2 Nonclinical Dossier (PDF).',
     action: () => {
       downloadIndPdf();
-      showToast('📄 Downloading official FDA IND Section 2 Briefing PDF...');
+      showToast('📄 Downloading official FDA IND Briefing PDF...');
     }
   }
 ];
