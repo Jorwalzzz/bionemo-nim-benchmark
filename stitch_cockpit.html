@@ -2151,6 +2151,9 @@ async function generateINDPdf() {
   }
 }
 
+// Tour & Shortcut Alias
+const downloadIndPdf = generateINDPdf;
+
 // ─── FEATURE 3: OPENTRONS OT-2 ROBOTIC PROTOCOL GENERATOR ────────────────────
 let currentOt2Code = '';
 let currentLabCardMd = '';
@@ -2916,12 +2919,18 @@ async function exportForumPostModal() {
         speedup: 58.4
       })
     });
-    const data = await res.json();
-    document.getElementById('forumPostContent').value = data.markdown || '';
-    modal.classList.remove('hidden');
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('forumPostContent').value = data.markdown || '';
+    } else {
+      throw new Error(`HTTP ${res.status}`);
+    }
   } catch (err) {
-    showToast('Failed to compile forum showcase: ' + err.message);
+    // Elegant client-side fallback for static GitHub Pages hosting
+    const fallbackMd = `# 🧬 Autonomous AI Drug Discovery with NVIDIA BioNeMo & NIM Microservices\n\n**Candidate:** ${leadId} | **Target:** ${target}\n**Predicted Binding Affinity (ΔG):** ${aff} kcal/mol\n**Candidate SMILES:** \`${smiles}\`\n**Hardware Speedup:** 58.4× Throughput Acceleration (NVIDIA H100 vs CPU)\n\n### 🚀 Reproducibility (Open Source AGPLv3)\n\`\`\`bash\npip install jorwal-nim\njorwal-nim --target "${target}" --mock\n\`\`\`\n\nLive Cockpit: https://jorwalzzz.github.io/bionemo-nim-benchmark/cockpit.html\nGitHub Repo: https://github.com/Jorwalzzz/bionemo-nim-benchmark`;
+    document.getElementById('forumPostContent').value = fallbackMd;
   }
+  modal.classList.remove('hidden');
 }
 
 function closeForumModal() {
