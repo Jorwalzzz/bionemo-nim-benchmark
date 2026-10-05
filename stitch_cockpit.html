@@ -1434,10 +1434,13 @@ async function fetchTrialStatus() {
     if (res.ok) {
       const data = await res.json();
       updateTrialUI(data);
+      return;
     }
   } catch (e) {
-    console.error('Could not fetch trial status:', e);
+    console.warn('API trial status unavailable in static/GitHub Pages mode:', e);
   }
+  // GitHub Pages / Static Offline Default: Grant 2 Free Demo Runs
+  updateTrialUI({ allowed: true, runs_used: 0, runs_remaining: 2, max_runs: 2, is_locked: false });
 }
 
 function updateTrialUI(status) {
@@ -1447,7 +1450,6 @@ function updateTrialUI(status) {
   const text = document.getElementById('trialText');
   const runBtn = document.getElementById('runBtn');
   const runLabel = document.getElementById('runLabel');
-
 
   if (status.is_locked || status.runs_remaining === 0) {
     if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse";
@@ -1499,29 +1501,53 @@ let isRunning = false;
 
 // ─── Target Info Update ──────────────────────────────────────────────────────
 function updateTargetInfo() {
-  let target = document.getElementById('targetSelect').value;
+  let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
+  let info = TARGETS[target];
+
   if (currentTargetTab === 'esmfold') {
-    const rawSeq = (document.getElementById('esmfoldSeqInput').value || '').trim().replace(/^>.*$/gm, '').replace(/\s+/g, '');
-    if (!rawSeq || rawSeq.length < 15) {
-      showToast('⚠️ Please enter an amino acid sequence in ESMFold tab (min 15 aa).');
-      return;
-    }
-    target = rawSeq;
+    const rawSeq = (document.getElementById('esmfoldSeqInput')?.value || '').trim().replace(/^>.*$/gm, '').replace(/\s+/g, '');
+    target = rawSeq || 'De Novo Variant';
+    info = {
+      pdb: `DE NOVO (pLDDT ${(currentTargetMeanPlddt || 89.5).toFixed(1)})`,
+      indication: 'De Novo Engineered Scaffold',
+      pocket: 'Predicted Catalytic Core',
+      mutant: 'Variant / De Novo',
+      color: '#a855f7'
+    };
   } else if (currentTargetTab === 'rcsb') {
-    const customCode = (document.getElementById('customTargetInput').value || '').trim();
-    if (!customCode) {
-      showToast('⚠️ Please enter an RCSB PDB code (e.g. 6LU7, 2ITZ).');
-      return;
-    }
-    target = customCode;
+    const customCode = (document.getElementById('customTargetInput')?.value || '').trim().toUpperCase();
+    target = customCode || '8AZV';
+    info = {
+      pdb: target,
+      indication: 'Crystallographic Target',
+      pocket: 'Active Site Cleft',
+      mutant: 'WT / Custom',
+      color: '#00f1fd'
+    };
+  } else if (!info) {
+    info = {
+      pdb: '8AZV',
+      indication: 'Oncology Target',
+      pocket: 'Allosteric Pocket',
+      mutant: 'WT',
+      color: '#76b900'
+    };
   }
-  const info = TARGETS[target];
-  document.getElementById('targetName').textContent = target;
-  document.getElementById('targetName').style.color = info.color;
-  document.getElementById('targetPdb').textContent = info.pdb;
-  document.getElementById('targetInd').textContent = info.indication;
-  document.getElementById('targetPocket').textContent = info.pocket;
-  document.getElementById('targetMut').textContent = info.mutant;
+
+  const nameEl = document.getElementById('targetName');
+  const pdbEl = document.getElementById('targetPdb');
+  const indEl = document.getElementById('targetInd');
+  const pocketEl = document.getElementById('targetPocket');
+  const mutEl = document.getElementById('targetMut');
+
+  if (nameEl) {
+    nameEl.textContent = currentTargetTab === 'esmfold' ? (target.length > 25 ? target.slice(0, 22) + '...' : target) : target;
+    nameEl.style.color = info.color;
+  }
+  if (pdbEl) pdbEl.textContent = info.pdb;
+  if (indEl) indEl.textContent = info.indication;
+  if (pocketEl) pocketEl.textContent = info.pocket;
+  if (mutEl) mutEl.textContent = info.mutant;
 }
 
 // ─── Agent Status Helpers ────────────────────────────────────────────────────
