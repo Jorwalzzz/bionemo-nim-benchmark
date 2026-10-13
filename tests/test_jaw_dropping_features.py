@@ -6,12 +6,18 @@ Unit and integration tests for the three jaw-dropping NVIDIA BioNeMo features:
 """
 
 import ast
+
 import pytest
 from fastapi.testclient import TestClient
 
 from serve_cockpit import app
 from src.ind_dossier import generate_ind_pdf
-from src.models import MoleculeCandidate, RetrosynthesisPlan, RetrosynthesisStep, TargetProfile
+from src.models import (
+    MoleculeCandidate,
+    RetrosynthesisPlan,
+    RetrosynthesisStep,
+    TargetProfile,
+)
 from src.resistance_engine import ResistanceEscapeEngine
 from src.robot_protocol import generate_lab_card, generate_ot2_protocol
 
@@ -42,7 +48,7 @@ def test_ind_dossier_pdf_generation():
                 "logp": 3.1,
                 "qed": 0.78,
                 "sascore": 2.7,
-                "admet_verdict": "PASS"
+                "admet_verdict": "PASS",
             }
         ],
         "retrosynthesis": {
@@ -54,17 +60,17 @@ def test_ind_dossier_pdf_generation():
                     "reaction_type": "Amide Coupling (PyBOP/DIPEA)",
                     "reagents": ["DIPEA", "DMF", "rt 2h"],
                     "yield_pct": 84.0,
-                    "difficulty": "Routine (★☆☆)"
+                    "difficulty": "Routine (★☆☆)",
                 },
                 {
                     "step": 2,
                     "reaction_type": "Suzuki-Miyaura Cross-Coupling",
                     "reagents": ["Pd(dppf)Cl2", "K2CO3", "80°C"],
                     "yield_pct": 78.0,
-                    "difficulty": "Routine (★☆☆)"
-                }
-            ]
-        }
+                    "difficulty": "Routine (★☆☆)",
+                },
+            ],
+        },
     }
 
     pdf_bytes = generate_ind_pdf(sample_dossier)
@@ -75,13 +81,16 @@ def test_ind_dossier_pdf_generation():
 
 def test_api_ind_dossier_pdf_endpoint(client):
     """Verify POST /api/dossier/pdf returns PDF with correct HTTP headers."""
-    resp = client.post("/api/dossier/pdf", json={
-        "dossier": {
-            "target": "EGFR T790M",
-            "nominated_lead": "LEAD-042",
-            "binding_affinity": -8.9
-        }
-    })
+    resp = client.post(
+        "/api/dossier/pdf",
+        json={
+            "dossier": {
+                "target": "EGFR T790M",
+                "nominated_lead": "LEAD-042",
+                "binding_affinity": -8.9,
+            }
+        },
+    )
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/pdf"
     assert "attachment; filename=" in resp.headers["content-disposition"]
@@ -107,11 +116,11 @@ def test_ot2_protocol_code_syntax():
                 reagents=["Ac2O", "AcOH"],
                 product_smiles="CC(=O)Nc1ccc(O)cc1",
                 estimated_yield_pct=90.0,
-                difficulty="Routine (★☆☆)"
+                difficulty="Routine (★☆☆)",
             )
         ],
         starting_materials=["4-aminophenol (CAS 123-30-8)", "Acetic anhydride"],
-        estimated_turnaround_days=2
+        estimated_turnaround_days=2,
     )
 
     py_code = generate_ot2_protocol(plan)
@@ -119,7 +128,7 @@ def test_ot2_protocol_code_syntax():
     assert "protocol_api.ProtocolContext" in py_code
     assert "opentrons_96_tiprack_300ul" in py_code
     assert "temperature module gen2" in py_code
-    
+
     # Must parse without syntax errors
     parsed_ast = ast.parse(py_code)
     assert isinstance(parsed_ast, ast.Module)
@@ -141,11 +150,11 @@ def test_lab_card_markdown():
                 reagents=["H2", "Pd/C"],
                 product_smiles="C1CCCCC1",
                 estimated_yield_pct=95.0,
-                difficulty="Routine"
+                difficulty="Routine",
             )
         ],
         starting_materials=["Benzene (CAS 71-43-2)"],
-        estimated_turnaround_days=1
+        estimated_turnaround_days=1,
     )
 
     card = generate_lab_card(plan, "LEAD-002")
@@ -156,17 +165,24 @@ def test_lab_card_markdown():
 
 def test_api_robot_protocol_endpoint(client):
     """Verify POST /api/robot/protocol endpoint returns protocol and SOP."""
-    resp = client.post("/api/robot/protocol", json={
-        "lead_id": "LEAD-777",
-        "smiles": "CC(=O)N1CCNCC1",
-        "retrosynthesis": {
-            "num_steps": 2,
-            "feasibility": "Custom Multi-Step",
-            "steps": [
-                {"step": 1, "reaction_type": "Buchwald-Hartwig Amination", "yield_pct": 72.0}
-            ]
-        }
-    })
+    resp = client.post(
+        "/api/robot/protocol",
+        json={
+            "lead_id": "LEAD-777",
+            "smiles": "CC(=O)N1CCNCC1",
+            "retrosynthesis": {
+                "num_steps": 2,
+                "feasibility": "Custom Multi-Step",
+                "steps": [
+                    {
+                        "step": 1,
+                        "reaction_type": "Buchwald-Hartwig Amination",
+                        "yield_pct": 72.0,
+                    }
+                ],
+            },
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "success"
@@ -181,12 +197,12 @@ def test_api_robot_protocol_endpoint(client):
 def test_resistance_escape_engine_scan():
     """Verify resistance engine detects mutational collapse and evolves counter-design."""
     engine = ResistanceEscapeEngine(mock=True)
-    
+
     lead = MoleculeCandidate(
         id="LEAD-TEST",
         smiles="O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5",
         parent_smiles="",
-        binding_affinity=-9.4
+        binding_affinity=-9.4,
     )
     target = TargetProfile(
         name="KRAS G12D",
@@ -197,7 +213,7 @@ def test_resistance_escape_engine_scan():
         canonical_sequence="MTEYKLVVVGAGDVGKSALTIQLIQNHFVDE",
         pocket_residues=["Gly12", "Asp12", "Tyr96", "Gln61"],
         reference_ligand_name="MRTX1133",
-        reference_ligand_smiles="CC"
+        reference_ligand_smiles="CC",
     )
 
     scan = engine.scan_and_evolve(lead=lead, target=target)
@@ -214,16 +230,22 @@ def test_resistance_escape_engine_scan():
 
 def test_api_resistance_evolve_endpoint(client):
     """Verify POST /api/resistance/evolve endpoint handles requests cleanly."""
-    resp = client.post("/api/resistance/evolve", json={
-        "target": "EGFR T790M",
-        "lead_id": "LEAD-001",
-        "smiles": "COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1",
-        "binding_affinity": -9.1
-    })
+    resp = client.post(
+        "/api/resistance/evolve",
+        json={
+            "target": "EGFR T790M",
+            "lead_id": "LEAD-001",
+            "smiles": "COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1",
+            "binding_affinity": -9.1,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "success"
     assert data["resistance_detected"] is True
-    assert "T790M" in data["mutation_simulated"] or "Resistance" in data["mutation_simulated"]
+    assert (
+        "T790M" in data["mutation_simulated"]
+        or "Resistance" in data["mutation_simulated"]
+    )
     assert data["delta_recovery"] > 0
     assert data["verdict"] == "RESISTANCE BYPASSED"

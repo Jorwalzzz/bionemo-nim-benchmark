@@ -1,0 +1,82 @@
+:root {
+  --nvidia-green: #76b900;
+  --cyber-cyan: #00f1fd;
+  --surface-base: #080c12;
+  --surface-card: #0d1117;
+  --surface-elevated: #161b22;
+  --surface-border: #21262d;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--surface-base); color: #e6edf3; min-height: 100vh; overflow-x: hidden; }
+body.modal-open { overflow: hidden; }
+h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Glassmorphism 2.0 */
+.glass { background: rgba(13,17,23,0.78); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+.glass-bright { background: rgba(22,27,34,0.9); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(118,185,0,0.25); box-shadow: 0 10px 40px -10px rgba(118,185,0,0.15); }
+
+/* NVIDIA glow effects */
+.glow-green { box-shadow: 0 0 15px rgba(118,185,0,0.25), 0 0 40px rgba(118,185,0,0.08); }
+.glow-green-intense { box-shadow: 0 0 25px rgba(118,185,0,0.5), 0 0 60px rgba(118,185,0,0.2); }
+.glow-cyan { box-shadow: 0 0 15px rgba(0,241,253,0.2), 0 0 40px rgba(0,241,253,0.05); }
+.text-glow-green { text-shadow: 0 0 20px rgba(118,185,0,0.6); }
+.text-glow-cyan { text-shadow: 0 0 15px rgba(0,241,253,0.5); }
+.border-glow { border-color: rgba(118,185,0,0.4); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--surface-card); }
+::-webkit-scrollbar-thumb { background: rgba(118,185,0,0.4); border-radius: 2px; }
+
+/* Agent status ring */
+.agent-ring { width: 10px; height: 10px; border-radius: 50%; transition: all 0.3s; }
+.agent-ring.idle { background: #374151; }
+.agent-ring.running { background: var(--nvidia-green); animation: agentRun 1.2s ease-in-out infinite; }
+.agent-ring.done { background: var(--nvidia-green); }
+.agent-ring.waiting { background: #f59e0b; animation: pulseGlow 1.5s ease-in-out infinite; }
+
+/* Progress bar */
+.progress-fill { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); background: linear-gradient(90deg, var(--nvidia-green), var(--cyber-cyan)); }
+
+/* Chart canvas */
+#paretoChart { max-height: 250px; }
+
+/* Scan line overlay for HUD feel */
+.scanlines { background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); pointer-events: none; }
+
+/* CTA button */
+.btn-cta { background: linear-gradient(135deg, #76b900, #4a7a00); transition: all 0.2s; }
+.btn-cta:hover { background: linear-gradient(135deg, #8fd600, #5c9800); transform: translateY(-1px); box-shadow: 0 8px 25px rgba(118,185,0,0.4); }
+.btn-cta:active { transform: translateY(0); }
+
+/* Modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal-card { background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); border: 1px solid rgba(118,185,0,0.3); border-radius: 16px; box-shadow: 0 0 60px rgba(118,185,0,0.2), 0 25px 80px rgba(0,0,0,0.5); max-width: 640px; width: 95%; max-height: 90vh; overflow-y: auto; }
+.tab-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; cursor: pointer; border: 1px solid transparent; }
+.tab-btn.active { background: rgba(118,185,0,0.15); border-color: rgba(118,185,0,0.4); color: var(--nvidia-green); }
+.tab-btn:not(.active) { color: #6b7280; }
+.tab-btn:not(.active):hover { color: #e6edf3; background: rgba(33,38,45,0.6); }
+.code-box { background: #010409; border: 1px solid #21262d; border-radius: 8px; padding: 12px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--nvidia-green); position: relative; }
+.copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(118,185,0,0.1); border: 1px solid rgba(118,185,0,0.3); color: var(--nvidia-green); padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+.copy-btn:hover { background: rgba(118,185,0,0.2); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: rgba(118,185,0,0.15); border: 1px solid rgba(118,185,0,0.4); color: var(--nvidia-green); padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 9999; backdrop-filter: blur(8px); transition: all 0.3s; transform: translateY(0); opacity: 1; }
+.toast.hide { transform: translateY(20px); opacity: 0; pointer-events: none; }
+
+/* Animated bg grid */
+.bg-grid { background-image: linear-gradient(rgba(118,185,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(118,185,0,0.03) 1px, transparent 1px); background-size: 40px 40px; }
+
+/* Lead cards */
+.lead-card { background: rgba(13,17,23,0.6); border: 1px solid #21262d; border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: all 0.2s; }
+.lead-card:hover, .lead-card.selected { border-color: rgba(118,185,0,0.4); background: rgba(118,185,0,0.05); }
+
+/* Tag badges */
+.badge-green { background: rgba(118,185,0,0.12); border: 1px solid rgba(118,185,0,0.3); color: #76b900; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; }
+.badge-cyan { background: rgba(0,241,253,0.08); border: 1px solid rgba(0,241,253,0.25); color: #00f1fd; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.badge-red { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #f87171; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.badge-yellow { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #fbbf24; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+
+/* Telemetry number */
+.tele-num { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; }

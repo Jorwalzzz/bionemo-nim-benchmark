@@ -8,11 +8,11 @@ without GPU acceleration to evaluate time-per-residue (ms/residue), token throug
 
 from __future__ import annotations
 
-import time
 import logging
+import time
 import tracemalloc
-from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
+from typing import Any, Dict, Tuple
 
 import torch
 
@@ -24,6 +24,7 @@ DEFAULT_BASELINE_MODEL = "facebook/esm2_t6_8M_UR50D"
 @dataclass
 class BaselineProfileResult:
     """Latency, throughput, and memory profiling metrics for CPU baseline inference."""
+
     sequence_length: int
     tokenization_ms: float
     forward_pass_ms: float
@@ -68,8 +69,12 @@ class LocalCPUBaseline:
             return
 
         try:
-            logger.info("Loading baseline ESM-2 model '%s' on %s...", self.model_name, self.device)
-            from transformers import AutoTokenizer, AutoModel
+            logger.info(
+                "Loading baseline ESM-2 model '%s' on %s...",
+                self.model_name,
+                self.device,
+            )
+            from transformers import AutoModel, AutoTokenizer
 
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
             self.model = AutoModel.from_pretrained(self.model_name)
@@ -88,7 +93,9 @@ class LocalCPUBaseline:
                 self._is_loaded = True
                 self._using_mock = True
             else:
-                raise RuntimeError(f"Failed to load baseline model {self.model_name}: {e}") from e
+                raise RuntimeError(
+                    f"Failed to load baseline model {self.model_name}: {e}"
+                ) from e
 
     def benchmark_sequence(
         self,
@@ -158,13 +165,17 @@ class LocalCPUBaseline:
 
         # Throughput calculations
         ms_per_residue = total_latency_ms / max(1, seq_len)
-        tokens_per_sec = (seq_len / (total_latency_ms / 1000.0)) if total_latency_ms > 0 else 0.0
+        tokens_per_sec = (
+            (seq_len / (total_latency_ms / 1000.0)) if total_latency_ms > 0 else 0.0
+        )
 
         # Tensor memory footprint
         tensor_bytes = 0
         tensor_shape = (1, seq_len, 320)
         if last_hidden_state is not None:
-            tensor_bytes = last_hidden_state.element_size() * last_hidden_state.nelement()
+            tensor_bytes = (
+                last_hidden_state.element_size() * last_hidden_state.nelement()
+            )
             tensor_shape = tuple(last_hidden_state.shape)
 
         return BaselineProfileResult(

@@ -5,12 +5,15 @@ Unit Test Suite: Verifying All 4 Elite X-TIER Council Leaders
 3. Elena Vance (Vector SVG geometry & 3D coordinate distance fidelity)
 4. Apollo (DevRel benchmark telemetry & speedup ratio validation)
 """
-import pytest
+
 import os
+
+import pytest
 from rdkit import Chem
-from src.models import MoleculeCandidate, TargetProfile
+
 from src.docking_agent import BiophysicsDockingAgent
-from src.target_scout import screen_biosecurity_dual_use, RESTRICTED_PATHOGEN_SIGNATURES
+from src.models import MoleculeCandidate, TargetProfile
+from src.target_scout import RESTRICTED_PATHOGEN_SIGNATURES, screen_biosecurity_dual_use
 
 
 class TestDrArisThorneBiophysics:
@@ -23,9 +26,10 @@ class TestDrArisThorneBiophysics:
         mol = Chem.MolFromSmiles(smiles)
         mol = Chem.AddHs(mol)
         from rdkit.Chem import AllChem
+
         AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
         strain, clashes = agent._evaluate_biophysics_conformer(mol)
-        
+
         # Strain energy must be calculated as a real finite positive float
         assert isinstance(strain, float)
         assert strain >= 0.0
@@ -42,13 +46,13 @@ class TestDrArisThorneBiophysics:
             canonical_sequence="MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLKKISKEEKTPGCVKIKKCIIM",
             pocket_residues=["Asp12", "Tyr96"],
             reference_ligand_name="MRTX1133",
-            reference_ligand_smiles="CC"
+            reference_ligand_smiles="CC",
         )
         cand = MoleculeCandidate(
             id="MOL_TEST_1",
-            smiles="CC(=O)OC1=CC=CC=C1C(=O)O", # Aspirin
+            smiles="CC(=O)OC1=CC=CC=C1C(=O)O",  # Aspirin
             parent_smiles="CC",
-            admet_verdict="PASS"
+            admet_verdict="PASS",
         )
         docked, msg = agent.dock_candidates([cand], target)
         assert len(docked) == 1
@@ -96,7 +100,7 @@ class TestElenaVanceDesignSystem:
             content = f.read()
         assert "<svg" in content
         assert "viewBox" in content
-        assert "#76B900" in content # NVIDIA signature green
+        assert "#76B900" in content  # NVIDIA signature green
         assert "</svg>" in content
 
 
@@ -105,6 +109,7 @@ class TestApolloDevRelMetrics:
 
     def test_speedup_ratios_validity(self):
         from src.metrics import calculate_speedup
+
         cpu_time = 58.4
         gpu_time = 1.0
         speedup = calculate_speedup(cpu_time, gpu_time)
@@ -116,7 +121,9 @@ class TestEnterpriseHardeningAndExploitProtection:
 
     def test_security_headers_present(self):
         from fastapi.testclient import TestClient
+
         from serve_cockpit import app
+
         client = TestClient(app)
         resp = client.get("/api/health")
         assert resp.status_code == 200
@@ -126,6 +133,7 @@ class TestEnterpriseHardeningAndExploitProtection:
 
     def test_target_input_sanitization(self):
         from serve_cockpit import sanitize_target_query
+
         # XSS injection
         assert "<script>" not in sanitize_target_query("<script>alert(1)</script>KRAS")
         # Command injection
@@ -137,16 +145,21 @@ class TestEnterpriseHardeningAndExploitProtection:
 
     def test_pdb_path_traversal_blocked(self):
         from fastapi.testclient import TestClient
+
         from serve_cockpit import app
+
         client = TestClient(app)
         resp = client.get("/api/target/pdb/..%2F..%2Fetc%2Fpasswd")
         # Must safely reject invalid identifier with 400 or 404, never execute path traversal
         assert resp.status_code in (400, 404)
 
     def test_reset_trial_requires_admin_key(self):
-        from fastapi.testclient import TestClient
-        from serve_cockpit import app
         import os
+
+        from fastapi.testclient import TestClient
+
+        from serve_cockpit import app
+
         client = TestClient(app)
 
         # 1. Unauthenticated reset attempt rejected
@@ -155,7 +168,9 @@ class TestEnterpriseHardeningAndExploitProtection:
         assert resp_unauth.json()["error"] == "UNAUTHORIZED_ADMIN_KEY"
 
         # 2. Wrong key rejected
-        resp_wrong = client.post("/api/reset-trial", headers={"X-Admin-Key": "wrong-key-1234"})
+        resp_wrong = client.post(
+            "/api/reset-trial", headers={"X-Admin-Key": "wrong-key-1234"}
+        )
         assert resp_wrong.status_code == 403
 
         # 3. Valid key accepted
@@ -166,30 +181,33 @@ class TestEnterpriseHardeningAndExploitProtection:
 
     def test_installer_downloads_available(self):
         from fastapi.testclient import TestClient
+
         from serve_cockpit import app
+
         client = TestClient(app)
 
         # Windows installer
         resp_win = client.get("/api/download/installer-windows")
         assert resp_win.status_code == 200
-        assert "JORWALZZZ" in resp_win.text
+        assert "JORWAL NIM" in resp_win.text
 
         # Unix installer
         resp_unix = client.get("/api/download/installer-unix")
         assert resp_unix.status_code == 200
-        assert "JORWALZZZ" in resp_unix.text
+        assert "JORWAL NIM" in resp_unix.text
 
     def test_csrf_origin_rejection(self):
         from fastapi.testclient import TestClient
+
         from serve_cockpit import app
+
         client = TestClient(app)
 
         # Cross-origin request from malicious site must be rejected
         resp = client.post(
             "/api/target/fetch",
             headers={"Origin": "https://malicious-attacker-site.com"},
-            json={"target": "KRAS"}
+            json={"target": "KRAS"},
         )
         assert resp.status_code == 403
         assert resp.json()["error"] == "CSRF_ORIGIN_REJECTED"
-

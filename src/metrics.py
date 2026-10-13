@@ -7,12 +7,14 @@ CSV performance summary tables evaluating NVIDIA NIM acceleration vs. local CPU 
 
 from __future__ import annotations
 
-import os
 import logging
-from typing import List, Dict, Any, Tuple
+import os
+from typing import Any, Dict, List
+
+import matplotlib
 import numpy as np
 import pandas as pd
-import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -33,7 +35,14 @@ BG_LIGHT = "#F8F9FA"
 def compute_summary_statistics(values: List[float]) -> Dict[str, float]:
     """Computes mean, median, standard deviation, min, max, and 95th percentile."""
     if not values:
-        return {"mean": 0.0, "median": 0.0, "std": 0.0, "min": 0.0, "max": 0.0, "p95": 0.0}
+        return {
+            "mean": 0.0,
+            "median": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "p95": 0.0,
+        }
     arr = np.array(values, dtype=float)
     return {
         "mean": round(float(np.mean(arr)), 2),
@@ -57,7 +66,9 @@ class BenchmarkReporter:
     Manages benchmark data aggregation, tabular CSV reporting, and graphical charting.
     """
 
-    def __init__(self, records: List[ComplexBenchmarkRecord], output_dir: str = "results"):
+    def __init__(
+        self, records: List[ComplexBenchmarkRecord], output_dir: str = "results"
+    ):
         self.records = records
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
@@ -73,15 +84,29 @@ class BenchmarkReporter:
     def get_aggregate_stats(self) -> Dict[str, Any]:
         """Calculates aggregate latency and throughput statistics."""
         return {
-            "nim_latency_stats": compute_summary_statistics(self.df["nim_total_latency_ms"].tolist()),
-            "cpu_latency_stats": compute_summary_statistics(self.df["cpu_total_latency_ms"].tolist()),
-            "nim_throughput_stats": compute_summary_statistics(self.df["nim_tokens_per_sec"].tolist()),
-            "cpu_throughput_stats": compute_summary_statistics(self.df["cpu_tokens_per_sec"].tolist()),
-            "speedup_stats": compute_summary_statistics(self.df["speedup_factor"].tolist()),
-            "diffdock_latency_stats": compute_summary_statistics(self.df["diffdock_latency_ms"].tolist()),
+            "nim_latency_stats": compute_summary_statistics(
+                self.df["nim_total_latency_ms"].tolist()
+            ),
+            "cpu_latency_stats": compute_summary_statistics(
+                self.df["cpu_total_latency_ms"].tolist()
+            ),
+            "nim_throughput_stats": compute_summary_statistics(
+                self.df["nim_tokens_per_sec"].tolist()
+            ),
+            "cpu_throughput_stats": compute_summary_statistics(
+                self.df["cpu_tokens_per_sec"].tolist()
+            ),
+            "speedup_stats": compute_summary_statistics(
+                self.df["speedup_factor"].tolist()
+            ),
+            "diffdock_latency_stats": compute_summary_statistics(
+                self.df["diffdock_latency_ms"].tolist()
+            ),
         }
 
-    def plot_throughput_comparison(self, filename: str = "throughput_comparison.png") -> str:
+    def plot_throughput_comparison(
+        self, filename: str = "throughput_comparison.png"
+    ) -> str:
         """
         Generates publication-grade comparative bar plot comparing
         NVIDIA NIM GPU throughput against Local CPU Baseline (Tokens / Sec).
@@ -96,12 +121,15 @@ class BenchmarkReporter:
 
         # Prepare grouped bar data
         df_sorted = self.df.sort_values(by="residue_count").reset_index(drop=True)
-        labels = [f"{row['target_name'][:18]}...\n({row['residue_count']} aa)" for _, row in df_sorted.iterrows()]
+        labels = [
+            f"{row['target_name'][:18]}...\n({row['residue_count']} aa)"
+            for _, row in df_sorted.iterrows()
+        ]
 
         x = np.arange(len(labels))
         width = 0.35
 
-        rects1 = ax.bar(
+        ax.bar(
             x - width / 2,
             df_sorted["cpu_tokens_per_sec"],
             width,
@@ -112,7 +140,7 @@ class BenchmarkReporter:
             alpha=0.9,
         )
 
-        rects2 = ax.bar(
+        ax.bar(
             x + width / 2,
             df_sorted["nim_tokens_per_sec"],
             width,
@@ -140,7 +168,12 @@ class BenchmarkReporter:
             )
 
         # Labels & Aesthetics
-        ax.set_ylabel("Residue Throughput (Tokens / Sec)", fontsize=12, fontweight="bold", labelpad=10)
+        ax.set_ylabel(
+            "Residue Throughput (Tokens / Sec)",
+            fontsize=12,
+            fontweight="bold",
+            labelpad=10,
+        )
         ax.set_title(
             "Residue Processing Throughput: NVIDIA BioNeMo NIM vs. Local CPU Baseline",
             fontsize=14,
@@ -149,7 +182,13 @@ class BenchmarkReporter:
         )
         ax.set_xticks(x)
         ax.set_xticklabels(labels, fontsize=10)
-        ax.legend(frameon=True, facecolor="white", edgecolor="#CBD5E0", fontsize=10.5, loc="upper right")
+        ax.legend(
+            frameon=True,
+            facecolor="white",
+            edgecolor="#CBD5E0",
+            fontsize=10.5,
+            loc="upper right",
+        )
 
         # Subtle upper bound padding for annotations
         max_val = df_sorted["nim_tokens_per_sec"].max()
@@ -243,15 +282,28 @@ class BenchmarkReporter:
                 fontweight="bold",
             )
 
-        ax.set_xlabel("Protein Sequence Length (Residues / Amino Acids)", fontsize=11, fontweight="bold", labelpad=8)
-        ax.set_ylabel("Total Latency (Milliseconds)", fontsize=11, fontweight="bold", labelpad=8)
+        ax.set_xlabel(
+            "Protein Sequence Length (Residues / Amino Acids)",
+            fontsize=11,
+            fontweight="bold",
+            labelpad=8,
+        )
+        ax.set_ylabel(
+            "Total Latency (Milliseconds)", fontsize=11, fontweight="bold", labelpad=8
+        )
         ax.set_title(
             "Inference Latency Scaling vs. Protein Sequence Length",
             fontsize=13.5,
             fontweight="bold",
             pad=14,
         )
-        ax.legend(frameon=True, facecolor="white", edgecolor="#CBD5E0", fontsize=10, loc="upper left")
+        ax.legend(
+            frameon=True,
+            facecolor="white",
+            edgecolor="#CBD5E0",
+            fontsize=10,
+            loc="upper left",
+        )
         ax.grid(True, linestyle="--", alpha=0.5)
 
         plt.figtext(

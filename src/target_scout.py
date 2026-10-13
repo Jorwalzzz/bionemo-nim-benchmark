@@ -1,15 +1,22 @@
 import math
 import os
 import re
+
 """
 Agentic BioNeMo - Agent 1: Target Scout Agent
 Resolves oncology targets, fetches 3D crystal structures, identifies binding pockets,
 and validates canonical amino acid sequences.
 """
 import logging
-from typing import Dict, Tuple, Optional, List
-from src.models import TargetProfile, AgentMessage
-from src.pdb_utils import fetch_pdb_online_or_mock, clean_pdb_structure, extract_sequence_from_pdb, validate_sequence
+from typing import Dict, Optional, Tuple
+
+from src.models import AgentMessage, TargetProfile
+from src.pdb_utils import (
+    clean_pdb_structure,
+    extract_sequence_from_pdb,
+    fetch_pdb_online_or_mock,
+    validate_sequence,
+)
 
 logger = logging.getLogger("TargetScout")
 
@@ -20,13 +27,14 @@ RESTRICTED_PATHOGEN_SIGNATURES = {
     "Ebola Virus Glycoprotein Core": "MGVTGILQLPRDRFKRTSFFLWVIILFQRTFSIPLGVIHNSTLQVSDVDKLVCRDKLSSTNQLRSVGLNLEGNGVATDVPSATKRWGFRSGVPPKVVNYEAGEWAENCYNLEIKKPDGSECLPAAPDGIRGFPRCRYVHKVSGTGPCAGDFAFHKEGAFFLYDRLASTVIYRGTTFAEGVVAFLILPQAKKDFFSSHPLREPVNATEDPSSGYYSTTIRYQATGFGTNETEYLFEVDNLTYVQLESRFTPQFLLQLNETIYTSGKRSNTTGKLIWKVNPEIDTTIGEWAFWETKKTSLEKFAVKSCL",
 }
 
+
 def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
     """
     Evaluates sequence against GDM-100 / Select Agent biosecurity catalogs.
     Implements multi-scale exact k-mer (12-mer) + fuzzy sliding-window homology (>=80% identity).
     Returns (is_safe: bool, flagged_agent: Optional[str]).
     """
-    clean = re.sub(r'[^A-Z]', '', sequence.upper())
+    clean = re.sub(r"[^A-Z]", "", sequence.upper())
     if not clean:
         return True, None
 
@@ -34,7 +42,7 @@ def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
         sig_clean = sig.upper()
         # 1. High-speed exact k-mer filter (12-mer)
         for i in range(0, len(sig_clean) - 12, 6):
-            kmer = sig_clean[i:i+12]
+            kmer = sig_clean[i : i + 12]
             if kmer in clean:
                 return False, agent_name
 
@@ -43,13 +51,16 @@ def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
         max_mismatches = 4
         if len(clean) >= window_size and len(sig_clean) >= window_size:
             for i in range(0, len(sig_clean) - window_size, 10):
-                sig_window = sig_clean[i:i+window_size]
+                sig_window = sig_clean[i : i + window_size]
                 for j in range(0, len(clean) - window_size + 1, 5):
-                    target_window = clean[j:j+window_size]
-                    mismatches = sum(1 for a, b in zip(sig_window, target_window) if a != b)
+                    target_window = clean[j : j + window_size]
+                    mismatches = sum(
+                        1 for a, b in zip(sig_window, target_window) if a != b
+                    )
                     if mismatches <= max_mismatches:
                         return False, f"{agent_name} (Homology Variant)"
     return True, None
+
 
 TARGET_REGISTRY: Dict[str, Dict] = {
     "SARS-CoV-2 Mpro": {
@@ -61,7 +72,7 @@ TARGET_REGISTRY: Dict[str, Dict] = {
         "pocket_residues": ["His41", "Cys145", "Met49", "Met165", "Glu166", "Gln189"],
         "reference_ligand_name": "Nirmatrelvir",
         "reference_ligand_smiles": "CC1(C2C1C(N(C2)C(=O)C(C(C)(C)C)NC(=O)C(F)(F)F)C(=O)NC(CC3CCNC3=O)C#N)C",
-        "pocket_coords": {"x": 9.2, "y": -4.5, "z": 21.3}
+        "pocket_coords": {"x": 9.2, "y": -4.5, "z": 21.3},
     },
     "HER2": {
         "gene": "ERBB2",
@@ -72,7 +83,7 @@ TARGET_REGISTRY: Dict[str, Dict] = {
         "pocket_residues": ["Thr798", "Met801", "Lys753", "Leu726", "Cys805", "Asp863"],
         "reference_ligand_name": "Lapatinib",
         "reference_ligand_smiles": "CS(=O)(=O)CCNCC1=CC=C(O1)C2=CC3=C(C=C2)N=CN=C3NC4=CC(=C(C=C4)OCC5=CC(=CC=C5)F)Cl",
-        "pocket_coords": {"x": 18.5, "y": 14.2, "z": 32.8}
+        "pocket_coords": {"x": 18.5, "y": 14.2, "z": 32.8},
     },
     "KRAS G12D": {
         "gene": "KRAS",
@@ -83,7 +94,7 @@ TARGET_REGISTRY: Dict[str, Dict] = {
         "pocket_residues": ["Asp12", "Gly60", "Gln61", "Tyr96", "Arg68", "Asp69"],
         "reference_ligand_name": "MRTX1133",
         "reference_ligand_smiles": "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5",
-        "pocket_coords": {"x": 14.2, "y": 8.5, "z": -12.1}
+        "pocket_coords": {"x": 14.2, "y": 8.5, "z": -12.1},
     },
     "EGFR T790M": {
         "gene": "EGFR",
@@ -94,7 +105,7 @@ TARGET_REGISTRY: Dict[str, Dict] = {
         "pocket_residues": ["Met790", "Thr854", "Lys745", "Asp855", "Leu718", "Cys797"],
         "reference_ligand_name": "Gefitinib",
         "reference_ligand_smiles": "COC1=C(OCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",
-        "pocket_coords": {"x": 22.1, "y": 0.4, "z": 52.8}
+        "pocket_coords": {"x": 22.1, "y": 0.4, "z": 52.8},
     },
     "BRAF V600E": {
         "gene": "BRAF",
@@ -105,12 +116,18 @@ TARGET_REGISTRY: Dict[str, Dict] = {
         "pocket_residues": ["Glu600", "Phe595", "Lys483", "Leu514", "Asp594"],
         "reference_ligand_name": "Vemurafenib",
         "reference_ligand_smiles": "CCCS(=O)(=O)NC1=C(F)C(=C(C=C1)C(=O)C2=CNC3=C2C=C(C=N3)C4=CC=C(Cl)C=C4)F",
-        "pocket_coords": {"x": -0.8, "y": -14.2, "z": -18.7}
-    }
+        "pocket_coords": {"x": -0.8, "y": -14.2, "z": -18.7},
+    },
 }
 
+
 class TargetScoutAgent:
-    def __init__(self, api_key: Optional[str] = None, mock: bool = True, name: str = "TargetScout"):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        mock: bool = True,
+        name: str = "TargetScout",
+    ):
         self.api_key = api_key or os.getenv("NVIDIA_API_KEY", "")
         self.mock = mock or (not self.api_key)
         self.name = name
@@ -121,10 +138,12 @@ class TargetScoutAgent:
         s = text.strip()
         if s.startswith(">"):
             return True
-        cleaned = re.sub(r'[\s\d\-_]', '', s).upper()
+        cleaned = re.sub(r"[\s\d\-_]", "", s).upper()
         return len(cleaned) >= 15 and all(c in "ACDEFGHIKLMNPQRSTVWY" for c in cleaned)
 
-    def fold_sequence_with_esmfold(self, sequence: str, target_name: Optional[str] = None) -> Tuple[TargetProfile, AgentMessage]:
+    def fold_sequence_with_esmfold(
+        self, sequence: str, target_name: Optional[str] = None
+    ) -> Tuple[TargetProfile, AgentMessage]:
         """
         Predicts 3D atomic coordinates de novo from primary amino acid sequence
         using NVIDIA NIM ESMFold (or high-fidelity pLDDT simulation in mock mode).
@@ -137,18 +156,22 @@ class TargetScoutAgent:
         else:
             fasta_header = target_name or "De Novo Variant"
             raw_seq = "".join(lines)
-        clean_seq = re.sub(r'[^A-Z]', '', raw_seq.upper())
+        clean_seq = re.sub(r"[^A-Z]", "", raw_seq.upper())
 
         is_valid, invalid_aas = validate_sequence(clean_seq)
         if not is_valid:
-            logger.warning(f"Sanitizing non-canonical residues {invalid_aas} from sequence.")
+            logger.warning(
+                f"Sanitizing non-canonical residues {invalid_aas} from sequence."
+            )
             for inv in invalid_aas:
                 clean_seq = clean_seq.replace(inv, "A")
 
         # Biosecurity & Dual-Use Intercept Gate (NIST / GDM-100 Standard)
         is_safe, flagged_agent = screen_biosecurity_dual_use(clean_seq)
         if not is_safe:
-            logger.error(f"BIOSECURITY INTERCEPT: Sequence matches dual-use restricted pathogen ({flagged_agent}). Refusing execution.")
+            logger.error(
+                f"BIOSECURITY INTERCEPT: Sequence matches dual-use restricted pathogen ({flagged_agent}). Refusing execution."
+            )
             profile = TargetProfile(
                 name=f"BIOSECURITY BLOCKED: {flagged_agent}",
                 gene="SELECT_AGENT",
@@ -160,7 +183,7 @@ class TargetScoutAgent:
                 reference_ligand_name="NONE",
                 reference_ligand_smiles="",
                 is_esmfold=False,
-                mean_plddt=0.0
+                mean_plddt=0.0,
             )
             msg = AgentMessage(
                 agent_name=self.name,
@@ -168,7 +191,7 @@ class TargetScoutAgent:
                 action="BIOSECURITY_INTERCEPT",
                 thought=f"Sequence matches restricted select agent ({flagged_agent}). Autonomous safety stop triggered.",
                 output_summary=f"BIOSECURITY INTERCEPT: Execution blocked for restricted pathogen {flagged_agent}.",
-                status="BLOCKED"
+                status="BLOCKED",
             )
             return profile, msg
 
@@ -179,17 +202,22 @@ class TargetScoutAgent:
         if not self.mock and self.api_key:
             try:
                 import requests
+
                 url = "https://health.api.nvidia.com/v1/biology/meta/esmfold"
                 headers = {
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
                 }
                 payload = {"sequence": clean_seq[:1000]}
                 resp = requests.post(url, json=payload, headers=headers, timeout=30)
                 if resp.status_code == 200:
                     data = resp.json()
-                    pdb_content = data.get("pdbs", [""])[0] if isinstance(data.get("pdbs"), list) else data.get("pdb", "")
+                    pdb_content = (
+                        data.get("pdbs", [""])[0]
+                        if isinstance(data.get("pdbs"), list)
+                        else data.get("pdb", "")
+                    )
                     if pdb_content:
                         # Extract pLDDT from B-factors
                         plddts = []
@@ -202,7 +230,9 @@ class TargetScoutAgent:
                         if plddts:
                             mean_plddt = round(sum(plddts) / len(plddts), 1)
             except Exception as e:
-                logger.warning(f"ESMFold NIM API call failed ({e}); switching to de novo simulation.")
+                logger.warning(
+                    f"ESMFold NIM API call failed ({e}); switching to de novo simulation."
+                )
 
         # 2. High-Fidelity Simulation Fallback
         if not pdb_content:
@@ -220,7 +250,9 @@ class TargetScoutAgent:
                     plddt = round(88.0 + (i % 8) * 1.2, 1)
                 plddt = min(98.5, max(52.0, plddt))
                 plddts.append(plddt)
-                atom_lines.append(f"ATOM  {i:5d}  CA  {aa:3s} A{i:4d}    {x:8.3f}{y:8.3f}{z:8.3f}  1.00 {plddt:5.2f}           C")
+                atom_lines.append(
+                    f"ATOM  {i:5d}  CA  {aa:3s} A{i:4d}    {x:8.3f}{y:8.3f}{z:8.3f}  1.00 {plddt:5.2f}           C"
+                )
             atom_lines.append("END")
             pdb_content = "\n".join(atom_lines)
             mean_plddt = round(sum(plddts) / len(plddts), 1)
@@ -229,9 +261,16 @@ class TargetScoutAgent:
 
         # Detect catalytic pocket residues (high-confidence core residues)
         sample_indices = [11, 15, 28, 42, 60, 95]
-        pocket_res = [f"{clean_seq[idx]}{idx+1}" for idx in sample_indices if idx < len(clean_seq)]
+        pocket_res = [
+            f"{clean_seq[idx]}{idx + 1}"
+            for idx in sample_indices
+            if idx < len(clean_seq)
+        ]
         if not pocket_res:
-            pocket_res = [f"{clean_seq[0]}1", f"{clean_seq[min(10, len(clean_seq)-1)]}10"]
+            pocket_res = [
+                f"{clean_seq[0]}1",
+                f"{clean_seq[min(10, len(clean_seq) - 1)]}10",
+            ]
 
         profile = TargetProfile(
             name=f"ESMFold: {fasta_header[:22]}",
@@ -246,7 +285,7 @@ class TargetScoutAgent:
             target_pocket_coords={"x": 0.0, "y": 0.0, "z": 15.0},
             pdb_text=cleaned_pdb,
             is_esmfold=True,
-            mean_plddt=mean_plddt
+            mean_plddt=mean_plddt,
         )
 
         message = AgentMessage(
@@ -260,7 +299,7 @@ class TargetScoutAgent:
                 f"Isolated catalytic binding pocket across key residues: {', '.join(pocket_res)}."
             ),
             output_summary=f"Folded sequence de novo via ESMFold (pLDDT: {mean_plddt}%, {len(clean_seq)} residues).",
-            status="SUCCESS"
+            status="SUCCESS",
         )
         return profile, message
 
@@ -273,25 +312,32 @@ class TargetScoutAgent:
         normalized_query = query.upper().strip()
         matched_key = None
         for key in TARGET_REGISTRY:
-            if key.upper() in normalized_query or any(token in normalized_query for token in key.upper().split()):
+            if key.upper() in normalized_query or any(
+                token in normalized_query for token in key.upper().split()
+            ):
                 matched_key = key
                 break
-                
+
         # 2. Check if query is an arbitrary 4-character PDB ID
         clean_query = query.strip().upper()
         if not matched_key and len(clean_query) == 4 and clean_query.isalnum():
             # Universal RCSB PDB Ingestion
             import urllib.request
+
             try:
                 url = f"https://files.rcsb.org/download/{clean_query}.pdb"
-                req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "BioNeMo-Scout/1.0"}
+                )
                 with urllib.request.urlopen(req, timeout=10) as r:
                     raw_pdb = r.read().decode("utf-8", errors="replace")
                 cleaned_pdb = clean_pdb_structure(raw_pdb)
                 extracted_seq = extract_sequence_from_pdb(cleaned_pdb)
                 if not extracted_seq:
-                    extracted_seq = "MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ"
-                
+                    extracted_seq = (
+                        "MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ"
+                    )
+
                 profile = TargetProfile(
                     name=f"Custom Target ({clean_query})",
                     gene=clean_query,
@@ -305,34 +351,38 @@ class TargetScoutAgent:
                     target_pocket_coords={"x": 10.0, "y": 10.0, "z": 10.0},
                     pdb_text=cleaned_pdb,
                     is_esmfold=False,
-                    mean_plddt=100.0
+                    mean_plddt=100.0,
                 )
-                
+
                 message = AgentMessage(
                     agent_name=self.name,
                     role="Target Scout",
                     action="UNIVERSAL_RCSB_FETCH",
                     thought=f"Live ingestion successful: fetched crystallographic PDB {clean_query} from RCSB Protein Data Bank. Cleaned solvent and isolated binding pocket.",
                     output_summary=f"Resolved custom target {clean_query} with {len(profile.canonical_sequence)} residues.",
-                    status="SUCCESS"
+                    status="SUCCESS",
                 )
                 return profile, message
             except Exception as e:
-                logger.warning(f"Universal PDB fetch for {clean_query} failed: {e}. Falling back to KRAS.")
+                logger.warning(
+                    f"Universal PDB fetch for {clean_query} failed: {e}. Falling back to KRAS."
+                )
                 matched_key = "KRAS G12D"
 
         # 3. Preset Target Resolution
         if not matched_key:
             matched_key = "KRAS G12D"
-            
+
         data = TARGET_REGISTRY[matched_key]
         raw_pdb = fetch_pdb_online_or_mock(data["pdb_id"])
         cleaned_pdb = clean_pdb_structure(raw_pdb)
-        
+
         is_valid, invalid_aas = validate_sequence(data["canonical_sequence"])
         if not is_valid:
-            logger.warning(f"Target sequence contains non-canonical residues: {invalid_aas}")
-            
+            logger.warning(
+                f"Target sequence contains non-canonical residues: {invalid_aas}"
+            )
+
         profile = TargetProfile(
             name=matched_key,
             gene=data["gene"],
@@ -346,9 +396,9 @@ class TargetScoutAgent:
             target_pocket_coords=data["pocket_coords"],
             pdb_text=cleaned_pdb,
             is_esmfold=False,
-            mean_plddt=100.0
+            mean_plddt=100.0,
         )
-        
+
         message = AgentMessage(
             agent_name=self.name,
             role="Target Scout",
@@ -359,6 +409,6 @@ class TargetScoutAgent:
                 f"Reference scaffold established from {profile.reference_ligand_name}."
             ),
             output_summary=f"Mapped {profile.name} (PDB: {profile.pdb_id}) with {len(profile.canonical_sequence)} validated canonical residues.",
-            status="SUCCESS"
+            status="SUCCESS",
         )
         return profile, message

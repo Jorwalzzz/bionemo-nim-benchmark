@@ -13,11 +13,13 @@ Tests:
 from __future__ import annotations
 
 import pytest
-import numpy as np
 
-from src.client import NimBioClient, ESM2Response, DiffDockResponse
-from src.baseline import LocalCPUBaseline, BaselineProfileResult
-from src.pipeline import BenchmarkPipeline, LigandValidationResult, ComplexBenchmarkRecord
+from src.baseline import BaselineProfileResult, LocalCPUBaseline
+from src.client import DiffDockResponse, ESM2Response, NimBioClient
+from src.pipeline import (
+    BenchmarkPipeline,
+    ComplexBenchmarkRecord,
+)
 
 
 class TestSmilesSanitization:
@@ -30,7 +32,10 @@ class TestSmilesSanitization:
         assert result.is_valid is True
         assert result.canonical_smiles == "CC(=O)Oc1ccccc1C(=O)O"
         assert result.molecular_formula == "C9H8O4"
-        assert result.molecular_weight is not None and abs(result.molecular_weight - 180.16) < 0.5
+        assert (
+            result.molecular_weight is not None
+            and abs(result.molecular_weight - 180.16) < 0.5
+        )
         assert result.error_message is None
 
     def test_imatinib_smiles(self):
@@ -38,7 +43,10 @@ class TestSmilesSanitization:
         imatinib = "Cc1ccc(NC(=O)c2ccc(CN3CCN(C)CC3)cc2)cc1Nc4nccc(-c5cccnc5)n4"
         result = BenchmarkPipeline.sanitize_ligand_smiles(imatinib)
         assert result.is_valid is True
-        assert result.molecular_weight is not None and abs(result.molecular_weight - 493.6) < 1.0
+        assert (
+            result.molecular_weight is not None
+            and abs(result.molecular_weight - 493.6) < 1.0
+        )
         assert result.num_hbd == 2
         assert result.num_hba == 7
 
@@ -55,7 +63,10 @@ class TestSmilesSanitization:
         hypervalent = "C(=O)(=O)(=O)(=O)C"
         result = BenchmarkPipeline.sanitize_ligand_smiles(hypervalent)
         assert result.is_valid is False
-        assert "Explicit valence" in result.error_message or "sanitization" in result.error_message.lower()
+        assert (
+            "Explicit valence" in result.error_message
+            or "sanitization" in result.error_message.lower()
+        )
 
     def test_empty_smiles_handling(self):
         result = BenchmarkPipeline.sanitize_ligand_smiles("")
@@ -123,7 +134,9 @@ class TestLocalCPUBaseline:
     def test_baseline_execution_mock_or_real(self):
         baseline = LocalCPUBaseline(mock_fallback=True)
         seq = "MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEG"
-        res: BaselineProfileResult = baseline.benchmark_sequence(seq, warmup_runs=0, benchmark_runs=1)
+        res: BaselineProfileResult = baseline.benchmark_sequence(
+            seq, warmup_runs=0, benchmark_runs=1
+        )
         assert res.sequence_length == len(seq)
         assert res.total_cpu_latency_ms > 0.0
         assert res.ms_per_residue > 0.0
@@ -150,7 +163,9 @@ class TestBenchmarkPipelineEndToEnd:
             "smiles": "CC(=O)Oc1ccccc1C(=O)O",
         }
 
-        record: ComplexBenchmarkRecord = pipeline.evaluate_complex(sample, benchmark_runs=1)
+        record: ComplexBenchmarkRecord = pipeline.evaluate_complex(
+            sample, benchmark_runs=1
+        )
         assert record.complex_id == "test_01"
         assert record.ligand_validation.is_valid is True
         assert record.nim_tokens_per_sec > 0
@@ -201,4 +216,3 @@ class TestPdbUtils:
         synthetic_out = resolve_protein_structure(sequence="ACDEFGHIKL")
         assert "ATOM" in synthetic_out
         assert "CA" in synthetic_out
-

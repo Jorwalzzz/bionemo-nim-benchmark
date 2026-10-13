@@ -3,10 +3,13 @@ Agentic BioNeMo - Retrosynthesis & Reaction Planner Agent (Dr. Chen)
 Deconstructs lead candidate molecules into commercially accessible chemical building blocks
 and proposes robust, validated organic synthesis reaction steps.
 """
-from typing import List, Dict, Any, Optional
+
+from typing import List
+
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+
 from src.models import MoleculeCandidate, RetrosynthesisPlan, RetrosynthesisStep
+
 
 class RetrosynthesisAgent:
     def __init__(self):
@@ -23,7 +26,7 @@ class RetrosynthesisAgent:
                 target_smiles=candidate.smiles,
                 num_steps=0,
                 overall_feasibility="Invalid SMILES structure",
-                steps=[]
+                steps=[],
             )
 
         steps: List[RetrosynthesisStep] = []
@@ -47,21 +50,28 @@ class RetrosynthesisAgent:
                     {
                         "name": "Substituted Benzoic Acid Core",
                         "smiles": "O=C(O)c1ccc(Cl)cc1",
-                        "cas": "74-11-3 (Commercial, Sigma-Aldrich)"
+                        "cas": "74-11-3 (Commercial, Sigma-Aldrich)",
                     },
                     {
                         "name": "Target Amine Intermediate",
                         "smiles": "NCc1cccnc1",
-                        "cas": "3731-52-0 (Commercial, Enamine)"
-                    }
+                        "cas": "3731-52-0 (Commercial, Enamine)",
+                    },
                 ],
-                reagents=["HATU (1.2 equiv)", "DIPEA (2.5 equiv)", "Anhydrous DMF", "25°C, 2 hours"],
+                reagents=[
+                    "HATU (1.2 equiv)",
+                    "DIPEA (2.5 equiv)",
+                    "Anhydrous DMF",
+                    "25°C, 2 hours",
+                ],
                 product_smiles=candidate.smiles,
                 estimated_yield_pct=84.5,
-                difficulty="Routine (★☆☆)"
+                difficulty="Routine (★☆☆)",
             )
             steps.append(step1)
-            starting_materials.extend(["4-Chlorobenzoic acid", "3-(Aminomethyl)pyridine"])
+            starting_materials.extend(
+                ["4-Chlorobenzoic acid", "3-(Aminomethyl)pyridine"]
+            )
             step_counter += 1
 
         if has_biaryl:
@@ -73,18 +83,23 @@ class RetrosynthesisAgent:
                     {
                         "name": "Aryl Bromide Intermediate",
                         "smiles": "Brc1ccc2ccccc2c1",
-                        "cas": "90-11-9 (Commercial, Combi-Blocks)"
+                        "cas": "90-11-9 (Commercial, Combi-Blocks)",
                     },
                     {
                         "name": "Heteroaryl Boronic Acid Pinacol Ester",
                         "smiles": "OB(O)c1cccnc1",
-                        "cas": "1692-25-7 (Commercial, BLD Pharm)"
-                    }
+                        "cas": "1692-25-7 (Commercial, BLD Pharm)",
+                    },
                 ],
-                reagents=["Pd(dppf)Cl2 (5 mol%)", "K2CO3 (2.0 equiv)", "1,4-Dioxane : H2O (4:1)", "90°C under N2, 6 hours"],
+                reagents=[
+                    "Pd(dppf)Cl2 (5 mol%)",
+                    "K2CO3 (2.0 equiv)",
+                    "1,4-Dioxane : H2O (4:1)",
+                    "90°C under N2, 6 hours",
+                ],
                 product_smiles=candidate.smiles,
                 estimated_yield_pct=76.0,
-                difficulty="Moderate (★★☆)"
+                difficulty="Moderate (★★☆)",
             )
             steps.append(step2)
             starting_materials.extend(["1-Bromonaphthalene", "Pyridine-3-boronic acid"])
@@ -99,18 +114,18 @@ class RetrosynthesisAgent:
                     {
                         "name": "2-Chloropyrimidine Core",
                         "smiles": "Clc1ncccn1",
-                        "cas": "1722-12-9 (Commercial, Sigma-Aldrich)"
+                        "cas": "1722-12-9 (Commercial, Sigma-Aldrich)",
                     },
                     {
                         "name": "Substituted Aniline Precursor",
                         "smiles": "Nc1cccc(F)c1",
-                        "cas": "372-19-0 (Commercial, Oakwood)"
-                    }
+                        "cas": "372-19-0 (Commercial, Oakwood)",
+                    },
                 ],
                 reagents=["i-PrOH", "Conc. HCl (cat.)", "Microvave 120°C, 30 min"],
                 product_smiles=candidate.smiles,
                 estimated_yield_pct=81.0,
-                difficulty="Routine (★☆☆)"
+                difficulty="Routine (★☆☆)",
             )
             steps.append(step_snar)
             starting_materials.extend(["2-Chloropyrimidine", "3-Fluoroaniline"])
@@ -125,23 +140,27 @@ class RetrosynthesisAgent:
                     {
                         "name": "Secondary Amine Core Scaffold",
                         "smiles": "C1CNCCN1",
-                        "cas": "110-85-0 (Commercial, Sigma-Aldrich)"
+                        "cas": "110-85-0 (Commercial, Sigma-Aldrich)",
                     },
                     {
                         "name": "Functionalized Alkyl Halide",
                         "smiles": "BrCCc1ccccc1",
-                        "cas": "103-63-9 (Commercial, Alfa Aesar)"
-                    }
+                        "cas": "103-63-9 (Commercial, Alfa Aesar)",
+                    },
                 ],
                 reagents=["K2CO3 (2.5 equiv)", "MeCN", "reflux, 4 hours"],
                 product_smiles=candidate.smiles,
                 estimated_yield_pct=72.0,
-                difficulty="Routine (★☆☆)"
+                difficulty="Routine (★☆☆)",
             )
             steps.append(default_step)
             starting_materials.extend(["Piperazine core", "Phenethyl bromide"])
 
-        feasibility = "High Feasibility (1-2 steps from commercial building blocks)" if len(steps) <= 2 else "Moderate Feasibility"
+        feasibility = (
+            "High Feasibility (1-2 steps from commercial building blocks)"
+            if len(steps) <= 2
+            else "Moderate Feasibility"
+        )
         turnaround = 5 if len(steps) == 1 else 10
 
         return RetrosynthesisPlan(
@@ -151,5 +170,5 @@ class RetrosynthesisAgent:
             overall_feasibility=feasibility,
             steps=steps,
             starting_materials=list(set(starting_materials)),
-            estimated_turnaround_days=turnaround
+            estimated_turnaround_days=turnaround,
         )

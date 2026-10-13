@@ -9,14 +9,13 @@ network vs. server inference latency profiling, and full mock simulation fallbac
 
 from __future__ import annotations
 
+import logging
 import os
+import random
 import re
 import time
-import math
-import random
-import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -28,13 +27,18 @@ logger = logging.getLogger(__name__)
 CANONICAL_AMINO_ACIDS = set("ACDEFGHIKLMNPQRSTVWY")
 
 DEFAULT_NIM_BASE_URL = os.getenv("NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
-DEFAULT_ESM2_ENDPOINT = os.getenv("ESM2_ENDPOINT", f"{DEFAULT_NIM_BASE_URL}/biology/nvidia/esm2-650m")
-DEFAULT_DIFFDOCK_ENDPOINT = os.getenv("DIFFDOCK_ENDPOINT", "https://health.api.nvidia.com/v1/biology/mit/diffdock")
+DEFAULT_ESM2_ENDPOINT = os.getenv(
+    "ESM2_ENDPOINT", f"{DEFAULT_NIM_BASE_URL}/biology/nvidia/esm2-650m"
+)
+DEFAULT_DIFFDOCK_ENDPOINT = os.getenv(
+    "DIFFDOCK_ENDPOINT", "https://health.api.nvidia.com/v1/biology/mit/diffdock"
+)
 
 
 @dataclass
 class LatencyProfile:
     """Latency metrics breakdown in milliseconds."""
+
     total_latency_ms: float
     server_inference_ms: float
     network_overhead_ms: float
@@ -45,6 +49,7 @@ class LatencyProfile:
 @dataclass
 class ESM2Response:
     """Standardized response from ESM-2 embedding endpoint."""
+
     embeddings: List[List[float]]
     sequence_length: int
     hidden_dim: int
@@ -57,6 +62,7 @@ class ESM2Response:
 @dataclass
 class DiffDockPose:
     """A predicted molecular docking pose and affinity."""
+
     rank: int
     confidence_score: float
     predicted_affinity_kcal_mol: float
@@ -67,6 +73,7 @@ class DiffDockPose:
 @dataclass
 class DiffDockResponse:
     """Standardized response from DiffDock docking endpoint."""
+
     poses: List[DiffDockPose]
     num_poses: int
     top_affinity_kcal_mol: float
@@ -103,13 +110,21 @@ class NimBioClient:
         self.backoff_factor = backoff_factor
 
         # Determine if client operates in forced mock simulation mode
-        self.mock = mock or not self.api_key or self.api_key.startswith("nvapi-your-key-here")
+        self.mock = (
+            mock or not self.api_key or self.api_key.startswith("nvapi-your-key-here")
+        )
 
         if self.mock:
             logger.info("NimBioClient initialized in MOCK simulation mode.")
         else:
-            masked_key = self.api_key[:8] + "..." + self.api_key[-4:] if len(self.api_key) > 12 else "***"
-            logger.info("NimBioClient initialized in LIVE mode with key: %s", masked_key)
+            masked_key = (
+                self.api_key[:8] + "..." + self.api_key[-4:]
+                if len(self.api_key) > 12
+                else "***"
+            )
+            logger.info(
+                "NimBioClient initialized in LIVE mode with key: %s", masked_key
+            )
 
         # Build reusable requests Session
         self.session = requests.Session()
@@ -192,7 +207,9 @@ class NimBioClient:
                     if retry_after_hdr and retry_after_hdr.isdigit():
                         sleep_time = float(retry_after_hdr)
                     else:
-                        sleep_time = self.backoff_factor * (2 ** attempt) + random.uniform(0.1, 0.6)
+                        sleep_time = self.backoff_factor * (
+                            2**attempt
+                        ) + random.uniform(0.1, 0.6)
 
                     logger.warning(
                         "HTTP 429 Rate Limit encountered. Retrying attempt %d/%d after %.2fs...",
@@ -205,7 +222,11 @@ class NimBioClient:
                     continue
 
                 server_inference_ms = None
-                for hdr_key in ["x-inference-time", "nv-latency-ms", "x-server-inference-time-ms"]:
+                for hdr_key in [
+                    "x-inference-time",
+                    "nv-latency-ms",
+                    "x-server-inference-time-ms",
+                ]:
                     if hdr_key in resp.headers:
                         try:
                             server_inference_ms = float(resp.headers[hdr_key])
@@ -230,10 +251,13 @@ class NimBioClient:
             except (requests.RequestException, requests.Timeout) as e:
                 attempt += 1
                 from src.security_sentinel import SecretScrubber
+
                 safe_err = SecretScrubber.scrub(str(e))
                 if attempt > self.max_retries:
                     raise RuntimeError(f"NIM upstream communication failed: {safe_err}")
-                sleep_time = self.backoff_factor * (2 ** attempt) + random.uniform(0.1, 0.5)
+                sleep_time = self.backoff_factor * (2**attempt) + random.uniform(
+                    0.1, 0.5
+                )
                 logger.warning(
                     "Network error (%s) on attempt %d/%d. Retrying after %.2fs...",
                     safe_err,
@@ -243,7 +267,9 @@ class NimBioClient:
                 )
                 time.sleep(sleep_time)
 
-        raise RuntimeError(f"Exceeded max retries ({self.max_retries}) contacting NVIDIA NIM endpoint.")
+        raise RuntimeError(
+            f"Exceeded max retries ({self.max_retries}) contacting NVIDIA NIM endpoint."
+        )
 
     def _simulate_esm2_response(self, clean_seq: str, seq_len: int) -> ESM2Response:
         """Generates realistic GPU TensorRT simulation profile for ESM-2."""
@@ -268,7 +294,9 @@ class NimBioClient:
             [round(random.gauss(0.0, 0.5), 4) for _ in range(hidden_dim)]
             for _ in range(min(seq_len, 4))
         ]
-        full_embeddings = [mock_embeddings[i % len(mock_embeddings)] for i in range(seq_len)]
+        full_embeddings = [
+            mock_embeddings[i % len(mock_embeddings)] for i in range(seq_len)
+        ]
 
         return ESM2Response(
             embeddings=full_embeddings,
@@ -312,14 +340,22 @@ class NimBioClient:
             if resp.status_code == 200:
                 data = resp.json()
                 embeddings: List[List[float]] = []
-                if "data" in data and isinstance(data["data"], list) and len(data["data"]) > 0:
+                if (
+                    "data" in data
+                    and isinstance(data["data"], list)
+                    and len(data["data"]) > 0
+                ):
                     item = data["data"][0]
                     if "embedding" in item:
                         embeddings = item["embedding"]
                 elif "embeddings" in data:
                     embeddings = data["embeddings"]
 
-                actual_hidden_dim = len(embeddings[0]) if embeddings and isinstance(embeddings[0], list) else 1280
+                actual_hidden_dim = (
+                    len(embeddings[0])
+                    if embeddings and isinstance(embeddings[0], list)
+                    else 1280
+                )
                 return ESM2Response(
                     embeddings=embeddings,
                     sequence_length=seq_len,
@@ -338,10 +374,15 @@ class NimBioClient:
                 return self._simulate_esm2_response(clean_seq, seq_len)
 
         except Exception as e:
-            logger.warning("NIM ESM-2 network error (%s). Falling back to GPU simulation profile.", str(e))
+            logger.warning(
+                "NIM ESM-2 network error (%s). Falling back to GPU simulation profile.",
+                str(e),
+            )
             return self._simulate_esm2_response(clean_seq, seq_len)
 
-    def _simulate_diffdock_response(self, ligand_smiles: str, num_poses: int) -> DiffDockResponse:
+    def _simulate_diffdock_response(
+        self, ligand_smiles: str, num_poses: int
+    ) -> DiffDockResponse:
         """Generates realistic simulated docking poses."""
         infer_ms = random.uniform(110.0, 220.0)
         net_ms = random.uniform(12.0, 25.0)
@@ -375,7 +416,9 @@ class NimBioClient:
         return DiffDockResponse(
             poses=poses,
             num_poses=len(poses),
-            top_affinity_kcal_mol=poses[0].predicted_affinity_kcal_mol if poses else -7.5,
+            top_affinity_kcal_mol=poses[0].predicted_affinity_kcal_mol
+            if poses
+            else -7.5,
             latency=latency,
             model="nvidia/diffdock",
             is_mock=True,
@@ -415,7 +458,9 @@ class NimBioClient:
             clean_seq = self.validate_protein_sequence(protein_sequence)
             for i, aa in enumerate(clean_seq[:100], start=1):
                 x = i * 3.8
-                lines.append(f"ATOM  {i:5d}  CA  {aa} A{i:4d}    {x:8.3f}{0.0:8.3f}{0.0:8.3f}  1.00 10.00           C")
+                lines.append(
+                    f"ATOM  {i:5d}  CA  {aa} A{i:4d}    {x:8.3f}{0.0:8.3f}{0.0:8.3f}  1.00 10.00           C"
+                )
             lines.append("END")
             pdb_text = "\n".join(lines)
 
@@ -457,7 +502,11 @@ class NimBioClient:
                             )
                         )
 
-                    top_aff = parsed_poses[0].predicted_affinity_kcal_mol if parsed_poses else -7.5
+                    top_aff = (
+                        parsed_poses[0].predicted_affinity_kcal_mol
+                        if parsed_poses
+                        else -7.5
+                    )
                     logger.info(
                         "Live NVIDIA DiffDock success! Poses: %d, Top Conf: %.3f, Top Affinity: %.2f kcal/mol",
                         len(parsed_poses),
@@ -475,12 +524,20 @@ class NimBioClient:
                         raw_response=data,
                     )
                 else:
-                    logger.warning("DiffDock API returned status '%s'. Using fallback profile.", data.get("status"))
+                    logger.warning(
+                        "DiffDock API returned status '%s'. Using fallback profile.",
+                        data.get("status"),
+                    )
                     return self._simulate_diffdock_response(ligand_smiles, num_poses)
             else:
-                logger.warning("DiffDock API returned HTTP [%d]. Using fallback profile.", resp.status_code)
+                logger.warning(
+                    "DiffDock API returned HTTP [%d]. Using fallback profile.",
+                    resp.status_code,
+                )
                 return self._simulate_diffdock_response(ligand_smiles, num_poses)
 
         except Exception as e:
-            logger.warning("Live DiffDock request failed: %s. Using fallback profile.", str(e))
+            logger.warning(
+                "Live DiffDock request failed: %s. Using fallback profile.", str(e)
+            )
             return self._simulate_diffdock_response(ligand_smiles, num_poses)

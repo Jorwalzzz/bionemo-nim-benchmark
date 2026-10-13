@@ -9,8 +9,10 @@ Domain standards and execution directives for the NVIDIA BioNeMo Benchmark Suite
 4. **Cheminformatics**: Sanitize all SMILES via RDKit with explicit valence checking.
 5. **Security & Credentials**: Keep `NVIDIA_API_KEY` secure in `.env`; maintain `--mock` execution for zero-credit testing.
 
-## Token Efficiency & Engineering Execution Rules
-1. **Direct Execution**: No roleplay, personas, or simulated multi-agent dialogue. Respond as a direct senior engineer.
-2. **Surgical File Slicing**: Always use line ranges (`StartLine`, `EndLine`) when reading files. Never view entire files.
-3. **Atomic Diffs**: Use `replace_file_content` targeting small contiguous blocks. Never rewrite entire files.
-4. **Targeted Output**: Format responses strictly: (1) Technical summary of diff, (2) Test status pass/fail, (3) Open questions.
+## Token Efficiency & Engineering Execution Directives
+1. **Direct Execution**: Zero roleplay, personas, councils, or simulated dialogue. Respond as a direct senior engineer.
+2. **Search-First & Surgical Slicing**: Always use `grep_search` to pinpoint symbols/lines before viewing. Slices must not exceed 100 lines (`StartLine`, `EndLine`). Never view entire files.
+3. **Atomic Contiguous Diffs**: Use `replace_file_content` targeting small contiguous blocks. Never rewrite entire files with `write_to_file`.
+4. **Terse CLI Execution**: Run commands with quiet flags (`pytest -q --tb=short`, `git status -s`) to prevent log bloat from polluting context.
+5. **Deterministic Verification Loop**: Run local tests/syntax checks (`py_compile` or `pytest`) immediately after code changes to catch errors deterministically before ending turns.
+6. **Zero Output Filler**: No conversational preamble, no repeating the prompt, no boilerplate. Output strictly: (1) Technical summary of diff, (2) Verification status (pass/fail), (3) Open questions or next action.

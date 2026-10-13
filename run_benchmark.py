@@ -9,20 +9,20 @@ and FDA-approved small-molecule complexes.
 
 from __future__ import annotations
 
+import argparse
+import json
+import logging
 import os
 import sys
-import json
-import argparse
-import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from dotenv import load_dotenv
 import pandas as pd
+from dotenv import load_dotenv
 
-from src.client import NimBioClient
 from src.baseline import LocalCPUBaseline
-from src.pipeline import BenchmarkPipeline, ComplexBenchmarkRecord
+from src.client import NimBioClient
 from src.metrics import BenchmarkReporter
+from src.pipeline import BenchmarkPipeline, ComplexBenchmarkRecord
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -99,16 +99,24 @@ def load_sample_complexes(filepath: str) -> List[Dict[str, Any]]:
     with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
     if not isinstance(data, list):
-        raise ValueError(f"Expected a list of complexes in {filepath}, got {type(data)}")
+        raise ValueError(
+            f"Expected a list of complexes in {filepath}, got {type(data)}"
+        )
     return data
 
 
 def print_ascii_header(mock_mode: bool) -> None:
-    mode_str = "[ MOCK SIMULATION (CI/CD READY) ]" if mock_mode else "[ LIVE NVIDIA NIM CLOUD ENDPOINTS ]"
+    mode_str = (
+        "[ MOCK SIMULATION (CI/CD READY) ]"
+        if mock_mode
+        else "[ LIVE NVIDIA NIM CLOUD ENDPOINTS ]"
+    )
     print("\n" + "=" * 80)
     print("  NVIDIA BioNeMo & NIM Inference Benchmark Suite")
     print(f"  Mode: {mode_str}")
-    print("  Evaluating GPU TensorRT Microservices vs. Local Unaccelerated CPU Baseline")
+    print(
+        "  Evaluating GPU TensorRT Microservices vs. Local Unaccelerated CPU Baseline"
+    )
     print("=" * 80 + "\n")
 
 
@@ -116,17 +124,19 @@ def print_results_table(records: List[ComplexBenchmarkRecord]) -> None:
     """Formats and prints executive summary table."""
     summary_rows = []
     for r in records:
-        summary_rows.append({
-            "Complex ID": r.complex_id,
-            "Target (Residues)": f"{r.target_name[:18]} ({r.residue_count}aa)",
-            "Drug (MW)": f"{r.drug_name.split()[0]} ({r.ligand_validation.molecular_weight or 0:.0f}g/mol)",
-            "NIM Latency": f"{r.nim_total_latency_ms:.1f} ms",
-            "NIM Throughput": f"{r.nim_tokens_per_sec:.0f} tok/s",
-            "CPU Latency": f"{r.cpu_total_latency_ms:.1f} ms",
-            "CPU Throughput": f"{r.cpu_tokens_per_sec:.0f} tok/s",
-            "Speedup": f"{r.speedup_factor:.1f}x",
-            "DiffDock Affinity": f"{r.diffdock_top_affinity_kcal_mol:.1f} kcal/mol",
-        })
+        summary_rows.append(
+            {
+                "Complex ID": r.complex_id,
+                "Target (Residues)": f"{r.target_name[:18]} ({r.residue_count}aa)",
+                "Drug (MW)": f"{r.drug_name.split()[0]} ({r.ligand_validation.molecular_weight or 0:.0f}g/mol)",
+                "NIM Latency": f"{r.nim_total_latency_ms:.1f} ms",
+                "NIM Throughput": f"{r.nim_tokens_per_sec:.0f} tok/s",
+                "CPU Latency": f"{r.cpu_total_latency_ms:.1f} ms",
+                "CPU Throughput": f"{r.cpu_tokens_per_sec:.0f} tok/s",
+                "Speedup": f"{r.speedup_factor:.1f}x",
+                "DiffDock Affinity": f"{r.diffdock_top_affinity_kcal_mol:.1f} kcal/mol",
+            }
+        )
 
     df = pd.DataFrame(summary_rows)
     print("\n" + "-" * 80)
@@ -148,53 +158,75 @@ def main() -> None:
     print_ascii_header(mock_mode=is_mock)
 
     if args.showcase:
-        print("\n[*] Executing NVIDIA BioNeMo End-to-End Showcase Campaign (Target: KRAS G12D)...")
-        from src.orchestrator import AgenticScientistOrchestrator
+        print(
+            "\n[*] Executing NVIDIA BioNeMo End-to-End Showcase Campaign (Target: KRAS G12D)..."
+        )
         from src.ind_dossier import generate_ind_pdf
+        from src.orchestrator import AgenticScientistOrchestrator
         from src.robot_protocol import generate_ot2_protocol
 
         orch = AgenticScientistOrchestrator(api_key=api_key, mock=is_mock)
-        dossier = orch.run_discovery_campaign(target_query="KRAS G12D", num_candidates=6, output_dir=args.output_dir)
+        dossier = orch.run_discovery_campaign(
+            target_query="KRAS G12D", num_candidates=6, output_dir=args.output_dir
+        )
 
         # Generate FDA IND PDF
-        ind_pdf_bytes = generate_ind_pdf({
-            "target": dossier.target.name,
-            "pdb_id": dossier.target.pdb_id,
-            "nominated_lead": dossier.top_leads[0].id if dossier.top_leads else "LEAD-001",
-            "binding_affinity": dossier.top_leads[0].binding_affinity if dossier.top_leads else -9.4,
-            "residue_count": len(dossier.target.canonical_sequence),
-            "screened": dossier.screened_count,
-            "pareto_count": dossier.pareto_leads_count,
-            "leads": [
-                {
-                    "id": l.id,
-                    "smiles": l.smiles,
-                    "mw": l.mw,
-                    "logp": l.logp,
-                    "qed": l.qed,
-                    "sascore": l.sascore,
-                    "admet_verdict": l.admet_verdict
-                }
-                for l in dossier.top_leads
-            ]
-        })
-        pdf_path = os.path.join(args.output_dir, "FDA_IND_Section2_Briefing_KRAS_G12D.pdf")
+        ind_pdf_bytes = generate_ind_pdf(
+            {
+                "target": dossier.target.name,
+                "pdb_id": dossier.target.pdb_id,
+                "nominated_lead": dossier.top_leads[0].id
+                if dossier.top_leads
+                else "LEAD-001",
+                "binding_affinity": dossier.top_leads[0].binding_affinity
+                if dossier.top_leads
+                else -9.4,
+                "residue_count": len(dossier.target.canonical_sequence),
+                "screened": dossier.screened_count,
+                "pareto_count": dossier.pareto_leads_count,
+                "leads": [
+                    {
+                        "id": l.id,
+                        "smiles": l.smiles,
+                        "mw": l.mw,
+                        "logp": l.logp,
+                        "qed": l.qed,
+                        "sascore": l.sascore,
+                        "admet_verdict": l.admet_verdict,
+                    }
+                    for l in dossier.top_leads
+                ],
+            }
+        )
+        pdf_path = os.path.join(
+            args.output_dir, "FDA_IND_Section2_Briefing_KRAS_G12D.pdf"
+        )
         with open(pdf_path, "wb") as f:
             f.write(ind_pdf_bytes)
 
         # Generate Robot OT-2 protocol
         if orch.latest_retrosynthesis_plan:
             ot2_code = generate_ot2_protocol(orch.latest_retrosynthesis_plan)
-            ot2_path = os.path.join(args.output_dir, "ot2_synthesis_protocol_KRAS_G12D.py")
+            ot2_path = os.path.join(
+                args.output_dir, "ot2_synthesis_protocol_KRAS_G12D.py"
+            )
             with open(ot2_path, "w", encoding="utf-8") as f:
                 f.write(ot2_code)
 
-        print(f"[OK] Nominated Clinical Lead: {dossier.top_leads[0].id if dossier.top_leads else 'LEAD-001'}")
-        print(f"[OK] Predicted Binding Affinity: {dossier.top_leads[0].binding_affinity if dossier.top_leads else -9.4:.2f} kcal/mol")
+        print(
+            f"[OK] Nominated Clinical Lead: {dossier.top_leads[0].id if dossier.top_leads else 'LEAD-001'}"
+        )
+        print(
+            f"[OK] Predicted Binding Affinity: {dossier.top_leads[0].binding_affinity if dossier.top_leads else -9.4:.2f} kcal/mol"
+        )
         print(f"[OK] FDA IND Dossier PDF: {pdf_path}")
         print("[OK] Opentrons OT-2 Python Script: Generated successfully in results/")
-        print("[OK] Biosecurity Dual-Use Pathogen Gate: Active (NIST GDM-100 Compliant)")
-        print("\n>>> NVIDIA SHOWCASE VERIFICATION COMPLETE: ALL SYSTEMS READY FOR SUBMISSION! <<<\n")
+        print(
+            "[OK] Biosecurity Dual-Use Pathogen Gate: Active (NIST GDM-100 Compliant)"
+        )
+        print(
+            "\n>>> NVIDIA SHOWCASE VERIFICATION COMPLETE: ALL SYSTEMS READY FOR SUBMISSION! <<<\n"
+        )
         return
 
     # Load complexes
@@ -207,7 +239,9 @@ def main() -> None:
     pipeline = BenchmarkPipeline(nim_client=nim_client, cpu_baseline=cpu_baseline)
 
     # Execute benchmark suite
-    logger.info("Starting benchmark evaluation loop (%d iterations/sample)...", args.iterations)
+    logger.info(
+        "Starting benchmark evaluation loop (%d iterations/sample)...", args.iterations
+    )
     records = pipeline.run_suite(samples, benchmark_runs=args.iterations)
 
     # Generate Reporter & CSV
@@ -229,7 +263,9 @@ def main() -> None:
     stats = reporter.get_aggregate_stats()
     avg_speedup = stats["speedup_stats"]["mean"]
     max_speedup = stats["speedup_stats"]["max"]
-    print(f" Benchmark Complete! Average Acceleration: {avg_speedup:.1f}x (Peak: {max_speedup:.1f}x)\n")
+    print(
+        f" Benchmark Complete! Average Acceleration: {avg_speedup:.1f}x (Peak: {max_speedup:.1f}x)\n"
+    )
 
 
 if __name__ == "__main__":

@@ -17,11 +17,11 @@ Outputs:
 Syncs to Drive D and OneDrive for instant mobile reading.
 """
 
-import os
 import glob
 import json
-import subprocess
+import os
 import shutil
+import subprocess
 
 html_out = os.path.abspath("ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html")
 pdf_out = os.path.abspath("ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf")
@@ -48,16 +48,28 @@ for m_dir in mcp_dirs:
                 params = list(props.keys())
         except Exception:
             pass
-        tools_list.append({"name": tool_name, "description": desc, "parameters": params})
+        tools_list.append(
+            {"name": tool_name, "description": desc, "parameters": params}
+        )
     if tools_list:
         mcp_data[server_name] = tools_list
 
 # 2. Collect all Skills and their YAML frontmatter/descriptions
 skills_paths = sorted(
-    glob.glob(os.path.expanduser("~/.gemini/config/plugins/**/SKILL.md"), recursive=True) +
-    glob.glob(os.path.expanduser("~/.gemini/config/skills/**/SKILL.md"), recursive=True) +
-    glob.glob(os.path.expanduser("~/.gemini/antigravity-ide/builtin/skills/**/SKILL.md"), recursive=True) +
-    glob.glob("c:/Users/jorwa/Documents/antigravity/BIONEMO/.agents/skills/**/SKILL.md", recursive=True)
+    glob.glob(
+        os.path.expanduser("~/.gemini/config/plugins/**/SKILL.md"), recursive=True
+    )
+    + glob.glob(
+        os.path.expanduser("~/.gemini/config/skills/**/SKILL.md"), recursive=True
+    )
+    + glob.glob(
+        os.path.expanduser("~/.gemini/antigravity-ide/builtin/skills/**/SKILL.md"),
+        recursive=True,
+    )
+    + glob.glob(
+        "c:/Users/jorwa/Documents/antigravity/BIONEMO/.agents/skills/**/SKILL.md",
+        recursive=True,
+    )
 )
 
 skills_data = []
@@ -94,7 +106,9 @@ for sp in skills_paths:
         pass
     if not desc:
         desc = "Specialized agent workflow skill."
-    skills_data.append({"name": skill_name, "category": category, "description": desc, "path": sp})
+    skills_data.append(
+        {"name": skill_name, "category": category, "description": desc, "path": sp}
+    )
 
 skills_data.sort(key=lambda x: (x["category"], x["name"]))
 
@@ -435,14 +449,18 @@ for s_name, t_list in mcp_data.items():
     <div class="card-meta">
 """
     for t in t_list:
-        p_str = f" <em>({', '.join(t['parameters'][:4])})</em>" if t['parameters'] else ""
-        html_content += f"      • <code>{t['name']}</code>{p_str}: {t['description']}<br>\n"
+        p_str = (
+            f" <em>({', '.join(t['parameters'][:4])})</em>" if t["parameters"] else ""
+        )
+        html_content += (
+            f"      • <code>{t['name']}</code>{p_str}: {t['description']}<br>\n"
+        )
     html_content += """    </div>
   </div>
 """
 
 # CHAPTER 6: ALL 57 SKILLS
-html_content += f"""
+html_content += """
   <!-- CHAPTER 6: ALL 57 SKILLS -->
   <div class="chapter-header">
     <div class="chapter-num">Chapter 6</div>
@@ -461,15 +479,15 @@ for sk in skills_data:
     html_content += f"""
   <div class="card">
     <div class="card-top">
-      <span class="card-title">📖 {sk['name']}</span>
-      <span class="badge purple">{sk['category'].split()[0]}</span>
+      <span class="card-title">📖 {sk["name"]}</span>
+      <span class="badge purple">{sk["category"].split()[0]}</span>
     </div>
-    <div class="card-desc">{sk['description']}</div>
+    <div class="card-desc">{sk["description"]}</div>
   </div>
 """
 
 # CHAPTER 7: MASTERY TIERS & TOKEN ECONOMICS
-html_content += f"""
+html_content += """
   <!-- CHAPTER 7: MASTERY TIERS -->
   <div class="chapter-header">
     <div class="chapter-num">Chapter 7</div>
@@ -519,27 +537,47 @@ print(f"Master HTML Volume created: {html_out} ({len(html_content)} bytes)")
 # Convert to Markdown version as well
 md_lines = [
     "# The Antigravity IDE Complete Master Volume: 100% Potential Decoded\n",
-    f"> **The Complete Exhaustive Reference: 3 Modalities, 7 Models, 17 Native Tools, {len(mcp_data)} MCP Servers ({sum(len(v) for v in mcp_data.values())} Tools), and {len(skills_data)} Specialized Skills.**\n\n---\n"
+    f"> **The Complete Exhaustive Reference: 3 Modalities, 7 Models, 17 Native Tools, {len(mcp_data)} MCP Servers ({sum(len(v) for v in mcp_data.values())} Tools), and {len(skills_data)} Specialized Skills.**\n\n---\n",
 ]
 
 md_lines.append("## 1. The 3 Core AI Modalities\n")
-md_lines.append("- **Passive: Antigravity Tab**: Real-time next-intent prediction, Tab to Jump, Tab to Import, Supercomplete floating diffs.\n")
-md_lines.append("- **Instructive: Inline Command (`Ctrl+I` / `Cmd+I`)**: Surgical in-editor code refactoring, code generation at cursor, localized docstrings.\n")
-md_lines.append("- **Collaborative: Sidebar Chat & Agent Mode**: Full-stack pair programming, inline code lenses, diagnostic auto-fix, visual diff overlays.\n\n---\n")
+md_lines.append(
+    "- **Passive: Antigravity Tab**: Real-time next-intent prediction, Tab to Jump, Tab to Import, Supercomplete floating diffs.\n"
+)
+md_lines.append(
+    "- **Instructive: Inline Command (`Ctrl+I` / `Cmd+I`)**: Surgical in-editor code refactoring, code generation at cursor, localized docstrings.\n"
+)
+md_lines.append(
+    "- **Collaborative: Sidebar Chat & Agent Mode**: Full-stack pair programming, inline code lenses, diagnostic auto-fix, visual diff overlays.\n\n---\n"
+)
 
 md_lines.append("## 2. The 7 Exact Models & Selection Matrix\n")
-md_lines.append("1. **Gemini 3.8 Flash (Medium/Low)**: Daily workhorse (80% of tasks), ultra-fast latency, lowest token burn.\n")
-md_lines.append("2. **Claude Sonnet 5.5 (Medium)**: Gold standard for UI design (CSS/JS) and pristine typed Python refactors.\n")
-md_lines.append("3. **Claude Opus 5.5 (Medium)**: Maximum cognitive depth (S-tier), novel algorithms, multi-module architecture.\n")
-md_lines.append("4. **Gemini 3.1 Pro (Low)**: Deliberate multi-hop reasoning, subtle race conditions, memory leaks, security audits.\n")
-md_lines.append("5. **Gemini 3.7 Flash & 3.6 Flash**: Stable JSON schema output and high-volume batch processing.\n")
-md_lines.append("6. **GPT-OSS 120B (Medium)**: Neutral open-weights second opinions and independent code review.\n\n---\n")
+md_lines.append(
+    "1. **Gemini 3.8 Flash (Medium/Low)**: Daily workhorse (80% of tasks), ultra-fast latency, lowest token burn.\n"
+)
+md_lines.append(
+    "2. **Claude Sonnet 5.5 (Medium)**: Gold standard for UI design (CSS/JS) and pristine typed Python refactors.\n"
+)
+md_lines.append(
+    "3. **Claude Opus 5.5 (Medium)**: Maximum cognitive depth (S-tier), novel algorithms, multi-module architecture.\n"
+)
+md_lines.append(
+    "4. **Gemini 3.1 Pro (Low)**: Deliberate multi-hop reasoning, subtle race conditions, memory leaks, security audits.\n"
+)
+md_lines.append(
+    "5. **Gemini 3.7 Flash & 3.6 Flash**: Stable JSON schema output and high-volume batch processing.\n"
+)
+md_lines.append(
+    "6. **GPT-OSS 120B (Medium)**: Neutral open-weights second opinions and independent code review.\n\n---\n"
+)
 
-md_lines.append(f"## 3. Complete MCP Server Ecosystem ({len(mcp_data)} Servers, {sum(len(v) for v in mcp_data.values())} Tools)\n")
+md_lines.append(
+    f"## 3. Complete MCP Server Ecosystem ({len(mcp_data)} Servers, {sum(len(v) for v in mcp_data.values())} Tools)\n"
+)
 for s_name, t_list in mcp_data.items():
     md_lines.append(f"### 🔌 `{s_name}` ({len(t_list)} Tools)\n")
     for t in t_list:
-        p_str = f" *({', '.join(t['parameters'][:4])})*" if t['parameters'] else ""
+        p_str = f" *({', '.join(t['parameters'][:4])})*" if t["parameters"] else ""
         md_lines.append(f"- **`{t['name']}`**{p_str}: {t['description']}\n")
     md_lines.append("\n")
 
@@ -556,43 +594,53 @@ with open(md_out, "w", encoding="utf-8") as f:
 print(f"Master Markdown Volume created: {md_out} ({len(md_lines)} lines)")
 
 # Compile to PDF
-edge_exe = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-chrome_exe = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+edge_exe = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+chrome_exe = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 browser = chrome_exe if os.path.exists(chrome_exe) else edge_exe
 
 cmd = [
     browser,
-    '--headless=new',
-    '--disable-gpu',
-    '--no-pdf-header-footer',
-    f'--print-to-pdf={pdf_out}',
-    f'file:///{html_out}'
+    "--headless=new",
+    "--disable-gpu",
+    "--no-pdf-header-footer",
+    f"--print-to-pdf={pdf_out}",
+    f"file:///{html_out}",
 ]
 
 print("Compiling Master PDF Volume...")
 res = subprocess.run(cmd, capture_output=True, text=True)
-print("PDF compiled:", os.path.exists(pdf_out), f"Size: {os.path.getsize(pdf_out) if os.path.exists(pdf_out) else 0} bytes")
+print(
+    "PDF compiled:",
+    os.path.exists(pdf_out),
+    f"Size: {os.path.getsize(pdf_out) if os.path.exists(pdf_out) else 0} bytes",
+)
 
 # Sync to all target drives
 destinations = [
-    r'D:\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf',
-    r'D:\BIONEMO\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf',
-    r'D:\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html',
-    r'D:\BIONEMO\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html',
-    r'D:\BIONEMO\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md',
-    os.path.expanduser('~/OneDrive/Documents/ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf'),
-    os.path.expanduser('~/OneDrive/Documents/ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html'),
-    os.path.expanduser('~/OneDrive/Documents/ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md'),
+    r"D:\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf",
+    r"D:\BIONEMO\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf",
+    r"D:\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html",
+    r"D:\BIONEMO\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html",
+    r"D:\BIONEMO\ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md",
+    os.path.expanduser(
+        "~/OneDrive/Documents/ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.pdf"
+    ),
+    os.path.expanduser(
+        "~/OneDrive/Documents/ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.html"
+    ),
+    os.path.expanduser(
+        "~/OneDrive/Documents/ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md"
+    ),
 ]
 
 for d in destinations:
     try:
         os.makedirs(os.path.dirname(d), exist_ok=True)
-        if d.endswith('.pdf'):
+        if d.endswith(".pdf"):
             shutil.copy2(pdf_out, d)
-        elif d.endswith('.html'):
+        elif d.endswith(".html"):
             shutil.copy2(html_out, d)
-        elif d.endswith('.md'):
+        elif d.endswith(".md"):
             shutil.copy2(md_out, d)
         print(f"Synced to: {d}")
     except Exception as e:

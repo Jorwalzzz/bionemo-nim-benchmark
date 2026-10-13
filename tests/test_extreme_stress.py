@@ -3,10 +3,10 @@ Extreme Stress & Boundary Test Suite for NVIDIA BioNeMo Platform.
 Tests all endpoints, pipeline functions, data models, error handlers, and edge cases.
 """
 
+import ast
 import os
 import sys
-import ast
-import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -15,21 +15,25 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from serve_cockpit import app
-from src.models import (
-    MoleculeCandidate, TargetProfile, DossierReport,
-    RetrosynthesisPlan, RetrosynthesisStep, ResistanceScan
-)
 from src.admet_critic import ADMETCriticAgent
-from src.generative_chemist import GenerativeChemistAgent
 from src.docking_agent import BiophysicsDockingAgent
+from src.generative_chemist import GenerativeChemistAgent
+from src.models import (
+    DossierReport,
+    MoleculeCandidate,
+    ResistanceScan,
+    TargetProfile,
+)
+from src.orchestrator import AgenticScientistOrchestrator
+from src.pdb_utils import (
+    clean_pdb_structure,
+    extract_sequence_from_pdb,
+    resolve_protein_structure,
+)
+from src.pi_agent import PrincipalInvestigatorAgent
+from src.resistance_engine import ResistanceEscapeEngine
 from src.retrosynthesis_agent import RetrosynthesisAgent
 from src.target_scout import TargetScoutAgent
-from src.pi_agent import PrincipalInvestigatorAgent
-from src.orchestrator import AgenticScientistOrchestrator
-from src.resistance_engine import ResistanceEscapeEngine
-from src.robot_protocol import generate_ot2_protocol, generate_lab_card
-from src.ind_dossier import generate_ind_pdf
-from src.pdb_utils import clean_pdb_structure, extract_sequence_from_pdb, resolve_protein_structure
 
 
 @pytest.fixture
@@ -82,7 +86,7 @@ class TestExtremeLoop1APIEndpointsAndBoundaryConditions:
                     "logp": 1.46,
                     "qed": 0.55,
                     "sascore": 1.1,
-                    "admet_verdict": "PASS"
+                    "admet_verdict": "PASS",
                 }
             ],
             "retrosynthesis": {
@@ -94,10 +98,10 @@ class TestExtremeLoop1APIEndpointsAndBoundaryConditions:
                         "reaction_type": "Phenol Diazotization",
                         "reagents": ["NaNO2", "HCl", "H2O"],
                         "yield_pct": 88.0,
-                        "difficulty": "Routine (★☆☆)"
+                        "difficulty": "Routine (★☆☆)",
                     }
-                ]
-            }
+                ],
+            },
         }
         res = client.post("/api/dossier/pdf", json=payload)
         assert res.status_code == 200
@@ -116,9 +120,9 @@ class TestExtremeLoop1APIEndpointsAndBoundaryConditions:
                     "reaction_type": "Acylation",
                     "reagents": ["Acetic anhydride", "Pyridine"],
                     "yield_pct": 95.0,
-                    "difficulty": "Routine"
+                    "difficulty": "Routine",
                 }
-            ]
+            ],
         }
         res = client.post("/api/robot/protocol", json=payload)
         assert res.status_code == 200
@@ -135,7 +139,7 @@ class TestExtremeLoop1APIEndpointsAndBoundaryConditions:
             "mutation": "G12D -> G12C (Switch-II Escape)",
             "lead_id": "LEAD-001",
             "baseline_smiles": "O=C(N1CCNCC1)c2ccccc2",
-            "baseline_affinity": -9.2
+            "baseline_affinity": -9.2,
         }
         res = client.post("/api/resistance/evolve", json=payload)
         assert res.status_code == 200
@@ -173,7 +177,9 @@ class TestExtremeLoop2CheminformaticsAndPDB:
         pdb_text1 = resolve_protein_structure(pdb_id="8AZV")
         assert "ATOM" in pdb_text1
 
-        pdb_text2 = resolve_protein_structure(sequence="MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ")
+        pdb_text2 = resolve_protein_structure(
+            sequence="MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ"
+        )
         assert "ATOM" in pdb_text2
         assert "CA" in pdb_text2
 
@@ -199,7 +205,7 @@ class TestExtremeLoop3MultiAgentCouncil:
         molecules, chem_msg = gen_chemist.generate_derivatives(
             parent_smiles=target.reference_ligand_smiles,
             target_name=target.name,
-            num_molecules=4
+            num_molecules=4,
         )
         assert len(molecules) == 4
         assert isinstance(molecules[0], MoleculeCandidate)
@@ -242,13 +248,13 @@ class TestExtremeLoop4ResistanceEngine:
             canonical_sequence="MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ",
             pocket_residues=["Gly12Asp", "Gln61"],
             reference_ligand_name="MRTX1133",
-            reference_ligand_smiles="CC1=CC=C(C=C1)NC2=NC=C(F)C(=N2)N3CCNCC3"
+            reference_ligand_smiles="CC1=CC=C(C=C1)NC2=NC=C(F)C(=N2)N3CCNCC3",
         )
         lead = MoleculeCandidate(
             id="LEAD-001",
             smiles="CC(=O)Oc1ccccc1C(=O)O",
             parent_smiles="c1ccccc1",
-            binding_affinity=-9.2
+            binding_affinity=-9.2,
         )
         scan = engine.scan_and_evolve(lead=lead, target=target)
         assert isinstance(scan, ResistanceScan)
@@ -263,12 +269,13 @@ class TestExtremeLoop5OrchestratorAndFullCampaign:
     def test_full_autonomous_campaign(self):
         orchestrator = AgenticScientistOrchestrator(mock=True)
         report = orchestrator.run_discovery_campaign(
-            target_query="KRAS G12D",
-            num_candidates=4
+            target_query="KRAS G12D", num_candidates=4
         )
         assert report is not None
         assert isinstance(report, DossierReport)
         assert len(report.top_leads) > 0
         assert report.target.name == "KRAS G12D"
-        assert os.path.exists(os.path.join(BASE_DIR, "results", "CANDIDATE_SELECTION_DOSSIER.md"))
+        assert os.path.exists(
+            os.path.join(BASE_DIR, "results", "CANDIDATE_SELECTION_DOSSIER.md")
+        )
         assert os.path.exists(os.path.join(BASE_DIR, "results", "top_leads_docked.sdf"))

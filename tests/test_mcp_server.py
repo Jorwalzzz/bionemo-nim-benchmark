@@ -4,6 +4,7 @@ Unit tests for NVIDIA BioNeMo MCP server tools.
 
 import sys
 from pathlib import Path
+
 import pytest
 
 # Ensure .agents/tools and project root are importable
@@ -15,25 +16,27 @@ sys.path.insert(0, str(PROJECT_ROOT))
 pytest.importorskip("mcp")
 
 from bionemo_mcp_server import (
-    bionemo_validate_sequence,
-    bionemo_sanitize_smiles,
-    bionemo_query_esm2_embedding,
-    bionemo_query_diffdock,
-    bionemo_query_esmfold,
     bionemo_compare_known_inhibitors,
     bionemo_fetch_rcsb_pdb,
+    bionemo_query_esmfold,
+    bionemo_sanitize_smiles,
+    bionemo_validate_sequence,
 )
 
 
 class TestBionemoMcpTools:
     def test_validate_sequence(self):
-        res = bionemo_validate_sequence("MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ")
+        res = bionemo_validate_sequence(
+            "MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ"
+        )
         assert res["valid"] is True
         assert res["length"] == 61
         assert "M" in res["residue_counts"]
 
     def test_sanitize_smiles(self):
-        res = bionemo_sanitize_smiles("CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5")
+        res = bionemo_sanitize_smiles(
+            "CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5"
+        )
         assert res["valid"] is True
         assert res["canonical_smiles"] is not None
         assert res["molecular_weight"] > 400

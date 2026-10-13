@@ -12,14 +12,14 @@ Designed to satisfy NVIDIA Inception, GxP, and HIPAA zero-trust guidelines:
 """
 
 import re
-import time
 import threading
-from typing import Dict, Tuple, Optional, List, Any
-
+import time
+from typing import Dict, Optional, Tuple
 
 # ==============================================================================
 # 1. BIOSECURITY & DUAL-USE TOXIN SCREENING
 # ==============================================================================
+
 
 class BiosecurityScreener:
     """
@@ -30,41 +30,71 @@ class BiosecurityScreener:
 
     # Regulated pathogen / toxin keywords (case-insensitive)
     HAZARDOUS_KEYWORDS = (
-        "RICIN", "BOTULINUM", "BOTULIN", "ANTHRAX", "BACILLUS ANTHRACIS",
-        "EBOLA", "MARBURG", "SMALLPOX", "VARIOLA", "FRANCISELLA", "TULAREMIA",
-        "YERSINIA PESTIS", "CHOLERA TOXIN", "DIPHTHERIA TOXIN", "SHIGA TOXIN",
-        "STAPHYLOCOCCAL ENTEROTOXIN", "CONOTOXIN", "TETANUSDETOX", "SAXITOXIN"
+        "RICIN",
+        "BOTULINUM",
+        "BOTULIN",
+        "ANTHRAX",
+        "BACILLUS ANTHRACIS",
+        "EBOLA",
+        "MARBURG",
+        "SMALLPOX",
+        "VARIOLA",
+        "FRANCISELLA",
+        "TULAREMIA",
+        "YERSINIA PESTIS",
+        "CHOLERA TOXIN",
+        "DIPHTHERIA TOXIN",
+        "SHIGA TOXIN",
+        "STAPHYLOCOCCAL ENTEROTOXIN",
+        "CONOTOXIN",
+        "TETANUSDETOX",
+        "SAXITOXIN",
     )
 
     # Conserved catalytic sequence signatures from select high-risk toxins
     HAZARDOUS_MOTIFS = [
-        re.compile(r"EAARF", re.IGNORECASE),                 # Ricin A-chain catalytic core
-        re.compile(r"HE[LIVM]XH", re.IGNORECASE),            # Botulinum zinc-endopeptidase consensus
-        re.compile(r"Y[FILV]R[FILV]X{2}[DE]", re.IGNORECASE) # Shiga-like ribosome-inactivating signature
+        re.compile(r"EAARF", re.IGNORECASE),  # Ricin A-chain catalytic core
+        re.compile(
+            r"HE[LIVM]XH", re.IGNORECASE
+        ),  # Botulinum zinc-endopeptidase consensus
+        re.compile(
+            r"Y[FILV]R[FILV]X{2}[DE]", re.IGNORECASE
+        ),  # Shiga-like ribosome-inactivating signature
     ]
 
     @classmethod
-    def screen_target(cls, target_name: str, sequence: Optional[str] = None) -> Tuple[bool, Optional[str]]:
+    def screen_target(
+        cls, target_name: str, sequence: Optional[str] = None
+    ) -> Tuple[bool, Optional[str]]:
         """
         Validates target against biological safety guidelines.
         Returns (is_safe: bool, rejection_reason: Optional[str]).
         """
         clean_name = str(target_name or "").upper().strip()
-        
+
         # Check keyword registry
         for kw in cls.HAZARDOUS_KEYWORDS:
             if kw in clean_name:
-                return False, f"BIOSECURITY_RESTRICTION: Target '{target_name}' matches regulated select agent toxin list ({kw}). Processing disallowed."
+                return (
+                    False,
+                    f"BIOSECURITY_RESTRICTION: Target '{target_name}' matches regulated select agent toxin list ({kw}). Processing disallowed.",
+                )
 
         # Check sequence motifs if provided
         if sequence:
-            clean_seq = re.sub(r'[^A-Z]', '', str(sequence).upper())
+            clean_seq = re.sub(r"[^A-Z]", "", str(sequence).upper())
             if len(clean_seq) > 5000:
-                return False, "PAYLOAD_TOO_LARGE: Protein sequence exceeds maximum 5,000 residue limit."
+                return (
+                    False,
+                    "PAYLOAD_TOO_LARGE: Protein sequence exceeds maximum 5,000 residue limit.",
+                )
 
             for motif in cls.HAZARDOUS_MOTIFS:
                 if motif.search(clean_seq):
-                    return False, "BIOSECURITY_RESTRICTION: Sequence contains conserved high-consequence toxin domain signature. Execution halted."
+                    return (
+                        False,
+                        "BIOSECURITY_RESTRICTION: Sequence contains conserved high-consequence toxin domain signature. Execution halted.",
+                    )
 
         return True, None
 
@@ -72,6 +102,7 @@ class BiosecurityScreener:
 # ==============================================================================
 # 2. IN-FLIGHT TOKEN BUCKET RATE LIMITER (DoS & BURST DEFENSE)
 # ==============================================================================
+
 
 class TokenBucketRateLimiter:
     """
@@ -99,19 +130,23 @@ class TokenBucketRateLimiter:
             # Periodic cleanup if registry exceeds 10,000 IPs to prevent memory bloat
             if len(self._buckets) > 10000:
                 cutoff = now - 3600
-                self._buckets = {k: v for k, v in self._buckets.items() if v["last_check"] > cutoff}
+                self._buckets = {
+                    k: v for k, v in self._buckets.items() if v["last_check"] > cutoff
+                }
 
             if ip_str not in self._buckets:
                 self._buckets[ip_str] = {
                     "tokens": self.capacity - cost,
-                    "last_check": now
+                    "last_check": now,
                 }
                 return True, 0.0
 
             bucket = self._buckets[ip_str]
             elapsed = now - bucket["last_check"]
             bucket["last_check"] = now
-            bucket["tokens"] = min(self.capacity, bucket["tokens"] + elapsed * self.refill_rate)
+            bucket["tokens"] = min(
+                self.capacity, bucket["tokens"] + elapsed * self.refill_rate
+            )
 
             if bucket["tokens"] >= cost:
                 bucket["tokens"] -= cost
@@ -126,6 +161,7 @@ class TokenBucketRateLimiter:
 # 3. SECRET & UPSTREAM TRACE SCRUBBER
 # ==============================================================================
 
+
 class SecretScrubber:
     """
     Deep sanitizes log strings, JSON payloads, and exception messages to prevent
@@ -133,10 +169,13 @@ class SecretScrubber:
     """
 
     SECRET_PATTERNS = [
-        re.compile(r'nvapi-[a-zA-Z0-9_-]{20,}', re.IGNORECASE),
-        re.compile(r'Bearer\s+[a-zA-Z0-9_\-\.]{15,}', re.IGNORECASE),
-        re.compile(r'(?:NVIDIA_API_KEY|api_key|api-key)\s*[:=]\s*["\']?([^"\'\s]+)["\']?', re.IGNORECASE),
-        re.compile(r'password\s*[:=]\s*["\']?([^"\'\s]+)["\']?', re.IGNORECASE)
+        re.compile(r"nvapi-[a-zA-Z0-9_-]{20,}", re.IGNORECASE),
+        re.compile(r"Bearer\s+[a-zA-Z0-9_\-\.]{15,}", re.IGNORECASE),
+        re.compile(
+            r'(?:NVIDIA_API_KEY|api_key|api-key)\s*[:=]\s*["\']?([^"\'\s]+)["\']?',
+            re.IGNORECASE,
+        ),
+        re.compile(r'password\s*[:=]\s*["\']?([^"\'\s]+)["\']?', re.IGNORECASE),
     ]
 
     @classmethod
@@ -154,6 +193,7 @@ class SecretScrubber:
 # 4. SAFE INPUT SANITIZERS (ReDoS & SCRIPT INJECTION DEFENSE)
 # ==============================================================================
 
+
 class SafeSanitizer:
     """
     Linear-time string sanitizers that prevent Command Injection, Python AST Injection,
@@ -169,7 +209,7 @@ class SafeSanitizer:
         if not smiles:
             return "CC(=O)N1CCNCC1"
         s = str(smiles).strip()[:max_length]
-        cleaned = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', s)
+        cleaned = re.sub(r"[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]", "", s)
         return cleaned or "CC(=O)N1CCNCC1"
 
     @staticmethod
@@ -180,7 +220,7 @@ class SafeSanitizer:
         if not pdb_id:
             return "8AZV"
         s = str(pdb_id).strip().upper()[:4]
-        cleaned = re.sub(r'[^A-Z0-9]', '', s)
+        cleaned = re.sub(r"[^A-Z0-9]", "", s)
         return cleaned if len(cleaned) == 4 else "8AZV"
 
     @staticmethod
@@ -195,18 +235,25 @@ class SafeSanitizer:
         s = str(value).strip()[:max_length]
 
         # Strip python code delimiters, semicolons, brackets, backticks, quotes, and newlines
-        cleaned = re.sub(r'[\'\"\\;\n\r`$(){}\[\]=]', ' ', s)
+        cleaned = re.sub(r"[\'\"\\;\n\r`$(){}\[\]=]", " ", s)
 
         # Strip dangerous execution keywords
         DANGEROUS_CODE_KEYWORDS = [
-            r'\bimport\b', r'\bos\b', r'\bsubprocess\b', r'\bsys\b',
-            r'\beval\b', r'\bexec\b', r'\bsystem\b', r'\bpopen\b',
-            r'\bspawn\b', r'__import__'
+            r"\bimport\b",
+            r"\bos\b",
+            r"\bsubprocess\b",
+            r"\bsys\b",
+            r"\beval\b",
+            r"\bexec\b",
+            r"\bsystem\b",
+            r"\bpopen\b",
+            r"\bspawn\b",
+            r"__import__",
         ]
         for kw in DANGEROUS_CODE_KEYWORDS:
-            cleaned = re.sub(kw, '', cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(kw, "", cleaned, flags=re.IGNORECASE)
 
         # Whitelist safe laboratory alphanumeric, punctuation, and rating stars
-        cleaned = re.sub(r'[^A-Za-z0-9\s\/\-\+\.,_★☆]', '', cleaned)
-        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        cleaned = re.sub(r"[^A-Za-z0-9\s\/\-\+\.,_★☆]", "", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned or "Standard Reagent"

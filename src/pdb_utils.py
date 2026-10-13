@@ -8,10 +8,11 @@ and dynamic alpha-carbon (C-alpha) backbone synthesis from raw amino acid sequen
 
 from __future__ import annotations
 
+import logging
 import os
 import re
-import logging
 from typing import Optional
+
 import requests
 
 logger = logging.getLogger(__name__)
@@ -28,9 +29,7 @@ def sanitize_pdb_atom_records(pdb_text: str) -> str:
         raise ValueError("PDB content cannot be empty.")
 
     filtered_lines = [
-        line.strip()
-        for line in pdb_text.splitlines()
-        if line.startswith("ATOM")
+        line.strip() for line in pdb_text.splitlines() if line.startswith("ATOM")
     ]
 
     if not filtered_lines:
@@ -59,7 +58,9 @@ def fetch_rcsb_pdb(
     """
     clean_id = pdb_id.strip().upper()
     if not re.match(r"^[0-9A-Z]{4}$", clean_id):
-        raise ValueError(f"Invalid PDB ID format: '{clean_id}'. Expected 4-character alphanumeric code.")
+        raise ValueError(
+            f"Invalid PDB ID format: '{clean_id}'. Expected 4-character alphanumeric code."
+        )
 
     os.makedirs(cache_dir, exist_ok=True)
     cache_path = os.path.join(cache_dir, f"{clean_id}.pdb")
@@ -69,8 +70,12 @@ def fetch_rcsb_pdb(
         cache_path,
         os.path.join("data", "pdbs", f"{clean_id}.pdb"),
         os.path.join("data", "targets", f"{clean_id}.pdb"),
-        os.path.join(os.path.dirname(__file__), "..", "data", "pdbs", f"{clean_id}.pdb"),
-        os.path.join(os.path.dirname(__file__), "..", "data", "targets", f"{clean_id}.pdb"),
+        os.path.join(
+            os.path.dirname(__file__), "..", "data", "pdbs", f"{clean_id}.pdb"
+        ),
+        os.path.join(
+            os.path.dirname(__file__), "..", "data", "targets", f"{clean_id}.pdb"
+        ),
     ]
     for cp in candidate_paths:
         if os.path.exists(cp):
@@ -85,7 +90,9 @@ def fetch_rcsb_pdb(
     try:
         response = requests.get(download_url, timeout=timeout)
         if response.status_code != 200:
-            raise RuntimeError(f"RCSB PDB returned status {response.status_code} for ID '{clean_id}'")
+            raise RuntimeError(
+                f"RCSB PDB returned status {response.status_code} for ID '{clean_id}'"
+            )
 
         sanitized_pdb = sanitize_pdb_atom_records(response.text)
 
@@ -117,7 +124,7 @@ def generate_synthetic_backbone(sequence: str) -> str:
     if not clean_seq:
         raise ValueError("Sequence cannot be empty for synthetic backbone generation.")
 
-    lines = [f"HEADER    SYNTHETIC BACKBONE GENERATED FOR BioNeMo NIM BENCHMARK"]
+    lines = ["HEADER    SYNTHETIC BACKBONE GENERATED FOR BioNeMo NIM BENCHMARK"]
     # 3.8 Angstroms between consecutive C-alpha atoms in an extended peptide chain
     for i, aa in enumerate(clean_seq, start=1):
         x = round((i - 1) * 3.8, 3)
@@ -144,26 +151,51 @@ def resolve_protein_structure(
         try:
             return fetch_rcsb_pdb(pdb_id, cache_dir=cache_dir)
         except Exception as e:
-            logger.warning("PDB resolution failed for '%s': %s. Checking sequence fallback...", pdb_id, str(e))
+            logger.warning(
+                "PDB resolution failed for '%s': %s. Checking sequence fallback...",
+                pdb_id,
+                str(e),
+            )
 
     if sequence:
-        logger.info("Generating synthetic backbone from amino acid sequence (%d residues)...", len(sequence))
+        logger.info(
+            "Generating synthetic backbone from amino acid sequence (%d residues)...",
+            len(sequence),
+        )
         return generate_synthetic_backbone(sequence)
 
-    raise ValueError("Neither a valid pdb_id nor sequence was provided to resolve protein structure.")
+    raise ValueError(
+        "Neither a valid pdb_id nor sequence was provided to resolve protein structure."
+    )
 
 
 CANONICAL_20_IUPAC = set("ACDEFGHIKLMNPQRSTVWY")
 
 AA3_TO_1 = {
-    "ALA": "A", "CYS": "C", "ASP": "D", "GLU": "E", "PHE": "F",
-    "GLY": "G", "HIS": "H", "ILE": "I", "LYS": "K", "LEU": "L",
-    "MET": "M", "ASN": "N", "PRO": "P", "GLN": "Q", "ARG": "R",
-    "SER": "S", "THR": "T", "VAL": "V", "TRP": "W", "TYR": "Y"
+    "ALA": "A",
+    "CYS": "C",
+    "ASP": "D",
+    "GLU": "E",
+    "PHE": "F",
+    "GLY": "G",
+    "HIS": "H",
+    "ILE": "I",
+    "LYS": "K",
+    "LEU": "L",
+    "MET": "M",
+    "ASN": "N",
+    "PRO": "P",
+    "GLN": "Q",
+    "ARG": "R",
+    "SER": "S",
+    "THR": "T",
+    "VAL": "V",
+    "TRP": "W",
+    "TYR": "Y",
 }
 
 
-def validate_sequence(sequence: str) -> Tuple[bool, List[str]]:
+def validate_sequence(sequence: str) -> tuple[bool, list[str]]:
     """Validates sequence against the canonical 20 IUPAC residues."""
     invalid = [char for char in sequence.upper() if char not in CANONICAL_20_IUPAC]
     return (len(invalid) == 0, list(set(invalid)))
@@ -193,7 +225,7 @@ def extract_sequence_from_pdb(pdb_content: str, chain_id: str = "A") -> str:
     """Extracts 1-letter canonical amino acid sequence from PDB ATOM lines."""
     seen_residues = set()
     seq_chars = []
-    
+
     for line in pdb_content.splitlines():
         if line.startswith("ATOM"):
             res_chain = line[21]
@@ -201,13 +233,13 @@ def extract_sequence_from_pdb(pdb_content: str, chain_id: str = "A") -> str:
                 continue
             res_seq_num = line[22:27].strip()
             res_name = line[17:20].strip()
-            
+
             key = (res_chain, res_seq_num)
             if key not in seen_residues:
                 seen_residues.add(key)
                 one_letter = AA3_TO_1.get(res_name, "X")
                 seq_chars.append(one_letter)
-                
+
     return "".join(seq_chars)
 
 

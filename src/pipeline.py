@@ -12,14 +12,14 @@ Coordinates the end-to-end bioinformatics workflow:
 from __future__ import annotations
 
 import logging
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
 
-from src.client import NimBioClient, ESM2Response, DiffDockResponse
-from src.baseline import LocalCPUBaseline, BaselineProfileResult
+from src.baseline import BaselineProfileResult, LocalCPUBaseline
+from src.client import DiffDockResponse, ESM2Response, NimBioClient
 from src.pdb_utils import resolve_protein_structure
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LigandValidationResult:
     """Chemical validation and property extraction results from RDKit."""
+
     raw_smiles: str
     canonical_smiles: str
     is_valid: bool
@@ -44,6 +45,7 @@ class LigandValidationResult:
 @dataclass
 class ComplexBenchmarkRecord:
     """Consolidated benchmark evaluation record for a single protein-ligand complex."""
+
     complex_id: str
     target_name: str
     uniprot_id: str
@@ -171,7 +173,9 @@ class BenchmarkPipeline:
             sanitize_ops = Chem.SanitizeFlags.SANITIZE_ALL
             Chem.SanitizeMol(mol, sanitizeOps=sanitize_ops)
 
-            canonical_smiles = Chem.MolToSmiles(mol, canonical=True, isomericSmiles=True)
+            canonical_smiles = Chem.MolToSmiles(
+                mol, canonical=True, isomericSmiles=True
+            )
             formula = rdMolDescriptors.CalcMolFormula(mol)
             mw = round(Descriptors.ExactMolWt(mol), 2)
             logp = round(Descriptors.MolLogP(mol), 2)
@@ -224,18 +228,32 @@ class BenchmarkPipeline:
         drug_indication = sample.get("drug_indication", "N/A")
         raw_smiles = sample.get("smiles", "")
 
-        logger.info("Evaluating [%s] %s (%d aa) with %s", complex_id, target_name, len(sequence), drug_name)
+        logger.info(
+            "Evaluating [%s] %s (%d aa) with %s",
+            complex_id,
+            target_name,
+            len(sequence),
+            drug_name,
+        )
 
         # 1. RDKit Sanitization
         ligand_val = self.sanitize_ligand_smiles(raw_smiles)
         if not ligand_val.is_valid:
-            logger.warning("Complex %s ligand failed sanitization: %s", complex_id, ligand_val.error_message)
+            logger.warning(
+                "Complex %s ligand failed sanitization: %s",
+                complex_id,
+                ligand_val.error_message,
+            )
 
         # 2. NVIDIA NIM ESM-2 Embeddings
         nim_esm_resp: ESM2Response = self.client.get_esm2_embeddings(sequence)
         seq_len = nim_esm_resp.sequence_length
         nim_ms_per_res = nim_esm_resp.latency.total_latency_ms / max(1, seq_len)
-        nim_tokens_sec = (seq_len / (nim_esm_resp.latency.total_latency_ms / 1000.0)) if nim_esm_resp.latency.total_latency_ms > 0 else 0.0
+        nim_tokens_sec = (
+            (seq_len / (nim_esm_resp.latency.total_latency_ms / 1000.0))
+            if nim_esm_resp.latency.total_latency_ms > 0
+            else 0.0
+        )
 
         # 3. Local CPU Baseline Benchmark
         cpu_baseline_res: BaselineProfileResult = self.baseline.benchmark_sequence(
@@ -246,7 +264,8 @@ class BenchmarkPipeline:
 
         # Speedup computations (Baseline CPU vs NIM GPU)
         speedup = (
-            cpu_baseline_res.total_cpu_latency_ms / max(0.001, nim_esm_resp.latency.total_latency_ms)
+            cpu_baseline_res.total_cpu_latency_ms
+            / max(0.001, nim_esm_resp.latency.total_latency_ms)
             if nim_esm_resp.latency.total_latency_ms > 0
             else 1.0
         )
@@ -257,7 +276,9 @@ class BenchmarkPipeline:
         )
 
         # 4. NVIDIA NIM DiffDock Pose Prediction
-        active_smiles = ligand_val.canonical_smiles if ligand_val.is_valid else raw_smiles
+        active_smiles = (
+            ligand_val.canonical_smiles if ligand_val.is_valid else raw_smiles
+        )
         pdb_id = sample.get("pdb_id", "")
         try:
             pdb_content = resolve_protein_structure(pdb_id=pdb_id, sequence=sequence)
@@ -272,7 +293,9 @@ class BenchmarkPipeline:
             num_poses=5,
         )
 
-        top_conf = diffdock_resp.poses[0].confidence_score if diffdock_resp.poses else 0.0
+        top_conf = (
+            diffdock_resp.poses[0].confidence_score if diffdock_resp.poses else 0.0
+        )
 
         return ComplexBenchmarkRecord(
             complex_id=complex_id,

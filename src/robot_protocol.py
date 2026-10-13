@@ -5,7 +5,8 @@ Python lab automation scripts (Opentrons API v2.15) and wet-lab SOP cards.
 """
 
 import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 from src.models import RetrosynthesisPlan, RetrosynthesisStep
 
 OT2_TEMPLATE = '''"""
@@ -69,7 +70,7 @@ def generate_ot2_protocol(
     lead_id: Optional[str] = None,
     lead_smiles: Optional[str] = None,
     synthesis_steps: Optional[List[Dict[str, Any]]] = None,
-    **kwargs
+    **kwargs,
 ) -> str:
     """
     Generates fully compliant Opentrons Python protocol string.
@@ -84,23 +85,27 @@ def generate_ot2_protocol(
             if isinstance(s, RetrosynthesisStep):
                 parsed_steps.append(s)
             elif isinstance(s, dict):
-                parsed_steps.append(RetrosynthesisStep(
-                    step_number=s.get("step", idx),
-                    reaction_type=s.get("reaction_type", "Coupling"),
-                    reaction_smarts="",
-                    reactants=s.get("reactants", [{"name": f"Reactant_{idx}"}]),
-                    reagents=s.get("reagents", ["DIPEA", "DMF"]),
-                    product_smiles=sm,
-                    estimated_yield_pct=float(s.get("yield_pct", 85.0)),
-                    difficulty=s.get("difficulty", "Routine")
-                ))
+                parsed_steps.append(
+                    RetrosynthesisStep(
+                        step_number=s.get("step", idx),
+                        reaction_type=s.get("reaction_type", "Coupling"),
+                        reaction_smarts="",
+                        reactants=s.get("reactants", [{"name": f"Reactant_{idx}"}]),
+                        reagents=s.get("reagents", ["DIPEA", "DMF"]),
+                        product_smiles=sm,
+                        estimated_yield_pct=float(s.get("yield_pct", 85.0)),
+                        difficulty=s.get("difficulty", "Routine"),
+                    )
+                )
         plan = RetrosynthesisPlan(
             candidate_id=cid,
             target_smiles=sm,
             num_steps=len(parsed_steps) or 1,
-            overall_feasibility="Commercially Accessible" if len(parsed_steps) <= 2 else "Multi-Step Custom",
+            overall_feasibility="Commercially Accessible"
+            if len(parsed_steps) <= 2
+            else "Multi-Step Custom",
             steps=parsed_steps,
-            starting_materials=["Precursor Scaffold A", "Commercial Reagent B"]
+            starting_materials=["Precursor Scaffold A", "Commercial Reagent B"],
         )
 
     from src.security_sentinel import SafeSanitizer
@@ -109,57 +114,71 @@ def generate_ot2_protocol(
     safe_feasibility = SafeSanitizer.sanitize_code_literal(plan.overall_feasibility, 60)
 
     step_blocks = []
-    
+
     for idx, step in enumerate(plan.steps, start=1):
         safe_rxn_type = SafeSanitizer.sanitize_code_literal(step.reaction_type, 60)
         safe_difficulty = SafeSanitizer.sanitize_code_literal(step.difficulty, 40)
 
         lines = []
-        lines.append(f"\n    # ----------------------------------------------------")
+        lines.append("\n    # ----------------------------------------------------")
         lines.append(f"    # STEP {step.step_number}: {safe_rxn_type.upper()}")
-        lines.append(f"    # Difficulty: {safe_difficulty} | Expected Yield: {step.estimated_yield_pct:.0f}%")
-        lines.append(f"    # ----------------------------------------------------")
-        lines.append(f"    protocol.comment('Executing Step {step.step_number}: {safe_rxn_type}')")
-        
+        lines.append(
+            f"    # Difficulty: {safe_difficulty} | Expected Yield: {step.estimated_yield_pct:.0f}%"
+        )
+        lines.append("    # ----------------------------------------------------")
+        lines.append(
+            f"    protocol.comment('Executing Step {step.step_number}: {safe_rxn_type}')"
+        )
+
         # Add reactants
         for r_idx, reactant in enumerate(step.reactants, start=1):
             raw_r_name = reactant.get("name", f"Reactant_{r_idx}")
             r_name = SafeSanitizer.sanitize_code_literal(raw_r_name, 50)
             res_well = f"A{((idx - 1) * 2 + r_idx) % 12 + 1}"
             lines.append(f"    # Liquid addition: {r_name} from Reservoir {res_well}")
-            lines.append(f"    p300.pick_up_tip()")
+            lines.append("    p300.pick_up_tip()")
             lines.append(f"    p300.aspirate(120, reagents['{res_well}'])")
             lines.append(f"    p300.dispense(120, rxn_block['A{idx}'])")
             lines.append(f"    p300.mix(3, 80, rxn_block['A{idx}'])")
-            lines.append(f"    p300.drop_tip()")
+            lines.append("    p300.drop_tip()")
 
         # Add reagents
         for rg_idx, reagent in enumerate(step.reagents, start=1):
             safe_reagent = SafeSanitizer.sanitize_code_literal(reagent, 50)
             lines.append(f"    # Catalyst/Reagent dosing: {safe_reagent}")
-            lines.append(f"    p300.pick_up_tip()")
+            lines.append("    p300.pick_up_tip()")
             lines.append(f"    p300.aspirate(50, reagents['A{min(12, rg_idx + 6)}'])")
             lines.append(f"    p300.dispense(50, rxn_block['A{idx}'])")
             lines.append(f"    p300.mix(4, 100, rxn_block['A{idx}'])")
-            lines.append(f"    p300.drop_tip()")
+            lines.append("    p300.drop_tip()")
 
         # Incubation or reaction delay
-        lines.append(f"    protocol.comment('Step {step.step_number} incubation initiated...')")
-        lines.append(f"    protocol.delay(minutes=15)  # Automated mixing incubation cycle")
-        lines.append(f"    protocol.comment('Step {step.step_number} completed. Ready for next transformation.')")
-        
+        lines.append(
+            f"    protocol.comment('Step {step.step_number} incubation initiated...')"
+        )
+        lines.append(
+            "    protocol.delay(minutes=15)  # Automated mixing incubation cycle"
+        )
+        lines.append(
+            f"    protocol.comment('Step {step.step_number} completed. Ready for next transformation.')"
+        )
+
         step_blocks.append("\n".join(lines))
 
     all_steps_text = "\n".join(step_blocks)
     if not all_steps_text:
-        all_steps_text = "    protocol.comment('Single-step verified commercial precursor ready.')"
+        all_steps_text = (
+            "    protocol.comment('Single-step verified commercial precursor ready.')"
+        )
 
     return OT2_TEMPLATE.format(
         candidate_id=safe_candidate_id,
         num_steps=plan.num_steps,
         feasibility=safe_feasibility,
-        timestamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        step_commands=all_steps_text
+        timestamp=datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%d %H:%M UTC"
+        ),
+        step_commands=all_steps_text,
     )
 
 
@@ -168,7 +187,7 @@ def generate_lab_card(
     lead_id: Optional[str] = None,
     target_name: Optional[str] = None,
     synthesis_steps: Optional[List[Dict[str, Any]]] = None,
-    **kwargs
+    **kwargs,
 ) -> str:
     """
     Generates standard markdown wet-lab card with reagent requirements and safety precautions.
@@ -182,26 +201,30 @@ def generate_lab_card(
             if isinstance(s, RetrosynthesisStep):
                 parsed_steps.append(s)
             elif isinstance(s, dict):
-                parsed_steps.append(RetrosynthesisStep(
-                    step_number=s.get("step", idx),
-                    reaction_type=s.get("reaction_type", "Coupling"),
-                    reaction_smarts="",
-                    reactants=s.get("reactants", [{"name": f"Reactant_{idx}"}]),
-                    reagents=s.get("reagents", ["DIPEA", "DMF"]),
-                    product_smiles="CC(=O)N1CCNCC1",
-                    estimated_yield_pct=float(s.get("yield_pct", 85.0)),
-                    difficulty=s.get("difficulty", "Routine")
-                ))
+                parsed_steps.append(
+                    RetrosynthesisStep(
+                        step_number=s.get("step", idx),
+                        reaction_type=s.get("reaction_type", "Coupling"),
+                        reaction_smarts="",
+                        reactants=s.get("reactants", [{"name": f"Reactant_{idx}"}]),
+                        reagents=s.get("reagents", ["DIPEA", "DMF"]),
+                        product_smiles="CC(=O)N1CCNCC1",
+                        estimated_yield_pct=float(s.get("yield_pct", 85.0)),
+                        difficulty=s.get("difficulty", "Routine"),
+                    )
+                )
         plan = RetrosynthesisPlan(
             candidate_id=cid,
             target_smiles=kwargs.get("lead_smiles", "CC(=O)N1CCNCC1"),
             num_steps=len(parsed_steps) or 1,
             overall_feasibility="Commercially Accessible",
             steps=parsed_steps,
-            starting_materials=["Precursor Scaffold A", "Commercial Reagent B"]
+            starting_materials=["Precursor Scaffold A", "Commercial Reagent B"],
         )
 
-    now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now_str = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y-%m-%d %H:%M UTC"
+    )
     lines = [
         f"# 🧪 Wet-Lab Protocol Card — {cid}",
         f"> **Generated by NVIDIA BioNeMo Autonomous Scientist** | {now_str}",
@@ -216,34 +239,44 @@ def generate_lab_card(
     ]
 
     for sm in plan.starting_materials:
-        lines.append(f"- [ ] **Precursor:** `{sm}` (Available in Sigma-Aldrich / Enamine catalog)")
+        lines.append(
+            f"- [ ] **Precursor:** `{sm}` (Available in Sigma-Aldrich / Enamine catalog)"
+        )
 
-    lines.extend([
-        "",
-        "## 3. Step-by-Step Reaction Conditions",
-    ])
+    lines.extend(
+        [
+            "",
+            "## 3. Step-by-Step Reaction Conditions",
+        ]
+    )
 
     for step in plan.steps:
         lines.append(f"### Step {step.step_number}: {step.reaction_type}")
         lines.append(f"- **Difficulty:** {step.difficulty}")
-        lines.append(f"- **Anticipated Isolated Yield:** {step.estimated_yield_pct:.0f}%")
+        lines.append(
+            f"- **Anticipated Isolated Yield:** {step.estimated_yield_pct:.0f}%"
+        )
         lines.append(f"- **Reagents / Catalysts:** {', '.join(step.reagents)}")
         if step.reactants:
             r_names = [f"`{r.get('name', 'Compound')}`" for r in step.reactants]
             lines.append(f"- **Reactants:** {', '.join(r_names)}")
-        lines.append("- **Quality Control:** Analyze aliquot by LC-MS (ESI+) to confirm product mass before downstream step.")
+        lines.append(
+            "- **Quality Control:** Analyze aliquot by LC-MS (ESI+) to confirm product mass before downstream step."
+        )
         lines.append("")
 
-    lines.extend([
-        "## 4. Robotic Automation Instructions (Opentrons OT-2)",
-        "1. Load `BioNeMo_Synthesis_Protocol.py` into the Opentrons App or web controller.",
-        "2. Place 300 µL tip rack in **Slot 1** and 1000 µL tip rack in **Slot 5**.",
-        "3. Prime Reagent Reservoir in **Slot 2** with stock solutions as outlined in deck map.",
-        "4. Mount Temperature Module Gen2 in **Slot 3** with 24-well 1.5 mL aluminum block.",
-        "5. Execute automated protocol. Yield product held at 4°C upon completion.",
-        "",
-        "---",
-        "*Safety Disclaimer: All reactions must be conducted in an approved chemical fume hood. Wear appropriate PPE.*"
-    ])
+    lines.extend(
+        [
+            "## 4. Robotic Automation Instructions (Opentrons OT-2)",
+            "1. Load `BioNeMo_Synthesis_Protocol.py` into the Opentrons App or web controller.",
+            "2. Place 300 µL tip rack in **Slot 1** and 1000 µL tip rack in **Slot 5**.",
+            "3. Prime Reagent Reservoir in **Slot 2** with stock solutions as outlined in deck map.",
+            "4. Mount Temperature Module Gen2 in **Slot 3** with 24-well 1.5 mL aluminum block.",
+            "5. Execute automated protocol. Yield product held at 4°C upon completion.",
+            "",
+            "---",
+            "*Safety Disclaimer: All reactions must be conducted in an approved chemical fume hood. Wear appropriate PPE.*",
+        ]
+    )
 
     return "\n".join(lines)

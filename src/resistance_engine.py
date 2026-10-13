@@ -8,12 +8,12 @@ counter-designed scaffolds that bypass the resistance barrier.
 
 import logging
 import random
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, Optional, Tuple
+
 from rdkit import Chem
-from rdkit.Chem import Descriptors
 
 from src.client import NimBioClient
-from src.models import MoleculeCandidate, TargetProfile, ResistanceScan
+from src.models import MoleculeCandidate, ResistanceScan, TargetProfile
 
 logger = logging.getLogger("ResistanceEngine")
 
@@ -23,36 +23,36 @@ CLINICAL_RESISTANCE_CATALOG: Dict[str, Dict[str, Any]] = {
         "hotspots": ["Gly12", "Asp12", "Tyr96", "Gln61"],
         "mechanism": "Loss of electrostatic salt bridge with Asp12 carboxylate. Leads to steric mismatch in Switch-II subpocket.",
         "evolved_suffix": "c1nn(CC(F)(F)F)cc1",
-        "bioisostere_mod": "Incorporated 3-trifluoromethylpyrazole anchor to engage Tyr96 hydrophobic shelf without requiring Asp12 coordination."
+        "bioisostere_mod": "Incorporated 3-trifluoromethylpyrazole anchor to engage Tyr96 hydrophobic shelf without requiring Asp12 coordination.",
     },
     "EGFR T790M": {
         "mutation": "T790M -> C797S (Acquired Covalent Decoupling)",
         "hotspots": ["Cys797", "Met790", "Leu718", "Lys745"],
         "mechanism": "Loss of nucleophilic Cys797 thiol eliminates covalent acrylamide trapping, reducing 3rd-generation TKI binding.",
         "evolved_suffix": "c1cc(F)cc(NC(=O)C2CC2)c1",
-        "bioisostere_mod": "Substituted covalent warhead with reversible cyclopropyl carboxamide engaging Lys745 via reinforced H-bond network."
+        "bioisostere_mod": "Substituted covalent warhead with reversible cyclopropyl carboxamide engaging Lys745 via reinforced H-bond network.",
     },
     "HER2": {
         "mutation": "T798I Gatekeeper Mutation",
         "hotspots": ["Thr798", "Met801", "Cys805", "Leu726"],
         "mechanism": "Bulky isoleucine sidechain produces steric clash with quinazoline core in ATP-binding pocket.",
         "evolved_suffix": "c1nc(NC2CC2)ncc1F",
-        "bioisostere_mod": "Streamlined bicyclic scaffold to 2-fluoropyrimidine core, avoiding steric clash with mutated Ile798 sidechain."
+        "bioisostere_mod": "Streamlined bicyclic scaffold to 2-fluoropyrimidine core, avoiding steric clash with mutated Ile798 sidechain.",
     },
     "BRAF V600E": {
         "mutation": "V600E -> D594G Active Conformation Lock",
         "hotspots": ["Val600", "Asp594", "Lys483", "Phe595"],
         "mechanism": "Altered DFG-motif dynamics causes accelerated drug dissociation from catalytic spine.",
         "evolved_suffix": "c1c(Cl)c(F)cc(C#N)c1",
-        "bioisostere_mod": "Added 2-chloro-4-fluoro-benzonitrile terminal pharmacophore for DFG-out conformation stabilization."
+        "bioisostere_mod": "Added 2-chloro-4-fluoro-benzonitrile terminal pharmacophore for DFG-out conformation stabilization.",
     },
     "SARS-CoV-2 Mpro": {
         "mutation": "E166V / S144A Catalytic Cleft Desensitization",
         "hotspots": ["Glu166", "His41", "Cys145", "Gln189"],
         "mechanism": "S1 subsite pocket contraction disrupts lactam ring hydrogen bonding network.",
         "evolved_suffix": "C1CCC(NC(=O)CF)CC1",
-        "bioisostere_mod": "Installed fluoroacetamide substituted ring to restore tight packing within constricted S1 subsite."
-    }
+        "bioisostere_mod": "Installed fluoroacetamide substituted ring to restore tight packing within constricted S1 subsite.",
+    },
 }
 
 
@@ -67,9 +67,7 @@ class ResistanceEscapeEngine:
         self.client = NimBioClient(api_key=api_key, mock=mock)
 
     def scan_and_evolve(
-        self,
-        lead: MoleculeCandidate,
-        target: TargetProfile
+        self, lead: MoleculeCandidate, target: TargetProfile
     ) -> ResistanceScan:
         """
         Executes the adaptive resistance scan:
@@ -86,10 +84,16 @@ class ResistanceEscapeEngine:
                 break
 
         if not catalog_entry:
-            hotspots = target.pocket_residues[:3] if target.pocket_residues else ["Res12", "Res61", "Res96"]
+            hotspots = (
+                target.pocket_residues[:3]
+                if target.pocket_residues
+                else ["Res12", "Res61", "Res96"]
+            )
             mutation_label = f"{hotspots[0]} Mutational Escape"
             mechanism = "Pocket residue mutation introduces steric hindrance and disrupts hydrogen bond network."
-            bioisostere_note = "Restructured core pharmacophore to bypass steric collision."
+            bioisostere_note = (
+                "Restructured core pharmacophore to bypass steric collision."
+            )
         else:
             hotspots = catalog_entry["hotspots"]
             mutation_label = catalog_entry["mutation"]
@@ -109,10 +113,7 @@ class ResistanceEscapeEngine:
         # 3. MolMIM counter-design evolution
         evolved_lead_id = f"{lead.id}-EVOLVED"
         evolved_smiles, evolved_affinity = self._evolve_escape_candidate(
-            lead=lead,
-            target=target,
-            catalog_entry=catalog_entry,
-            orig_aff=orig_aff
+            lead=lead, target=target, catalog_entry=catalog_entry, orig_aff=orig_aff
         )
 
         delta_recovery = round(mutant_affinity - evolved_affinity, 2)
@@ -130,7 +131,7 @@ class ResistanceEscapeEngine:
             evolved_affinity=evolved_affinity,
             delta_recovery=delta_recovery,
             nim_calls_made=nim_calls,
-            structural_mechanism=f"{mechanism} {bioisostere_note}"
+            structural_mechanism=f"{mechanism} {bioisostere_note}",
         )
 
     def _evolve_escape_candidate(
@@ -138,7 +139,7 @@ class ResistanceEscapeEngine:
         lead: MoleculeCandidate,
         target: TargetProfile,
         catalog_entry: Optional[Dict[str, Any]],
-        orig_aff: float
+        orig_aff: float,
     ) -> Tuple[str, float]:
         """
         Invokes MolMIM steering or smart chemical modification to bypass the resistance clash.
@@ -155,7 +156,11 @@ class ResistanceEscapeEngine:
                 # Add bioisosteric modification
                 if catalog_entry and "evolved_suffix" in catalog_entry:
                     suffix = catalog_entry["evolved_suffix"]
-                    evolved_smiles = f"{parent_smiles}.{suffix}" if "." not in parent_smiles else parent_smiles
+                    evolved_smiles = (
+                        f"{parent_smiles}.{suffix}"
+                        if "." not in parent_smiles
+                        else parent_smiles
+                    )
                     # Validate smiles
                     test_mol = Chem.MolFromSmiles(evolved_smiles)
                     if not test_mol:

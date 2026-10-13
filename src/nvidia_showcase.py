@@ -7,7 +7,7 @@ Directly addresses NVIDIA strategic priorities:
 3. BioNeMoBlueprintGenerator: Generates official production-ready Docker Compose & Helm Blueprints.
 """
 
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 class GreenComputeProfiler:
@@ -17,17 +17,14 @@ class GreenComputeProfiler:
     """
 
     # Industry standard data center power and carbon intensity figures
-    CPU_CLUSTER_WATTS = 1600.0   # 64-core Dual-Socket Xeon Server baseline draw
-    H100_SXM5_WATTS = 700.0      # Peak draw of 1x NVIDIA H100 SXM5 during inference
-    AVG_KWH_COST_USD = 0.14      # Average US commercial data center electricity price/kWh
+    CPU_CLUSTER_WATTS = 1600.0  # 64-core Dual-Socket Xeon Server baseline draw
+    H100_SXM5_WATTS = 700.0  # Peak draw of 1x NVIDIA H100 SXM5 during inference
+    AVG_KWH_COST_USD = 0.14  # Average US commercial data center electricity price/kWh
     CARBON_INTENSITY_G_PER_KWH = 380.0  # US grid average gCO2e per kWh
 
     @classmethod
     def calculate_campaign_impact(
-        cls,
-        cpu_time_sec: float,
-        gpu_time_sec: float,
-        num_molecules: int = 1000
+        cls, cpu_time_sec: float, gpu_time_sec: float, num_molecules: int = 1000
     ) -> Dict[str, Any]:
         """
         Calculates energy (kWh), cloud compute cost ($), and carbon footprint (gCO2e).
@@ -42,7 +39,9 @@ class GreenComputeProfiler:
         gpu_kwh = round((cls.H100_SXM5_WATTS * gpu_total_hours) / 1000.0, 3)
 
         energy_saved_kwh = round(max(0.001, cpu_kwh - gpu_kwh), 3)
-        energy_reduction_pct = round((energy_saved_kwh / max(0.001, cpu_kwh)) * 100.0, 1)
+        energy_reduction_pct = round(
+            (energy_saved_kwh / max(0.001, cpu_kwh)) * 100.0, 1
+        )
 
         # Carbon footprint (gCO2e)
         cpu_co2_g = round(cpu_kwh * cls.CARBON_INTENSITY_G_PER_KWH, 1)
@@ -55,7 +54,9 @@ class GreenComputeProfiler:
         cpu_cloud_cost = round(cpu_total_hours * 3.40, 2)
         gpu_cloud_cost = round(gpu_total_hours * 4.50, 2)
         cost_saved_usd = round(max(0.01, cpu_cloud_cost - gpu_cloud_cost), 2)
-        cost_savings_pct = round((cost_saved_usd / max(0.01, cpu_cloud_cost)) * 100.0, 1)
+        cost_savings_pct = round(
+            (cost_saved_usd / max(0.01, cpu_cloud_cost)) * 100.0, 1
+        )
 
         return {
             "num_molecules": num_molecules,
@@ -73,7 +74,7 @@ class GreenComputeProfiler:
             "executive_summary": (
                 f"NVIDIA H100 NIM slashes energy consumption by {energy_reduction_pct}% "
                 f"and avoids {co2_saved_g}g CO2e, saving ${cost_saved_usd} per {num_molecules:,} screened molecules."
-            )
+            ),
         }
 
 
@@ -84,16 +85,38 @@ class MultiGpuScalingEngine:
     """
 
     @classmethod
-    def simulate_cluster_scaling(cls, base_throughput_tokens_per_sec: float = 14500.0) -> List[Dict[str, Any]]:
+    def simulate_cluster_scaling(
+        cls, base_throughput_tokens_per_sec: float = 14500.0
+    ) -> List[Dict[str, Any]]:
         """
         Returns scaling telemetry curves across 1, 2, 4, and 8 GPU configurations.
         Includes NVLink bus utilization and FP8 Tensor Core speedups.
         """
         gpu_configs = [
-            {"count": 1, "efficiency": 1.00, "nvlink": "N/A (Single Card)", "interconnect_bw": "PCIe Gen5"},
-            {"count": 2, "efficiency": 0.98, "nvlink": "Dual NVLink Bridge", "interconnect_bw": "900 GB/s"},
-            {"count": 4, "efficiency": 0.95, "nvlink": "4x NVLink Mesh", "interconnect_bw": "1.8 TB/s"},
-            {"count": 8, "efficiency": 0.92, "nvlink": "NVSwitch Full Bisection", "interconnect_bw": "3.6 TB/s"}
+            {
+                "count": 1,
+                "efficiency": 1.00,
+                "nvlink": "N/A (Single Card)",
+                "interconnect_bw": "PCIe Gen5",
+            },
+            {
+                "count": 2,
+                "efficiency": 0.98,
+                "nvlink": "Dual NVLink Bridge",
+                "interconnect_bw": "900 GB/s",
+            },
+            {
+                "count": 4,
+                "efficiency": 0.95,
+                "nvlink": "4x NVLink Mesh",
+                "interconnect_bw": "1.8 TB/s",
+            },
+            {
+                "count": 8,
+                "efficiency": 0.92,
+                "nvlink": "NVSwitch Full Bisection",
+                "interconnect_bw": "3.6 TB/s",
+            },
         ]
 
         results = []
@@ -105,17 +128,19 @@ class MultiGpuScalingEngine:
             fp8_thru = round(fp16_thru * 1.85, 0)
             scaling_factor = round(n * eff, 2)
 
-            results.append({
-                "gpu_count": n,
-                "node_type": f"NVIDIA DGX H100 ({n}x SXM5 80GB)",
-                "scaling_factor": scaling_factor,
-                "efficiency_pct": round(eff * 100.0, 1),
-                "interconnect": cfg["nvlink"],
-                "total_bandwidth": cfg["interconnect_bw"],
-                "throughput_fp16_tokens_sec": fp16_thru,
-                "throughput_fp8_tokens_sec": fp8_thru,
-                "docking_poses_per_minute": int(n * 240 * eff)
-            })
+            results.append(
+                {
+                    "gpu_count": n,
+                    "node_type": f"NVIDIA DGX H100 ({n}x SXM5 80GB)",
+                    "scaling_factor": scaling_factor,
+                    "efficiency_pct": round(eff * 100.0, 1),
+                    "interconnect": cfg["nvlink"],
+                    "total_bandwidth": cfg["interconnect_bw"],
+                    "throughput_fp16_tokens_sec": fp16_thru,
+                    "throughput_fp8_tokens_sec": fp8_thru,
+                    "docking_poses_per_minute": int(n * 240 * eff),
+                }
+            )
 
         return results
 
@@ -233,17 +258,29 @@ services:
                 "NVIDIA DGX H100",
                 "NVIDIA DGX Cloud",
                 "NVIDIA RTX 6000 Ada",
-                "NVIDIA H100 80GB SXM5"
+                "NVIDIA H100 80GB SXM5",
             ],
             "microservices": [
-                {"name": "meta/esm2-650m", "task": "Per-residue attention & protein sequence representation"},
-                {"name": "mit/diffdock", "task": "SE(3)-equivariant score-based diffusion docking"},
-                {"name": "nvidia/molmim", "task": "Controlled latent space molecular generation & scaffold hopping"},
-                {"name": "nvidia/esmfold", "task": "De novo 3D macromolecular structure prediction"}
+                {
+                    "name": "meta/esm2-650m",
+                    "task": "Per-residue attention & protein sequence representation",
+                },
+                {
+                    "name": "mit/diffdock",
+                    "task": "SE(3)-equivariant score-based diffusion docking",
+                },
+                {
+                    "name": "nvidia/molmim",
+                    "task": "Controlled latent space molecular generation & scaffold hopping",
+                },
+                {
+                    "name": "nvidia/esmfold",
+                    "task": "De novo 3D macromolecular structure prediction",
+                },
             ],
             "compliance": [
                 "FDA 21 CFR Part 312 Nonclinical Pharmacology (IND Section 2)",
                 "Opentrons OT-2 API v2.15 Wet-Lab Robotic Protocol Compilation",
-                "NVIDIA Inception Zero-Trust & Dual-Use Biosecurity Screening"
-            ]
+                "NVIDIA Inception Zero-Trust & Dual-Use Biosecurity Screening",
+            ],
         }

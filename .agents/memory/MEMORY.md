@@ -21,3 +21,10 @@
 - Strategy: PRODUCT-SHERPA, GROWTH-CATALYST, APOLLO-NARRATIVE, FINANCE-RUNWAY.
 - Execution: SYNTAX-CRAFT, PRISM-CORE, ATLAS-DEPLOY, SCOUT-INTEL, BIO-NIM, CHRONOS-QA, SIMULATOR-USER.
 - Telemetry & Polish: AEGIS-WATCH, COUNCIL-METRICS, VERITAS-COUNCIL, GAIA-HEART.
+
+## 4. Active Roadmap: Clean Individual Packaging & Windows Execution
+- Context: Project built and maintained by an individual independent developer (Jorwal / Jorwalzzz), not a corporate enterprise.
+- Invariant: Offline / local users must NEVER require an NVIDIA API key (`USE_MOCK=true`, local medchem simulation, zero credits).
+- Distribution Strategy: Focus on lightweight, transparent individual developer distribution (PowerShell/batch setup, standalone PyInstaller CLI/GUI binary, or open-source GitHub release artifacts) without corporate enterprise overhead.
+- Next Actions: Align installer and packaging tooling (`install.ps1`, `install.bat`, or standalone binary) around clear, friction-free independent open-source setup.
+

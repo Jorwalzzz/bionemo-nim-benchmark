@@ -32,3 +32,9 @@ htmlcov/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Build Artifacts
+*.egg-info/
+dist_npm/
+dist/*.whl
+dist/*.tar.gz

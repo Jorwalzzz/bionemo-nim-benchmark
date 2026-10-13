@@ -5,8 +5,8 @@ Compiles an exhaustive, multi-chapter reference manual into both mobile-responsi
 """
 
 import os
-import subprocess
 import shutil
+import subprocess
 
 html_path = os.path.abspath("ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html")
 pdf_path = os.path.abspath("ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf")
@@ -809,37 +809,45 @@ with open(html_path, "w", encoding="utf-8") as f:
 print(f"HTML Encyclopedia created: {html_path} ({len(content)} chars)")
 
 # Compile to PDF
-edge_exe = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-chrome_exe = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+edge_exe = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+chrome_exe = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 browser = chrome_exe if os.path.exists(chrome_exe) else edge_exe
 
 cmd = [
     browser,
-    '--headless=new',
-    '--disable-gpu',
-    '--no-pdf-header-footer',
-    f'--print-to-pdf={pdf_path}',
-    f'file:///{html_path}'
+    "--headless=new",
+    "--disable-gpu",
+    "--no-pdf-header-footer",
+    f"--print-to-pdf={pdf_path}",
+    f"file:///{html_path}",
 ]
 
 print("Compiling Master PDF via headless browser...")
 res = subprocess.run(cmd, capture_output=True, text=True)
-print("PDF compiled:", os.path.exists(pdf_path), f"Size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0} bytes")
+print(
+    "PDF compiled:",
+    os.path.exists(pdf_path),
+    f"Size: {os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0} bytes",
+)
 
 # Sync to all target drives
 destinations = [
-    r'D:\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf',
-    r'D:\BIONEMO\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf',
-    r'D:\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html',
-    r'D:\BIONEMO\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html',
-    os.path.expanduser('~/OneDrive/Documents/ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf'),
-    os.path.expanduser('~/OneDrive/Documents/ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html'),
+    r"D:\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf",
+    r"D:\BIONEMO\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf",
+    r"D:\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html",
+    r"D:\BIONEMO\ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html",
+    os.path.expanduser(
+        "~/OneDrive/Documents/ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.pdf"
+    ),
+    os.path.expanduser(
+        "~/OneDrive/Documents/ANTIGRAVITY_IDE_ULTIMATE_ENCYCLOPEDIA.html"
+    ),
 ]
 
 for d in destinations:
     try:
         os.makedirs(os.path.dirname(d), exist_ok=True)
-        src = pdf_path if d.endswith('.pdf') else html_path
+        src = pdf_path if d.endswith(".pdf") else html_path
         shutil.copy2(src, d)
         print(f"Synced to: {d}")
     except Exception as e:

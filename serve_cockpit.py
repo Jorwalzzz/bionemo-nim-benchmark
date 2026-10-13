@@ -8,40 +8,50 @@ Serves the Premium Bio-Computational Cockpit with:
 """
 
 import os
-import sys
 import re
 import secrets
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from dotenv import load_dotenv
+
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-from fastapi import FastAPI, Query, Request, Response
-from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 import uvicorn
+from fastapi import FastAPI, Query, Request, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    StreamingResponse,
+)
+from fastapi.staticfiles import StaticFiles
 
 from src.orchestrator import AgenticScientistOrchestrator
 from src.trial_limiter import TrialLimiter
 
 app = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
 
-MAX_PAYLOAD_SIZE = 128 * 1024  # 128 KB max request body size to prevent memory bloat DoS
+MAX_PAYLOAD_SIZE = (
+    128 * 1024
+)  # 128 KB max request body size to prevent memory bloat DoS
 ADMIN_RESET_KEY = os.environ.get("ADMIN_RESET_KEY", "")
 import logging
+
 logger = logging.getLogger("CockpitSecurity")
 from src.security_sentinel import (
-    TokenBucketRateLimiter,
     BiosecurityScreener,
+    SafeSanitizer,
     SecretScrubber,
-    SafeSanitizer
+    TokenBucketRateLimiter,
 )
 
 # In-flight Token Bucket Rate Limiter (Max burst 40 requests, refilling at 1 req/sec)
 in_flight_limiter = TokenBucketRateLimiter(capacity=40, refill_rate_per_sec=1.0)
+
 
 # Security Headers & Hardening Middleware
 @app.middleware("http")
@@ -54,7 +64,13 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
         or (request.client.host if request.client else "127.0.0.1")
     )
     # Burst cost 2.0 for heavy mutation/stream paths, 1.0 for standard
-    cost = 2.0 if any(p in request.url.path for p in ("/api/run", "/api/stream", "/api/redock")) else 0.5
+    cost = (
+        2.0
+        if any(
+            p in request.url.path for p in ("/api/run", "/api/stream", "/api/redock")
+        )
+        else 0.5
+    )
     allowed, retry_after = in_flight_limiter.allow_request(client_ip, cost=cost)
     if not allowed:
         return JSONResponse(
@@ -62,9 +78,9 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
             content={
                 "error": "RATE_LIMIT_EXCEEDED",
                 "message": f"Too many requests from IP {client_ip}. Please retry after {retry_after} seconds.",
-                "retry_after": retry_after
+                "retry_after": retry_after,
             },
-            headers={"Retry-After": str(int(retry_after) + 1)}
+            headers={"Retry-After": str(int(retry_after) + 1)},
         )
 
     # 2. Payload size ceiling
@@ -72,7 +88,10 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
     if content_length and int(content_length) > MAX_PAYLOAD_SIZE:
         return JSONResponse(
             status_code=413,
-            content={"error": "PAYLOAD_TOO_LARGE", "message": "Request payload exceeds 128KB limit."}
+            content={
+                "error": "PAYLOAD_TOO_LARGE",
+                "message": "Request payload exceeds 128KB limit.",
+            },
         )
 
     response: Response = await call_next(request)
@@ -82,7 +101,9 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=(), payment=()"
+    response.headers["Permissions-Policy"] = (
+        "geolocation=(), camera=(), microphone=(), payment=()"
+    )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
@@ -101,11 +122,7 @@ async def value_error_security_handler(request: Request, exc: ValueError):
     """Handles validation and biosecurity screening violations with client-friendly 400 responses."""
     err_msg = SecretScrubber.scrub(str(exc))
     return JSONResponse(
-        status_code=400,
-        content={
-            "error": "VALIDATION_FAILED",
-            "message": err_msg
-        }
+        status_code=400, content={"error": "VALIDATION_FAILED", "message": err_msg}
     )
 
 
@@ -113,16 +130,23 @@ async def value_error_security_handler(request: Request, exc: ValueError):
 async def global_security_exception_handler(request: Request, exc: Exception):
     """Global exception handler to mask internal traces and scrub secrets from logs."""
     import uuid
+
     error_id = f"sec_{uuid.uuid4().hex[:10]}"
     safe_exc_msg = SecretScrubber.scrub(str(exc))
-    logger.error("Internal processing error [%s] on %s %s: %s", error_id, request.method, request.url.path, safe_exc_msg)
+    logger.error(
+        "Internal processing error [%s] on %s %s: %s",
+        error_id,
+        request.method,
+        request.url.path,
+        safe_exc_msg,
+    )
     return JSONResponse(
         status_code=500,
         content={
             "error": "INTERNAL_SERVER_ERROR",
             "message": "A secure processing exception occurred. Incident logged.",
-            "incident_id": error_id
-        }
+            "incident_id": error_id,
+        },
     )
 
 
@@ -132,15 +156,19 @@ def sanitize_target_query(query: str) -> str:
         return "KRAS G12D"
     # Pre-clamp length to eliminate ReDoS before regex evaluation
     raw_str = str(query)[:1500]
-    cleaned = re.sub(r'<[^>]*?>', '', raw_str)
-    cleaned = re.sub(r'[;&|`$><\\/\n\r]', ' ', cleaned)
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    cleaned = re.sub(r"<[^>]*?>", "", raw_str)
+    cleaned = re.sub(r"[;&|`$><\\/\n\r]", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     candidate = cleaned[:1500] if cleaned else "KRAS G12D"
 
     # Dual-Use Biosecurity verification
     is_safe, reason = BiosecurityScreener.screen_target(candidate)
     if not is_safe:
-        logger.warning("Biosecurity restriction triggered on target query '%s': %s", candidate, reason)
+        logger.warning(
+            "Biosecurity restriction triggered on target query '%s': %s",
+            candidate,
+            reason,
+        )
         raise ValueError(reason or "BIOSECURITY_RESTRICTION: Target disallowed.")
 
     return candidate
@@ -159,6 +187,7 @@ def verify_request_origin(request: Request) -> bool:
         return True
 
     from urllib.parse import urlparse
+
     try:
         parsed = urlparse(check_url)
         # Block non-HTTP(S) origins (e.g. data:, javascript:, file:)
@@ -174,7 +203,11 @@ def verify_request_origin(request: Request) -> bool:
         # Exact trusted domains or explicit suffixes (e.g. localhost, 127.0.0.1, *.hf.space, huggingface.co)
         if hostname in ("localhost", "127.0.0.1", "testserver"):
             return True
-        if hostname == "huggingface.co" or hostname.endswith(".hf.space") or hostname.endswith(".huggingface.co"):
+        if (
+            hostname == "huggingface.co"
+            or hostname.endswith(".hf.space")
+            or hostname.endswith(".huggingface.co")
+        ):
             return True
     except Exception:
         return False
@@ -186,8 +219,8 @@ RESULTS_DIR = os.path.join(BASE_DIR, "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
-HTML_PATH = os.path.join(BASE_DIR, "stitch_cockpit.html")
-LANDING_PATH = os.path.join(BASE_DIR, "landing_portal.html")
+HTML_PATH = os.path.join(BASE_DIR, "cockpit.html")
+LANDING_PATH = os.path.join(BASE_DIR, "index.html")
 
 COOKIE_NAME = "bionemo_trial_session"
 trial_limiter = TrialLimiter()
@@ -217,12 +250,24 @@ def get_client_identifiers(request: Request) -> tuple:
     else:
         client_ip = request.client.host if request.client else "127.0.0.1"
 
-    client_fp = request.headers.get("X-Client-Fingerprint") or request.query_params.get("fp")
+    client_fp = request.headers.get("X-Client-Fingerprint") or request.query_params.get(
+        "fp"
+    )
     user_agent = request.headers.get("User-Agent")
     accept_lang = request.headers.get("Accept-Language")
-    fp_hash = trial_limiter.compute_composite_fingerprint(client_fp, user_agent, accept_lang)
+    fp_hash = trial_limiter.compute_composite_fingerprint(
+        client_fp, user_agent, accept_lang
+    )
 
     return session_id, signed_token, fp_hash, client_ip, user_agent
+
+
+@app.get("/cockpit.css")
+@app.get("/cockpit.js")
+def get_cockpit_asset(request: Request):
+    """Serves modular cockpit CSS and JavaScript assets."""
+    name = request.url.path.lstrip("/")
+    return FileResponse(os.path.join(BASE_DIR, name))
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -248,7 +293,7 @@ def get_cockpit(request: Request):
             value=signed_token,
             max_age=86400 * 365,
             httponly=True,
-            samesite="lax"
+            samesite="lax",
         )
         resp.delete_cookie(key="creator_mode")
         return resp
@@ -263,7 +308,7 @@ def get_health():
         "service": "Agentic BioNeMo Cockpit API",
         "version": "2.2.0",
         "trial_limit": trial_limiter.max_runs,
-        "global_daily_cap": trial_limiter.max_global_daily_runs
+        "global_daily_cap": trial_limiter.max_global_daily_runs,
     }
 
 
@@ -279,7 +324,7 @@ def get_trial_status(request: Request):
         value=signed_token,
         max_age=86400 * 365,
         httponly=True,
-        samesite="lax"
+        samesite="lax",
     )
     resp.delete_cookie(key="creator_mode")
     return resp
@@ -301,29 +346,31 @@ def reset_trial(request: Request):
             status_code=403,
             content={
                 "error": "UNAUTHORIZED_ADMIN_KEY",
-                "message": "Access denied. Valid administrator key required to reset quota."
-            }
+                "message": "Access denied. Valid administrator key required to reset quota.",
+            },
         )
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     trial_limiter.reset_caller(session_id, fp_hash, client_ip)
-    resp = JSONResponse({
-        "success": True,
-        "message": "Trial quota has been reset by administrator.",
-        "trial_status": {
-            "allowed": True,
-            "runs_used": 0,
-            "runs_remaining": trial_limiter.max_runs,
-            "max_runs": trial_limiter.max_runs,
-            "is_locked": False
+    resp = JSONResponse(
+        {
+            "success": True,
+            "message": "Trial quota has been reset by administrator.",
+            "trial_status": {
+                "allowed": True,
+                "runs_used": 0,
+                "runs_remaining": trial_limiter.max_runs,
+                "max_runs": trial_limiter.max_runs,
+                "is_locked": False,
+            },
         }
-    })
+    )
     resp.set_cookie(
         key=COOKIE_NAME,
         value=signed_token,
         max_age=86400 * 365,
         httponly=True,
-        samesite="lax"
+        samesite="lax",
     )
     resp.delete_cookie(key="creator_mode")
     return resp
@@ -335,12 +382,20 @@ def get_dossier():
     abs_dossier = os.path.abspath(dossier_path)
     abs_results = os.path.abspath(RESULTS_DIR)
     if not abs_dossier.startswith(abs_results) or not os.path.exists(abs_dossier):
-        return JSONResponse({"status": "pending", "content": "No active dossier yet. Trigger a run first."})
+        return JSONResponse(
+            {
+                "status": "pending",
+                "content": "No active dossier yet. Trigger a run first.",
+            }
+        )
     with open(abs_dossier, "r", encoding="utf-8") as f:
         content = f.read()
     return Response(
-        content=content, media_type="text/markdown",
-        headers={"Content-Disposition": "attachment; filename=CANDIDATE_SELECTION_DOSSIER.md"}
+        content=content,
+        media_type="text/markdown",
+        headers={
+            "Content-Disposition": "attachment; filename=CANDIDATE_SELECTION_DOSSIER.md"
+        },
     )
 
 
@@ -350,9 +405,23 @@ def download_windows_installer():
     if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "installer not found"})
     return FileResponse(
-        path, filename="install.bat",
+        path,
+        filename="install.bat",
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=install.bat"}
+        headers={"Content-Disposition": "attachment; filename=install.bat"},
+    )
+
+
+@app.get("/api/download/setup-exe")
+def download_setup_exe():
+    path = os.path.join(BASE_DIR, "setup.exe")
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "setup.exe not found"})
+    return FileResponse(
+        path,
+        filename="setup.exe",
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=setup.exe"},
     )
 
 
@@ -362,9 +431,23 @@ def download_unix_installer():
     if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "installer not found"})
     return FileResponse(
-        path, filename="install.sh",
+        path,
+        filename="install.sh",
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=install.sh"}
+        headers={"Content-Disposition": "attachment; filename=install.sh"},
+    )
+
+
+@app.get("/api/download/installer-powershell")
+def download_powershell_installer():
+    path = os.path.join(BASE_DIR, "install.ps1")
+    if not os.path.exists(path):
+        return JSONResponse(status_code=404, content={"error": "installer not found"})
+    return FileResponse(
+        path,
+        filename="install.ps1",
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": "attachment; filename=install.ps1"},
     )
 
 
@@ -372,7 +455,8 @@ def download_unix_installer():
 def get_download_checksums():
     """Cryptographic SHA-256 attestation manifest for installers and package integrity."""
     import hashlib
-    files_to_hash = ["install.bat", "install.sh", "requirements.txt"]
+
+    files_to_hash = ["setup.exe", "install.bat", "install.sh", "install.ps1", "requirements.txt"]
     checksums = {}
     for fname in files_to_hash:
         fpath = os.path.join(BASE_DIR, fname)
@@ -381,32 +465,44 @@ def get_download_checksums():
                 checksums[fname] = hashlib.sha256(f.read()).hexdigest()
         else:
             checksums[fname] = None
-    return JSONResponse({
-        "status": "success",
-        "algorithm": "SHA-256",
-        "attestation": "Verified NVIDIA BioNeMo Agentic Scientist Suite",
-        "checksums": checksums
-    })
+    return JSONResponse(
+        {
+            "status": "success",
+            "algorithm": "SHA-256",
+            "attestation": "Verified NVIDIA BioNeMo Agentic Scientist Suite",
+            "checksums": checksums,
+        }
+    )
 
 
 @app.get("/api/setup-guide")
 def get_setup_guide():
     return {
-        "windows_powershell": "irm https://raw.githubusercontent.com/Jorwalzzz/bionemo-agentic-scientist/main/install.ps1 | iex",
-        "unix_curl": "curl -sSL https://raw.githubusercontent.com/Jorwalzzz/bionemo-agentic-scientist/main/install.sh | bash",
-        "docker": "git clone https://github.com/Jorwalzzz/bionemo-agentic-scientist.git && cd bionemo-agentic-scientist && docker compose up",
-        "github": "https://github.com/Jorwalzzz/bionemo-agentic-scientist",
-        "note": "Free Mock Mode works with zero API credits. Add NVIDIA_API_KEY to .env on your local instance for live GPU inference."
+        "windows_powershell": "irm https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/install.ps1 | iex",
+        "unix_curl": "curl -sSL https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/install.sh | bash",
+        "docker": "git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git && cd bionemo-nim-benchmark && docker compose up",
+        "github": "https://github.com/Jorwalzzz/bionemo-nim-benchmark",
+        "note": "Free Mock Mode works with zero API credits. Add NVIDIA_API_KEY to .env on your local instance for live GPU inference.",
     }
 
 
 @app.post("/api/run")
-def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)):
+def trigger_run(
+    request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
+):
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     target = sanitize_target_query(target)
-    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(request)
+    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(
+        request
+    )
 
     # 1. Clamp candidates to prevent single-request resource exhaustion
     safe_candidates = min(max(candidates, 1), 10)
@@ -417,13 +513,21 @@ def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: 
         fp_hash=fp_hash,
         ip_str=client_ip,
         target_name=target,
-        user_agent=user_agent
+        user_agent=user_agent,
     )
 
     if not allowed:
-        status_code = 429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
+        status_code = (
+            429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
+        )
         resp = JSONResponse(status_code=status_code, content=trial_info)
-        resp.set_cookie(key=COOKIE_NAME, value=signed_token, max_age=86400 * 365, httponly=True, samesite="lax")
+        resp.set_cookie(
+            key=COOKIE_NAME,
+            value=signed_token,
+            max_age=86400 * 365,
+            httponly=True,
+            samesite="lax",
+        )
         return resp
 
     # 3. Run Autonomous Discovery Campaign
@@ -449,10 +553,10 @@ def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: 
                     "reactants": s.reactants,
                     "reagents": s.reagents,
                     "yield_pct": s.estimated_yield_pct,
-                    "difficulty": s.difficulty
+                    "difficulty": s.difficulty,
                 }
                 for s in rp.steps
-            ]
+            ],
         }
 
     # Assemble Council Dialogues
@@ -469,14 +573,16 @@ def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: 
         "target_pdb": dossier.target.pdb_text,
         "pocket_residues": dossier.target.pocket_residues,
         "nominated_lead": dossier.top_leads[0].id if dossier.top_leads else "None",
-        "binding_affinity": dossier.top_leads[0].binding_affinity if dossier.top_leads else 0.0,
+        "binding_affinity": dossier.top_leads[0].binding_affinity
+        if dossier.top_leads
+        else 0.0,
         "screened": dossier.screened_count,
         "pareto_count": dossier.pareto_leads_count,
         "council_dialogues": council_summary["recent_dialogues"],
         "council_stats": {
             "total_messages": council_summary["total_messages"],
             "veto_count": council_summary["veto_count"],
-            "clearance_count": council_summary["clearance_count"]
+            "clearance_count": council_summary["clearance_count"],
         },
         "evolution_rounds": orchestrator.evolution_rounds_data,
         "retrosynthesis": retro_data,
@@ -496,42 +602,67 @@ def trigger_run(request: Request, target: str = Query("KRAS G12D"), candidates: 
                 "contact_residues": lead.contact_residues,
             }
             for lead in dossier.top_leads
-        ]
+        ],
     }
     resp = JSONResponse(result)
-    resp.set_cookie(key=COOKIE_NAME, value=signed_token, max_age=86400 * 365, httponly=True, samesite="lax")
+    resp.set_cookie(
+        key=COOKIE_NAME,
+        value=signed_token,
+        max_age=86400 * 365,
+        httponly=True,
+        samesite="lax",
+    )
     return resp
 
 
 @app.get("/api/stream")
-async def stream_council_run(request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(6)):
+async def stream_council_run(
+    request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(6)
+):
     """
     Live Asynchronous Server-Sent Events (SSE) Stream:
     Streams each council agent's thoughts, debates, vetoes, and docking scores
     in real time directly into the browser at 60 FPS.
     """
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     target = sanitize_target_query(target)
     safe_candidates = min(max(candidates, 1), 10)
-    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(request)
+    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(
+        request
+    )
 
     allowed, trial_info = trial_limiter.consume_trial_run(
         session_id=session_id,
         fp_hash=fp_hash,
         ip_str=client_ip,
         target_name=target,
-        user_agent=user_agent
+        user_agent=user_agent,
     )
     if not allowed:
-        status_code = 429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
+        status_code = (
+            429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
+        )
         resp = JSONResponse(status_code=status_code, content=trial_info)
-        resp.set_cookie(key=COOKIE_NAME, value=signed_token, max_age=86400 * 365, httponly=True, samesite="lax")
+        resp.set_cookie(
+            key=COOKIE_NAME,
+            value=signed_token,
+            max_age=86400 * 365,
+            httponly=True,
+            samesite="lax",
+        )
         return resp
 
     import asyncio
     import json
+
     from src.models import CouncilMessage
 
     async def event_generator():
@@ -540,29 +671,34 @@ async def stream_council_run(request: Request, target: str = Query("KRAS G12D"),
 
         def on_council_dialogue(msg: CouncilMessage):
             # Put msg into async queue from sync thread
-            loop.call_soon_threadsafe(queue.put_nowait, {
-                "event": "council_message",
-                "agent_id": msg.agent_id,
-                "persona_name": msg.persona_name,
-                "avatar": msg.avatar,
-                "intent": msg.intent,
-                "content": msg.content,
-                "metadata": msg.metadata,
-                "timestamp_str": msg.timestamp_str
-            })
+            loop.call_soon_threadsafe(
+                queue.put_nowait,
+                {
+                    "event": "council_message",
+                    "agent_id": msg.agent_id,
+                    "persona_name": msg.persona_name,
+                    "avatar": msg.avatar,
+                    "intent": msg.intent,
+                    "content": msg.content,
+                    "metadata": msg.metadata,
+                    "timestamp_str": msg.timestamp_str,
+                },
+            )
 
         api_key = os.getenv("NVIDIA_API_KEY", "").strip()
         use_mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
         orch = AgenticScientistOrchestrator(
-            api_key=api_key,
-            mock=use_mock,
-            on_council_dialogue=on_council_dialogue
+            api_key=api_key, mock=use_mock, on_council_dialogue=on_council_dialogue
         )
 
         # Run campaign in background worker thread so SSE stream remains responsive
         future = loop.run_in_executor(
             None,
-            lambda: orch.run_discovery_campaign(target_query=target, num_candidates=safe_candidates, output_dir=RESULTS_DIR)
+            lambda: orch.run_discovery_campaign(
+                target_query=target,
+                num_candidates=safe_candidates,
+                output_dir=RESULTS_DIR,
+            ),
         )
 
         while not future.done() or not queue.empty():
@@ -580,10 +716,14 @@ async def stream_council_run(request: Request, target: str = Query("KRAS G12D"),
                 "event": "campaign_complete",
                 "target": dossier.target.name,
                 "pdb_id": dossier.target.pdb_id,
-                "nominated_lead": dossier.top_leads[0].id if dossier.top_leads else "None",
-                "binding_affinity": dossier.top_leads[0].binding_affinity if dossier.top_leads else 0.0,
+                "nominated_lead": dossier.top_leads[0].id
+                if dossier.top_leads
+                else "None",
+                "binding_affinity": dossier.top_leads[0].binding_affinity
+                if dossier.top_leads
+                else 0.0,
                 "pareto_count": dossier.pareto_leads_count,
-                "screened": dossier.screened_count
+                "screened": dossier.screened_count,
             }
             yield f"data: {json.dumps(done_payload)}\n\n"
         except Exception as exc:
@@ -591,7 +731,7 @@ async def stream_council_run(request: Request, target: str = Query("KRAS G12D"),
             err_payload = {
                 "event": "campaign_error",
                 "error": "PROCESSING_ERROR",
-                "message": safe_msg
+                "message": safe_msg,
             }
             yield f"data: {json.dumps(err_payload)}\n\n"
 
@@ -606,7 +746,13 @@ async def api_export_forum_post(request: Request):
     hardware speedup multipliers, and reproducible verification commands.
     """
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     try:
         body = await request.json()
@@ -614,13 +760,21 @@ async def api_export_forum_post(request: Request):
         body = {}
 
     target = sanitize_target_query(body.get("target", "KRAS G12D"))
-    lead_id = re.sub(r'[^A-Za-z0-9_-]', '', str(body.get("lead_id", "LEAD-001")))[:30] or "LEAD-001"
+    lead_id = (
+        re.sub(r"[^A-Za-z0-9_-]", "", str(body.get("lead_id", "LEAD-001")))[:30]
+        or "LEAD-001"
+    )
     try:
         affinity = float(body.get("binding_affinity", -9.4))
     except (ValueError, TypeError):
         affinity = -9.4
-    raw_smiles = str(body.get("smiles", "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5"))
-    smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', raw_smiles)[:500]
+    raw_smiles = str(
+        body.get(
+            "smiles",
+            "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5",
+        )
+    )
+    smiles = re.sub(r"[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]", "", raw_smiles)[:500]
     try:
         speedup = float(body.get("speedup", 58.4))
     except (ValueError, TypeError):
@@ -628,7 +782,7 @@ async def api_export_forum_post(request: Request):
 
     forum_markdown = f"""### 🚀 [Showcase] Autonomous Drug Discovery Swarm Powered by NVIDIA BioNeMo & NIM
 
-**Repository**: [https://github.com/Jorwalzzz/bionemo-agentic-scientist](https://github.com/Jorwalzzz/bionemo-agentic-scientist)  
+**Repository**: [https://github.com/Jorwalzzz/bionemo-nim-benchmark](https://github.com/Jorwalzzz/bionemo-nim-benchmark)  
 **NVIDIA Blueprint**: `blueprint.yaml` (ESMFold, ESM-2 650M, MolMIM, DiffDock)
 
 ---
@@ -655,25 +809,26 @@ We deployed an autonomous multi-sub-agent scientific swarm to discover bioisoste
 
 #### 🧪 1-Line Zero-Credit Local Reproduction
 ```bash
-git clone https://github.com/Jorwalzzz/bionemo-agentic-scientist.git
-cd bionemo-agentic-scientist
+git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git
+cd bionemo-nim-benchmark
 python serve_cockpit.py --port 8000
 ```
 *Validated with 53/53 passing hermetic tests. Built with NVIDIA BioNeMo & NIM Microservices.*
 """
-    return JSONResponse({
-        "status": "success",
-        "markdown": forum_markdown
-    })
-
-
+    return JSONResponse({"status": "success", "markdown": forum_markdown})
 
 
 @app.post("/api/target/fetch")
 async def api_fetch_target(request: Request):
     """Universal Target Ingestion: fetches any RCSB PDB code or resolves query."""
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     try:
         body = await request.json()
@@ -687,10 +842,14 @@ async def api_fetch_target(request: Request):
     except ValueError as ve:
         return JSONResponse(
             status_code=400,
-            content={"error": "VALIDATION_FAILED", "message": SecretScrubber.scrub(str(ve))}
+            content={
+                "error": "VALIDATION_FAILED",
+                "message": SecretScrubber.scrub(str(ve)),
+            },
         )
 
     from src.target_scout import TargetScoutAgent
+
     scout = TargetScoutAgent()
     profile, msg = scout.scout_target(query)
 
@@ -708,9 +867,8 @@ async def api_fetch_target(request: Request):
         "pocket_coords": profile.target_pocket_coords,
         "is_esmfold": profile.is_esmfold,
         "mean_plddt": profile.mean_plddt,
-        "pdb_text": profile.pdb_text
+        "pdb_text": profile.pdb_text,
     }
-
 
 
 @app.get("/api/target/pdb/{pdb_id}")
@@ -718,13 +876,22 @@ def get_target_pdb(pdb_id: str):
     """Fetches PDB structure text for the 3D WebGL viewer with strict anti-traversal & SSRF controls."""
     clean_id = SafeSanitizer.sanitize_pdb_id(pdb_id)
     if not clean_id or len(clean_id) != 4:
-        return JSONResponse(status_code=400, content={"error": "Invalid 4-character alphanumeric PDB identifier."})
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Invalid 4-character alphanumeric PDB identifier."},
+        )
 
     # Prevent directory traversal: verify resolved path stays strictly within data/targets
     target_dir = os.path.abspath(os.path.join(BASE_DIR, "data", "targets"))
     file_path = os.path.abspath(os.path.join(target_dir, f"{clean_id}.pdb"))
     if not file_path.startswith(target_dir):
-        return JSONResponse(status_code=403, content={"error": "PATH_TRAVERSAL_DETECTED", "message": "Disallowed path traversal attempt."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "PATH_TRAVERSAL_DETECTED",
+                "message": "Disallowed path traversal attempt.",
+            },
+        )
 
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -732,6 +899,7 @@ def get_target_pdb(pdb_id: str):
 
     # Hardened RCSB PDB upstream lookup (Strict HTTPS, pinned domain, timeout, max 5MB)
     import urllib.request
+
     try:
         url = f"https://files.rcsb.org/download/{clean_id}.pdb"
         req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
@@ -741,13 +909,22 @@ def get_target_pdb(pdb_id: str):
                 return Response(content=data, media_type="chemical/x-pdb")
     except Exception:
         pass
-    return JSONResponse(status_code=404, content={"error": f"PDB {clean_id} not found."})
+    return JSONResponse(
+        status_code=404, content={"error": f"PDB {clean_id} not found."}
+    )
+
 
 @app.post("/api/redock")
 async def api_redock(request: Request):
     """Interactive Chemical Workbench: Re-docks a human-edited molecule in real-time."""
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
@@ -756,23 +933,28 @@ async def api_redock(request: Request):
             status_code=403,
             content={
                 "error": "TRIAL_LIMIT_EXCEEDED",
-                "message": "Demo trial quota exhausted. Run the local version for unlimited redocking."
-            }
+                "message": "Demo trial quota exhausted. Run the local version for unlimited redocking.",
+            },
         )
 
     try:
         body = await request.json()
         raw_smiles = body.get("smiles", "")
         # ReDoS-safe canonical chemical SMILES validation
-        modified_smiles = SafeSanitizer.sanitize_chemical_smiles(raw_smiles, max_length=500)
+        modified_smiles = SafeSanitizer.sanitize_chemical_smiles(
+            raw_smiles, max_length=500
+        )
         target_name = sanitize_target_query(body.get("target", "KRAS G12D"))
     except Exception as e:
-        return JSONResponse(status_code=400, content={"error": f"Invalid request body: {SecretScrubber.scrub(str(e))}"})
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Invalid request body: {SecretScrubber.scrub(str(e))}"},
+        )
 
     api_key = os.getenv("NVIDIA_API_KEY", "").strip()
     use_mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
     orchestrator = AgenticScientistOrchestrator(api_key=api_key, mock=use_mock)
-    
+
     redock_result = orchestrator.redock_modified_candidate(modified_smiles, target_name)
     return redock_result
 
@@ -784,7 +966,13 @@ async def api_generate_ind_pdf(request: Request):
     Extracts campaign candidate selection data and compiles a publication-grade PDF.
     """
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     try:
         body = await request.json()
@@ -812,20 +1000,33 @@ async def api_generate_ind_pdf(request: Request):
                     "logp": 3.1,
                     "qed": 0.78,
                     "sascore": 2.7,
-                    "admet_verdict": "PASS"
+                    "admet_verdict": "PASS",
                 }
             ],
             "retrosynthesis": {
                 "num_steps": 2,
                 "feasibility": "Commercially Accessible (1-2 steps)",
                 "steps": [
-                    {"step": 1, "reaction_type": "Amide Coupling (PyBOP/DIPEA)", "reagents": ["DIPEA", "DMF", "rt 2h"], "yield_pct": 84.0, "difficulty": "Routine (★☆☆)"},
-                    {"step": 2, "reaction_type": "Suzuki-Miyaura Cross-Coupling", "reagents": ["Pd(dppf)Cl2", "K2CO3", "80°C"], "yield_pct": 78.0, "difficulty": "Routine (★☆☆)"}
-                ]
-            }
+                    {
+                        "step": 1,
+                        "reaction_type": "Amide Coupling (PyBOP/DIPEA)",
+                        "reagents": ["DIPEA", "DMF", "rt 2h"],
+                        "yield_pct": 84.0,
+                        "difficulty": "Routine (★☆☆)",
+                    },
+                    {
+                        "step": 2,
+                        "reaction_type": "Suzuki-Miyaura Cross-Coupling",
+                        "reagents": ["Pd(dppf)Cl2", "K2CO3", "80°C"],
+                        "yield_pct": 78.0,
+                        "difficulty": "Routine (★☆☆)",
+                    },
+                ],
+            },
         }
 
     from src.ind_dossier import generate_ind_pdf
+
     try:
         pdf_bytes = generate_ind_pdf(dossier_data, benchmark_data)
     except Exception as exc:
@@ -833,16 +1034,24 @@ async def api_generate_ind_pdf(request: Request):
         logger.error("IND Dossier PDF compilation failed: %s", safe_msg)
         return JSONResponse(
             status_code=500,
-            content={"error": "PDF_GENERATION_FAILED", "message": "Failed to compile IND Section 2 Dossier."}
+            content={
+                "error": "PDF_GENERATION_FAILED",
+                "message": "Failed to compile IND Section 2 Dossier.",
+            },
         )
 
-    target_clean = re.sub(r'[^A-Za-z0-9_-]', '_', str(dossier_data.get("target", "Candidate")))[:40] or "Candidate"
+    target_clean = (
+        re.sub(r"[^A-Za-z0-9_-]", "_", str(dossier_data.get("target", "Candidate")))[
+            :40
+        ]
+        or "Candidate"
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
             "Content-Disposition": f"attachment; filename=FDA_IND_Section2_Briefing_{target_clean}.pdf"
-        }
+        },
     )
 
 
@@ -853,17 +1062,26 @@ async def api_robot_protocol(request: Request):
     and wet-lab SOP Card (.md) from retrosynthesis plan.
     """
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     try:
         body = await request.json()
     except Exception:
         body = {}
 
-    from src.robot_protocol import generate_ot2_protocol, generate_lab_card
     from src.models import RetrosynthesisPlan, RetrosynthesisStep
+    from src.robot_protocol import generate_lab_card, generate_ot2_protocol
 
-    lead_id = SafeSanitizer.sanitize_code_literal(str(body.get("lead_id", "LEAD-001")), 30) or "LEAD-001"
+    lead_id = (
+        SafeSanitizer.sanitize_code_literal(str(body.get("lead_id", "LEAD-001")), 30)
+        or "LEAD-001"
+    )
     raw_smiles = str(body.get("smiles", "CC(=O)N1CCNCC1"))
     smiles = SafeSanitizer.sanitize_chemical_smiles(raw_smiles, 500)
     retro_data = body.get("retrosynthesis", {})
@@ -880,7 +1098,7 @@ async def api_robot_protocol(request: Request):
                 reagents=["DIPEA", "DMF", "rt 2h"],
                 product_smiles=smiles,
                 estimated_yield_pct=85.0,
-                difficulty="Routine (★☆☆)"
+                difficulty="Routine (★☆☆)",
             ),
             RetrosynthesisStep(
                 step_number=2,
@@ -890,52 +1108,67 @@ async def api_robot_protocol(request: Request):
                 reagents=["Pd(dppf)Cl2", "K2CO3", "80°C"],
                 product_smiles=smiles,
                 estimated_yield_pct=78.0,
-                difficulty="Routine (★☆☆)"
-            )
+                difficulty="Routine (★☆☆)",
+            ),
         ]
     else:
         steps = [
             RetrosynthesisStep(
                 step_number=s.get("step", idx + 1),
-                reaction_type=re.sub(r'[^A-Za-z0-9\(\)\/\-\s★☆]', '', str(s.get("reaction_type", "Coupling Transformation")))[:100],
+                reaction_type=re.sub(
+                    r"[^A-Za-z0-9\(\)\/\-\s★☆]",
+                    "",
+                    str(s.get("reaction_type", "Coupling Transformation")),
+                )[:100],
                 reaction_smarts="",
                 reactants=s.get("reactants", [{"name": f"Reactant {idx + 1}"}]),
                 reagents=s.get("reagents", ["Standard Reagents"]),
-                product_smiles=re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', str(s.get("product_smiles", smiles)))[:500],
+                product_smiles=re.sub(
+                    r"[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]",
+                    "",
+                    str(s.get("product_smiles", smiles)),
+                )[:500],
                 estimated_yield_pct=float(s.get("yield_pct", 75.0)),
-                difficulty=str(s.get("difficulty", "Routine (★☆☆)"))[:50]
+                difficulty=str(s.get("difficulty", "Routine (★☆☆)"))[:50],
             )
             for idx, s in enumerate(steps_raw)
         ]
 
-    starting_materials = retro_data.get("starting_materials", [
-        "4-bromo-2-fluorobenzonitrile (CAS: 105942-08-3)",
-        "N-Boc-piperazine (CAS: 57260-71-6)"
-    ])
+    starting_materials = retro_data.get(
+        "starting_materials",
+        [
+            "4-bromo-2-fluorobenzonitrile (CAS: 105942-08-3)",
+            "N-Boc-piperazine (CAS: 57260-71-6)",
+        ],
+    )
 
     plan = RetrosynthesisPlan(
         candidate_id=lead_id,
         target_smiles=smiles,
         num_steps=len(steps),
-        overall_feasibility=str(retro_data.get("feasibility", "Commercially Accessible (1-2 steps)"))[:100],
+        overall_feasibility=str(
+            retro_data.get("feasibility", "Commercially Accessible (1-2 steps)")
+        )[:100],
         steps=steps,
         starting_materials=starting_materials,
-        estimated_turnaround_days=7
+        estimated_turnaround_days=7,
     )
 
     ot2_py = generate_ot2_protocol(plan)
     lab_card_md = generate_lab_card(plan, lead_id)
 
-    return JSONResponse({
-        "status": "success",
-        "candidate_id": lead_id,
-        "ot2_protocol_py": ot2_py,
-        "lab_card_md": lab_card_md,
-        "num_steps": len(steps),
-        "feasibility": plan.overall_feasibility,
-        "filename_py": f"ot2_protocol_{lead_id}.py",
-        "filename_md": f"wetlab_card_{lead_id}.md"
-    })
+    return JSONResponse(
+        {
+            "status": "success",
+            "candidate_id": lead_id,
+            "ot2_protocol_py": ot2_py,
+            "lab_card_md": lab_card_md,
+            "num_steps": len(steps),
+            "feasibility": plan.overall_feasibility,
+            "filename_py": f"ot2_protocol_{lead_id}.py",
+            "filename_md": f"wetlab_card_{lead_id}.md",
+        }
+    )
 
 
 @app.post("/api/resistance/evolve")
@@ -946,7 +1179,13 @@ async def api_resistance_evolve(request: Request):
     and evolves an escape scaffold via NVIDIA MolMIM NIM.
     """
     if not verify_request_origin(request):
-        return JSONResponse(status_code=403, content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin execution blocked for security."})
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin execution blocked for security.",
+            },
+        )
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
@@ -955,8 +1194,8 @@ async def api_resistance_evolve(request: Request):
             status_code=403,
             content={
                 "error": "TRIAL_LIMIT_EXCEEDED",
-                "message": "Demo trial quota exhausted. Run the local version for unlimited resistance scans."
-            }
+                "message": "Demo trial quota exhausted. Run the local version for unlimited resistance scans.",
+            },
         )
 
     try:
@@ -964,16 +1203,24 @@ async def api_resistance_evolve(request: Request):
     except Exception:
         body = {}
 
-    lead_smiles = re.sub(r'[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]', '', str(body.get("smiles", "")))[:500] or "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5"
-    lead_id = re.sub(r'[^A-Za-z0-9_-]', '', str(body.get("lead_id", "LEAD-001")))[:30] or "LEAD-001"
+    lead_smiles = (
+        re.sub(r"[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]", "", str(body.get("smiles", "")))[
+            :500
+        ]
+        or "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5"
+    )
+    lead_id = (
+        re.sub(r"[^A-Za-z0-9_-]", "", str(body.get("lead_id", "LEAD-001")))[:30]
+        or "LEAD-001"
+    )
     target_name = sanitize_target_query(body.get("target", "KRAS G12D"))
     try:
         affinity = float(body.get("binding_affinity", -9.2))
     except (ValueError, TypeError):
         affinity = -9.2
 
+    from src.models import MoleculeCandidate
     from src.resistance_engine import ResistanceEscapeEngine
-    from src.models import MoleculeCandidate, TargetProfile
     from src.target_scout import TargetScoutAgent
 
     api_key = os.getenv("NVIDIA_API_KEY", "").strip()
@@ -986,29 +1233,33 @@ async def api_resistance_evolve(request: Request):
         id=lead_id,
         smiles=lead_smiles,
         parent_smiles=lead_smiles,
-        binding_affinity=affinity
+        binding_affinity=affinity,
     )
 
     engine = ResistanceEscapeEngine(api_key=api_key, mock=mock)
     scan = engine.scan_and_evolve(lead=lead_cand, target=target_prof)
 
-    return JSONResponse({
-        "status": "success",
-        "original_lead_id": scan.original_lead_id,
-        "original_affinity": scan.original_affinity,
-        "hotspot_residues": scan.hotspot_residues,
-        "mutation_simulated": scan.mutation_simulated,
-        "mutant_affinity": scan.mutant_affinity,
-        "resistance_detected": scan.resistance_detected,
-        "evolved_lead_id": scan.evolved_lead_id,
-        "evolved_smiles": scan.evolved_lead_smiles,
-        "evolved_lead_smiles": scan.evolved_lead_smiles,
-        "evolved_affinity": scan.evolved_affinity,
-        "delta_recovery": scan.delta_recovery,
-        "nim_calls_made": scan.nim_calls_made,
-        "structural_mechanism": scan.structural_mechanism,
-        "verdict": "RESISTANCE BYPASSED" if scan.resistance_detected else "STABLE LEAD"
-    })
+    return JSONResponse(
+        {
+            "status": "success",
+            "original_lead_id": scan.original_lead_id,
+            "original_affinity": scan.original_affinity,
+            "hotspot_residues": scan.hotspot_residues,
+            "mutation_simulated": scan.mutation_simulated,
+            "mutant_affinity": scan.mutant_affinity,
+            "resistance_detected": scan.resistance_detected,
+            "evolved_lead_id": scan.evolved_lead_id,
+            "evolved_smiles": scan.evolved_lead_smiles,
+            "evolved_lead_smiles": scan.evolved_lead_smiles,
+            "evolved_affinity": scan.evolved_affinity,
+            "delta_recovery": scan.delta_recovery,
+            "nim_calls_made": scan.nim_calls_made,
+            "structural_mechanism": scan.structural_mechanism,
+            "verdict": "RESISTANCE BYPASSED"
+            if scan.resistance_detected
+            else "STABLE LEAD",
+        }
+    )
 
 
 @app.get("/api/benchmark/speedup")
@@ -1018,16 +1269,17 @@ def get_hardware_speedup_benchmark():
     NVIDIA NIM H100 Tensor Core GPU cloud microservices.
     Runs a real micro-workload on the local host CPU to measure actual baseline latency.
     """
-    import time
-    from rdkit import Chem
-    from rdkit.Chem import Descriptors, AllChem
     import platform
+    import time
+
+    from rdkit import Chem
+    from rdkit.Chem import AllChem, Descriptors
 
     cpu_info = f"{platform.processor() or 'Standard x86_64 CPU'} ({platform.system()} {platform.machine()})"
 
     # Benchmark test SMILES (Erlotinib / Gefitinib core)
     test_smiles = "COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1"
-    
+
     t0 = time.perf_counter()
     mol = Chem.MolFromSmiles(test_smiles)
     if mol:
@@ -1042,18 +1294,22 @@ def get_hardware_speedup_benchmark():
 
     # Scale to full discovery batch (10 molecules across ESM-2, MolMIM, DiffDock)
     # CPU baseline scaling based on unaccelerated PyTorch/RDKit CPU execution
-    esm2_cpu_ms = round(cpu_measured_sec * 3200 + 1800, 1)     # ~3.5s per sequence on CPU
-    esm2_h100_ms = 44.5                                       # 44.5ms on H100 NIM
+    esm2_cpu_ms = round(cpu_measured_sec * 3200 + 1800, 1)  # ~3.5s per sequence on CPU
+    esm2_h100_ms = 44.5  # 44.5ms on H100 NIM
 
-    molmim_cpu_ms = round(cpu_measured_sec * 4100 + 2200, 1)   # ~4.5s per batch on CPU
-    molmim_h100_ms = 112.0                                    # 112ms on H100 NIM
+    molmim_cpu_ms = round(cpu_measured_sec * 4100 + 2200, 1)  # ~4.5s per batch on CPU
+    molmim_h100_ms = 112.0  # 112ms on H100 NIM
 
-    diffdock_cpu_ms = round(cpu_measured_sec * 12500 + 6500, 1) # ~14.8s per pose on CPU
-    diffdock_h100_ms = 245.0                                    # 245ms on H100 NIM
+    diffdock_cpu_ms = round(
+        cpu_measured_sec * 12500 + 6500, 1
+    )  # ~14.8s per pose on CPU
+    diffdock_h100_ms = 245.0  # 245ms on H100 NIM
 
     total_cpu_sec = round((esm2_cpu_ms + molmim_cpu_ms + diffdock_cpu_ms) / 1000.0, 2)
-    total_h100_sec = round((esm2_h100_ms + molmim_h100_ms + diffdock_h100_ms) / 1000.0, 3)
-    
+    total_h100_sec = round(
+        (esm2_h100_ms + molmim_h100_ms + diffdock_h100_ms) / 1000.0, 3
+    )
+
     overall_speedup = round((total_cpu_sec / total_h100_sec), 1)
 
     # Extrapolate for 10,000 screened candidates campaign
@@ -1061,11 +1317,10 @@ def get_hardware_speedup_benchmark():
     h100_hours_10k = round((total_h100_sec * 1000) / 3600.0, 2)
     time_saved_hours = round(cpu_hours_10k - h100_hours_10k, 1)
 
-    from src.nvidia_showcase import GreenComputeProfiler, MultiGpuScalingEngine
+    from src.nvidia_showcase import GreenComputeProfiler
+
     green_metrics = GreenComputeProfiler.calculate_campaign_impact(
-        cpu_time_sec=total_cpu_sec,
-        gpu_time_sec=total_h100_sec,
-        num_molecules=10000
+        cpu_time_sec=total_cpu_sec, gpu_time_sec=total_h100_sec, num_molecules=10000
     )
 
     return {
@@ -1084,23 +1339,23 @@ def get_hardware_speedup_benchmark():
                 "purpose": "Per-residue attention & sequence embedding",
                 "cpu_latency_ms": esm2_cpu_ms,
                 "h100_latency_ms": esm2_h100_ms,
-                "speedup": round(esm2_cpu_ms / esm2_h100_ms, 1)
+                "speedup": round(esm2_cpu_ms / esm2_h100_ms, 1),
             },
             {
                 "module": "MolMIM Generative Chemistry",
                 "purpose": "Latent space CMA-ES scaffold hopping",
                 "cpu_latency_ms": molmim_cpu_ms,
                 "h100_latency_ms": molmim_h100_ms,
-                "speedup": round(molmim_cpu_ms / molmim_h100_ms, 1)
+                "speedup": round(molmim_cpu_ms / molmim_h100_ms, 1),
             },
             {
                 "module": "DiffDock 3D Conformer Pose Sampling",
                 "purpose": "Score-based generative diffusion on SE(3) group",
                 "cpu_latency_ms": diffdock_cpu_ms,
                 "h100_latency_ms": diffdock_h100_ms,
-                "speedup": round(diffdock_cpu_ms / diffdock_h100_ms, 1)
-            }
-        ]
+                "speedup": round(diffdock_cpu_ms / diffdock_h100_ms, 1),
+            },
+        ],
     }
 
 
@@ -1108,26 +1363,63 @@ def get_hardware_speedup_benchmark():
 def get_nvidia_multigpu_scaling():
     """Returns cluster scaling curves across 1x to 8x H100 SXM5 NVLink interconnects."""
     from src.nvidia_showcase import MultiGpuScalingEngine
+
     scaling_data = MultiGpuScalingEngine.simulate_cluster_scaling()
-    return JSONResponse({
-        "status": "success",
-        "interconnect": "NVLink 4 (900 GB/s bidirectional per GPU)",
-        "precision": "FP8 / FP16 Mixed Precision",
-        "scaling_nodes": scaling_data
-    })
+    return JSONResponse(
+        {
+            "status": "success",
+            "interconnect": "NVLink 4 (900 GB/s bidirectional per GPU)",
+            "precision": "FP8 / FP16 Mixed Precision",
+            "scaling_nodes": scaling_data,
+        }
+    )
 
 
 @app.get("/api/nvidia/blueprint")
 def get_bionemo_blueprint():
     """Generates official NVIDIA NIM BioNeMo Blueprint spec and Docker Compose setup."""
     from src.nvidia_showcase import BioNeMoBlueprintGenerator
-    return JSONResponse({
-        "status": "success",
-        "blueprint_spec": BioNeMoBlueprintGenerator.generate_blueprint_spec(),
-        "docker_compose_yml": BioNeMoBlueprintGenerator.generate_docker_compose()
-    })
+
+    return JSONResponse(
+        {
+            "status": "success",
+            "blueprint_spec": BioNeMoBlueprintGenerator.generate_blueprint_spec(),
+            "docker_compose_yml": BioNeMoBlueprintGenerator.generate_docker_compose(),
+        }
+    )
+
+
+def _free_port(host: str, port: int, tries: int = 20) -> int:
+    """Return `port` if bindable, else the next free port (local runs only)."""
+    import socket
+
+    for p in range(port, port + tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex((host, p)) != 0:
+                return p
+    return port
+
+
+def main(argv=None):
+    import argparse
+    import threading
+    import webbrowser
+
+    cloud = "PORT" in os.environ  # Docker / HF Spaces / PaaS: bind all interfaces
+    ap = argparse.ArgumentParser(prog="jorwal-nim", description="JORWAL NIM cockpit")
+    ap.add_argument("--host", default="0.0.0.0" if cloud else "127.0.0.1")
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    ap.add_argument("--open", action="store_true", help="open the browser once ready")
+    args = ap.parse_args(argv)
+
+    port = args.port if cloud else _free_port("127.0.0.1", args.port)
+    if args.open:
+        threading.Timer(
+            1.5, webbrowser.open, [f"http://localhost:{port}"]
+        ).start()
+    print(f"JORWAL NIM cockpit: http://localhost:{port}  (Ctrl+C to stop)")
+    uvicorn.run(app, host=args.host, port=port, reload=False)
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8000"))
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)
+    main()

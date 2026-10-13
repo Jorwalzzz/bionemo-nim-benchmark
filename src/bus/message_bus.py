@@ -2,13 +2,16 @@
 Agentic BioNeMo - Asynchronous Swarm Message Bus
 Manages inter-agent communication, topic routing, debate history, and real-time streaming hooks.
 """
-from typing import Callable, List, Dict, Any, Optional
-import time
+
 import logging
+import time
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
+
 from src.models import CouncilMessage
 
 logger = logging.getLogger("SwarmMessageBus")
+
 
 class SwarmMessageBus:
     def __init__(self):
@@ -35,7 +38,7 @@ class SwarmMessageBus:
         avatar: str,
         intent: str,
         content: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> CouncilMessage:
         """Publish a structured council message to the swarm."""
         now_str = datetime.now().strftime("%H:%M:%S")
@@ -47,11 +50,11 @@ class SwarmMessageBus:
             content=content,
             metadata=metadata or {},
             timestamp=time.time(),
-            timestamp_str=now_str
+            timestamp_str=now_str,
         )
-        
+
         self.history.append(msg)
-        
+
         if intent == "VETO":
             self.active_vetoes.append(msg)
         elif intent == "CLEARANCE":
@@ -88,10 +91,10 @@ class SwarmMessageBus:
                     "avatar": m.avatar,
                     "intent": m.intent,
                     "content": m.content,
-                    "time": m.timestamp_str
+                    "time": m.timestamp_str,
                 }
                 for m in self.history[-12:]
-            ]
+            ],
         }
 
     def clear(self):
