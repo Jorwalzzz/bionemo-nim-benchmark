@@ -14,7 +14,10 @@ import tracemalloc
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,7 @@ class LocalCPUBaseline:
         mock_fallback: bool = True,
     ):
         self.model_name = model_name
-        self.device = torch.device(device)
+        self.device = torch.device(device) if torch is not None else device
         self.mock_fallback = mock_fallback
         self.tokenizer = None
         self.model = None
@@ -67,6 +70,14 @@ class LocalCPUBaseline:
         """Loads tokenizer and model weights onto the target device (CPU)."""
         if self._is_loaded:
             return
+
+        if torch is None:
+            if self.mock_fallback:
+                logger.warning("PyTorch not installed. Using synthetic mock CPU baseline.")
+                self._using_mock = True
+                self._is_loaded = True
+                return
+            raise RuntimeError("PyTorch is required for local CPU baseline.")
 
         try:
             logger.info(
