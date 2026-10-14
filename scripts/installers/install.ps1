@@ -44,8 +44,14 @@ if (-not $CurrentDir -and (Test-Path "serve_cockpit.py")) {
     $CurrentDir = (Get-Location).Path
 }
 
+$RepoParent = if ($CurrentDir) { Join-Path $CurrentDir "..\.." } else { $null }
+
 if ($CurrentDir -and (Test-Path (Join-Path $CurrentDir "serve_cockpit.py"))) {
-    $TargetDir = $CurrentDir
+    $TargetDir = (Resolve-Path $CurrentDir).Path
+    Set-Location $TargetDir
+    Write-Success "Running inside existing JORWAL NIM repository: $TargetDir"
+} elseif ($RepoParent -and (Test-Path (Join-Path $RepoParent "serve_cockpit.py"))) {
+    $TargetDir = (Resolve-Path $RepoParent).Path
     Set-Location $TargetDir
     Write-Success "Running inside existing JORWAL NIM repository: $TargetDir"
 } else {
@@ -177,12 +183,12 @@ Write-Success "Active Python environment: Python $PyVer"
 
 # 4. Dependency Installation
 Write-Step "4/5" "Verifying biocompute dependencies..."
-$ReqFile = Join-Path $TargetDir "requirements.txt"
-$DoneFile = Join-Path $TargetDir ".venv\requirements.done"
+$PyProject = Join-Path $TargetDir "pyproject.toml"
+$DoneFile = Join-Path $TargetDir ".venv\install.done"
 
 $NeedsInstall = $true
-if ((Test-Path $DoneFile) -and (Test-Path $ReqFile)) {
-    $Hash1 = (Get-FileHash $ReqFile -Algorithm SHA256).Hash
+if ((Test-Path $DoneFile) -and (Test-Path $PyProject)) {
+    $Hash1 = (Get-FileHash $PyProject -Algorithm SHA256).Hash
     $Hash2 = (Get-FileHash $DoneFile -Algorithm SHA256).Hash
     if ($Hash1 -eq $Hash2) {
         $NeedsInstall = $false
@@ -190,13 +196,13 @@ if ((Test-Path $DoneFile) -and (Test-Path $ReqFile)) {
 }
 
 if ($NeedsInstall) {
-    Write-Info "Installing dependencies from requirements.txt (RDKit, FastAPI, BioNeMo)..."
+    Write-Info "Installing package & dependencies via pip install -e . (RDKit, FastAPI, BioNeMo)..."
     if ($UvCmd) {
-        & uv pip install --python $VenvPython -q -r $ReqFile
+        & uv pip install --python $VenvPython -q -e .
     } else {
-        & $VenvPython -m pip install -q -r $ReqFile
+        & $VenvPython -m pip install -q -e .
     }
-    Copy-Item -Path $ReqFile -Destination $DoneFile -Force
+    Copy-Item -Path $PyProject -Destination $DoneFile -Force
     Write-Success "Dependencies installed and cached."
 } else {
     Write-Success "Dependencies verified (cached)."

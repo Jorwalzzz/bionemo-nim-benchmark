@@ -94,7 +94,7 @@ class TestElenaVanceDesignSystem:
     """Tests Elena Vance's vector SVG geometry and styling assets."""
 
     def test_brand_vector_svg_integrity(self):
-        svg_path = os.path.join("web", "assets", "brand_logo.svg")
+        svg_path = os.path.join("results", "assets", "brand_logo.svg")
         assert os.path.exists(svg_path)
         with open(svg_path, "r", encoding="utf-8") as f:
             content = f.read()

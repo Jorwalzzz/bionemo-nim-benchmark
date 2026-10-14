@@ -33,7 +33,8 @@ def test_install_ps1_content_and_invariants():
     assert "serve_cockpit.py" in content
     assert "nvidia-smi" in content
     assert "uv venv --python 3.12" in content
-    assert "requirements.txt" in content
+    assert "pip install" in content
+    assert "pyproject.toml" in content
     assert "JORWAL NIM Cockpit.lnk" in content
 
 

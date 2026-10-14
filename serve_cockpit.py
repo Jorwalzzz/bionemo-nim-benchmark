@@ -228,16 +228,15 @@ RESULTS_DIR = os.path.join(BASE_DIR, "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
-WEB_DIR = os.path.join(BASE_DIR, "web")
-HTML_PATH = os.path.join(WEB_DIR, "cockpit.html")
-LANDING_PATH = os.path.join(WEB_DIR, "index.html")
+HTML_PATH = os.path.join(BASE_DIR, "cockpit.html")
+LANDING_PATH = os.path.join(BASE_DIR, "index.html")
 
-ASSETS_DIR = os.path.join(WEB_DIR, "assets")
-DATA_DIR = os.path.join(WEB_DIR, "data")
+ASSETS_DIR = os.path.join(RESULTS_DIR, "assets")
+DATA_DIR = os.path.join(BASE_DIR, "data")
 if os.path.exists(ASSETS_DIR):
-    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="web_assets")
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 if os.path.exists(DATA_DIR):
-    app.mount("/data", StaticFiles(directory=DATA_DIR), name="web_data")
+    app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
 
 COOKIE_NAME = "bionemo_trial_session"
 trial_limiter = TrialLimiter()
@@ -315,9 +314,9 @@ def gate_run(request: Request, target: str):
 @app.get("/cockpit.css")
 @app.get("/cockpit.js")
 def get_cockpit_asset(request: Request):
-    """Serves modular cockpit CSS and JavaScript assets."""
+    """Serves root cockpit CSS and JavaScript assets."""
     name = request.url.path.lstrip("/")
-    return FileResponse(os.path.join(WEB_DIR, name))
+    return FileResponse(os.path.join(BASE_DIR, name))
 
 
 @app.get("/cockpit.html", response_class=HTMLResponse)

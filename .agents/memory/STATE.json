@@ -6,8 +6,8 @@
   "fallback_router_active": true,
   "memory_size_cap_bytes": 40960,
   "memory_footprint_bytes": 1782,
-  "last_synced": "2026-10-14T10:32:00+05:30",
+  "last_synced": "2026-10-14T11:20:00+05:30",
   "test_suite_status": "77/77 passing",
   "modular_package": "bionemo_benchmark (core, agents, infra, domain, reporting)",
-  "github_pages": "web/ (index.html, cockpit.html, assets, data)"
+  "github_pages": "root zero-config (index.html, cockpit.html, results/pdb_data.js, results/assets)"
 }

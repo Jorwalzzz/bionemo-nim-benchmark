@@ -6,8 +6,9 @@ import argparse
 import json
 import os
 
-MEMORY_PATH = r"c:\Users\jorwa\Documents\antigravity\BIONEMO\.agents\memory\MEMORY.md"
-STATE_PATH = r"c:\Users\jorwa\Documents\antigravity\BIONEMO\.agents\memory\STATE.json"
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MEMORY_PATH = os.path.join(ROOT_DIR, ".agents", "memory", "MEMORY.md")
+STATE_PATH = os.path.join(ROOT_DIR, ".agents", "memory", "STATE.json")
 MAX_CAP_BYTES = 40960  # 40 KB cap
 
 

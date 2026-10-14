@@ -226,8 +226,16 @@ namespace JorwalNimSetup
                     Directory.CreateDirectory(targetDir);
                 }
 
-                // Check if serve_cockpit.py is already present
+                // Check if serve_cockpit.py is already present in targetDir or parent directory
                 string servePy = Path.Combine(targetDir, "serve_cockpit.py");
+                string parentServePy = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "serve_cockpit.py");
+                if (!File.Exists(servePy) && File.Exists(parentServePy))
+                {
+                    targetDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", ".."));
+                    servePy = Path.Combine(targetDir, "serve_cockpit.py");
+                    Log("[1/6] Detected local repository at: " + targetDir);
+                }
+
                 if (!File.Exists(servePy))
                 {
                     SetStatus("Downloading JORWAL NIM source archive...", 25);

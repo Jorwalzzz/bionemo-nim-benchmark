@@ -11,9 +11,10 @@
 ## 2. Hardened Infrastructure & Gotcha Cache
 - Workspace Location: `D:\BIONEMO` (linked at `C:\Users\jorwa\Documents\antigravity\BIONEMO`).
 - Python Environment: Must execute via `.venv\Scripts\python.exe` (global `pytest` CLI not in PATH).
-- Test Integrity: Hermetic verification suite running at 71/71 tests passing (100% pass rate).
+- Test Integrity: Hermetic verification suite running at 77/77 tests passing (100% pass rate).
 - Airgap Rule: Maintain bit-identical mock surrogates (`--mock`) for zero-credit testing and offline reliability.
 - RDKit & Molecular Rules: Canonical 20 IUPAC validation on sequences; explicit valence checks (`Chem.SanitizeMol`) on SMILES before remote API calls.
+- Static Hosting: Zero-config GitHub Pages from repository root (`index.html`, `cockpit.html`, `results/pdb_data.js`, `results/assets`).
 
 ## 3. Active Council Roster & Boundary Isolation
 - Orchestration: GATEWAY-ENHANCE, NOOSPHERE-CORE, NEXUS-PRIME, ORACLE-ROUTE.
@@ -26,5 +27,5 @@
 - Context: Project built and maintained by an individual independent developer (Jorwal / Jorwalzzz), not a corporate enterprise.
 - Invariant: Offline / local users must NEVER require an NVIDIA API key (`USE_MOCK=true`, local medchem simulation, zero credits).
 - Distribution Strategy: Focus on lightweight, transparent individual developer distribution (PowerShell/batch setup, standalone PyInstaller CLI/GUI binary, or open-source GitHub release artifacts) without corporate enterprise overhead.
-- Next Actions: Align installer and packaging tooling (`install.ps1`, `install.bat`, or standalone binary) around clear, friction-free independent open-source setup.
+- Next Actions: Root zero-config Pages and path depth normalization complete. All 77 tests hermetic and passing.
 

@@ -71,10 +71,10 @@ def fetch_rcsb_pdb(
         os.path.join("data", "pdbs", f"{clean_id}.pdb"),
         os.path.join("data", "targets", f"{clean_id}.pdb"),
         os.path.join(
-            os.path.dirname(__file__), "..", "data", "pdbs", f"{clean_id}.pdb"
+            os.path.dirname(__file__), "..", "..", "..", "data", "pdbs", f"{clean_id}.pdb"
         ),
         os.path.join(
-            os.path.dirname(__file__), "..", "data", "targets", f"{clean_id}.pdb"
+            os.path.dirname(__file__), "..", "..", "..", "data", "targets", f"{clean_id}.pdb"
         ),
     ]
     for cp in candidate_paths:

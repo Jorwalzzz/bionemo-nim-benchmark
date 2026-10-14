@@ -62,7 +62,8 @@ class NumberedCanvas(canvas.Canvas):
 
 
 def generate_certificate():
-    out_dir = os.path.join(os.getcwd(), "results")
+    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    out_dir = os.path.join(root_dir, "results")
     os.makedirs(out_dir, exist_ok=True)
     pdf_path = os.path.join(out_dir, "JORWAL_LEGAL_CERTIFICATE_OF_OWNERSHIP.pdf")
 
