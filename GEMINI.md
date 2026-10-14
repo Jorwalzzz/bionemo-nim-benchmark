@@ -4,7 +4,7 @@ Domain standards and execution directives for the NVIDIA BioNeMo Benchmark Suite
 
 ## Primary Directives & Invariants
 1. **Target Environment**: Python 3.12 managed via `.venv` (`.venv\Scripts\python.exe`).
-2. **Automated Verification**: All changes must verify with `.venv\Scripts\python.exe -m pytest -v`. Maintain 100% test hermeticity across all 71 tests.
+2. **Automated Verification**: All changes must verify with `.venv\Scripts\python.exe -m pytest -v`. Maintain 100% test hermeticity across all 77 tests.
 3. **Biological Validation**: Canonical 20 IUPAC residues required before calling ESMFold/ESM-2 models.
 4. **Cheminformatics**: Sanitize all SMILES via RDKit with explicit valence checking.
 5. **Security & Credentials**: Keep `NVIDIA_API_KEY` secure in `.env`; maintain `--mock` execution for zero-credit testing.

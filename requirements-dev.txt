@@ -1,8 +1,0 @@
--r requirements.txt
-pytest>=7.4.0
-mcp>=1.2.0
-biopython>=1.81
-tqdm>=4.66.0
-# Optional: CPU baseline benchmark (src/baseline.py) - multi-GB download
-torch>=2.0.0
-transformers>=4.35.0

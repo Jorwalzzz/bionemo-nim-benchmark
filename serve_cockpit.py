@@ -15,6 +15,9 @@ import sys
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+SRC_DIR = os.path.join(BASE_DIR, "src")
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
 from dotenv import load_dotenv
 
@@ -30,8 +33,8 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 
-from src.orchestrator import AgenticScientistOrchestrator
-from src.trial_limiter import TrialLimiter
+from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
+from bionemo_benchmark.infra.trial_limiter import TrialLimiter
 
 app = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
 
@@ -42,7 +45,7 @@ ADMIN_RESET_KEY = os.environ.get("ADMIN_RESET_KEY", "")
 import logging
 
 logger = logging.getLogger("CockpitSecurity")
-from src.security_sentinel import (
+from bionemo_benchmark.infra.security_sentinel import (
     BiosecurityScreener,
     SafeSanitizer,
     SecretScrubber,
@@ -53,16 +56,22 @@ from src.security_sentinel import (
 in_flight_limiter = TokenBucketRateLimiter(capacity=40, refill_rate_per_sec=1.0)
 
 
+def client_ip(request: Request) -> str:
+    """Proxy-aware client IP extraction."""
+    h = request.headers
+    for name in ("cf-connecting-ip", "CF-Connecting-IP", "x-forwarded-for", "X-Forwarded-For", "x-real-ip", "X-Real-IP"):
+        val = h.get(name)
+        if val:
+            return val.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
 # Security Headers & Hardening Middleware
 @app.middleware("http")
 async def enterprise_security_headers_middleware(request: Request, call_next):
     """Enforces enterprise defense-in-depth HTTP security headers, rate limits, and payload size limits."""
     # 1. In-flight rate limit check per client IP
-    client_ip = (
-        request.headers.get("cf-connecting-ip")
-        or request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        or (request.client.host if request.client else "127.0.0.1")
-    )
+    ip = client_ip(request)
     # Burst cost 2.0 for heavy mutation/stream paths, 1.0 for standard
     cost = (
         2.0
@@ -71,13 +80,13 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
         )
         else 0.5
     )
-    allowed, retry_after = in_flight_limiter.allow_request(client_ip, cost=cost)
+    allowed, retry_after = in_flight_limiter.allow_request(ip, cost=cost)
     if not allowed:
         return JSONResponse(
             status_code=429,
             content={
                 "error": "RATE_LIMIT_EXCEEDED",
-                "message": f"Too many requests from IP {client_ip}. Please retry after {retry_after} seconds.",
+                "message": f"Too many requests from IP {ip}. Please retry after {retry_after} seconds.",
                 "retry_after": retry_after,
             },
             headers={"Retry-After": str(int(retry_after) + 1)},
@@ -219,8 +228,16 @@ RESULTS_DIR = os.path.join(BASE_DIR, "results")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 
-HTML_PATH = os.path.join(BASE_DIR, "cockpit.html")
-LANDING_PATH = os.path.join(BASE_DIR, "index.html")
+WEB_DIR = os.path.join(BASE_DIR, "web")
+HTML_PATH = os.path.join(WEB_DIR, "cockpit.html")
+LANDING_PATH = os.path.join(WEB_DIR, "index.html")
+
+ASSETS_DIR = os.path.join(WEB_DIR, "assets")
+DATA_DIR = os.path.join(WEB_DIR, "data")
+if os.path.exists(ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="web_assets")
+if os.path.exists(DATA_DIR):
+    app.mount("/data", StaticFiles(directory=DATA_DIR), name="web_data")
 
 COOKIE_NAME = "bionemo_trial_session"
 trial_limiter = TrialLimiter()
@@ -236,19 +253,7 @@ def get_client_identifiers(request: Request) -> tuple:
     else:
         signed_token = cookie_token
 
-    # Cloudflare / Reverse Proxy true client IP extraction
-    cf_ip = request.headers.get("CF-Connecting-IP")
-    xff = request.headers.get("X-Forwarded-For")
-    x_real = request.headers.get("X-Real-IP")
-
-    if cf_ip:
-        client_ip = cf_ip.strip()
-    elif xff:
-        client_ip = xff.split(",")[0].strip()
-    elif x_real:
-        client_ip = x_real.strip()
-    else:
-        client_ip = request.client.host if request.client else "127.0.0.1"
+    ip = client_ip(request)
 
     client_fp = request.headers.get("X-Client-Fingerprint") or request.query_params.get(
         "fp"
@@ -259,7 +264,52 @@ def get_client_identifiers(request: Request) -> tuple:
         client_fp, user_agent, accept_lang
     )
 
-    return session_id, signed_token, fp_hash, client_ip, user_agent
+    return session_id, signed_token, fp_hash, ip, user_agent
+
+
+def with_cookie(resp, token):
+    resp.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        max_age=86400 * 365,
+        httponly=True,
+        samesite="lax",
+    )
+    return resp
+
+
+def make_orchestrator(**kw):
+    api_key = os.getenv("NVIDIA_API_KEY", "").strip()
+    mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
+    return AgenticScientistOrchestrator(api_key=api_key, mock=mock, **kw)
+
+
+def gate_run(request: Request, target: str):
+    """Origin check, sanitize, and consume a trial run. Returns (error_response, ctx)."""
+    if not verify_request_origin(request):
+        return (
+            JSONResponse(
+                status_code=403,
+                content={
+                    "error": "CSRF_ORIGIN_REJECTED",
+                    "message": "Cross-origin execution blocked for security.",
+                },
+            ),
+            None,
+        )
+    target = sanitize_target_query(target)
+    session_id, token, fp_hash, ip, ua = get_client_identifiers(request)
+    allowed, info = trial_limiter.consume_trial_run(
+        session_id=session_id,
+        fp_hash=fp_hash,
+        ip_str=ip,
+        target_name=target,
+        user_agent=ua,
+    )
+    if not allowed:
+        code = 429 if info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
+        return with_cookie(JSONResponse(status_code=code, content=info), token), None
+    return None, (target, token, info)
 
 
 @app.get("/cockpit.css")
@@ -267,7 +317,17 @@ def get_client_identifiers(request: Request) -> tuple:
 def get_cockpit_asset(request: Request):
     """Serves modular cockpit CSS and JavaScript assets."""
     name = request.url.path.lstrip("/")
-    return FileResponse(os.path.join(BASE_DIR, name))
+    return FileResponse(os.path.join(WEB_DIR, name))
+
+
+@app.get("/cockpit.html", response_class=HTMLResponse)
+def get_cockpit_html_page(request: Request):
+    return get_cockpit(request)
+
+
+@app.get("/index.html", response_class=HTMLResponse)
+def get_index_html_page(request: Request):
+    return get_landing(request)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -287,14 +347,7 @@ def get_cockpit(request: Request):
     if os.path.exists(HTML_PATH):
         with open(HTML_PATH, "r", encoding="utf-8") as f:
             content = f.read()
-        resp = HTMLResponse(content=content)
-        resp.set_cookie(
-            key=COOKIE_NAME,
-            value=signed_token,
-            max_age=86400 * 365,
-            httponly=True,
-            samesite="lax",
-        )
+        resp = with_cookie(HTMLResponse(content=content), signed_token)
         resp.delete_cookie(key="creator_mode")
         return resp
     return "<h1>Cockpit template not found.</h1>"
@@ -399,9 +452,12 @@ def get_dossier():
     )
 
 
+INSTALLERS_DIR = os.path.join(BASE_DIR, "scripts", "installers")
+
+
 @app.get("/api/download/installer-windows")
 def download_windows_installer():
-    path = os.path.join(BASE_DIR, "install.bat")
+    path = os.path.join(INSTALLERS_DIR, "install.bat")
     if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "installer not found"})
     return FileResponse(
@@ -414,20 +470,20 @@ def download_windows_installer():
 
 @app.get("/api/download/setup-exe")
 def download_setup_exe():
-    path = os.path.join(BASE_DIR, "setup.exe")
+    path = os.path.join(INSTALLERS_DIR, "install.bat")
     if not os.path.exists(path):
-        return JSONResponse(status_code=404, content={"error": "setup.exe not found"})
+        return JSONResponse(status_code=404, content={"error": "installer not found"})
     return FileResponse(
         path,
-        filename="setup.exe",
+        filename="install.bat",
         media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=setup.exe"},
+        headers={"Content-Disposition": "attachment; filename=install.bat"},
     )
 
 
 @app.get("/api/download/installer-unix")
 def download_unix_installer():
-    path = os.path.join(BASE_DIR, "install.sh")
+    path = os.path.join(INSTALLERS_DIR, "install.sh")
     if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "installer not found"})
     return FileResponse(
@@ -440,7 +496,7 @@ def download_unix_installer():
 
 @app.get("/api/download/installer-powershell")
 def download_powershell_installer():
-    path = os.path.join(BASE_DIR, "install.ps1")
+    path = os.path.join(INSTALLERS_DIR, "install.ps1")
     if not os.path.exists(path):
         return JSONResponse(status_code=404, content={"error": "installer not found"})
     return FileResponse(
@@ -456,15 +512,20 @@ def get_download_checksums():
     """Cryptographic SHA-256 attestation manifest for installers and package integrity."""
     import hashlib
 
-    files_to_hash = ["setup.exe", "install.bat", "install.sh", "install.ps1", "requirements.txt"]
+    files_to_hash = ["install.bat", "install.sh", "install.ps1", "InstallerWizard.cs"]
     checksums = {}
     for fname in files_to_hash:
-        fpath = os.path.join(BASE_DIR, fname)
+        fpath = os.path.join(INSTALLERS_DIR, fname)
         if os.path.exists(fpath):
             with open(fpath, "rb") as f:
                 checksums[fname] = hashlib.sha256(f.read()).hexdigest()
         else:
             checksums[fname] = None
+    # Support pyproject.toml / requirements.txt root integrity
+    req_path = os.path.join(BASE_DIR, "pyproject.toml")
+    if os.path.exists(req_path):
+        with open(req_path, "rb") as f:
+            checksums["pyproject.toml"] = hashlib.sha256(f.read()).hexdigest()
     return JSONResponse(
         {
             "status": "success",
@@ -490,50 +551,14 @@ def get_setup_guide():
 def trigger_run(
     request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
 ):
-    if not verify_request_origin(request):
-        return JSONResponse(
-            status_code=403,
-            content={
-                "error": "CSRF_ORIGIN_REJECTED",
-                "message": "Cross-origin execution blocked for security.",
-            },
-        )
-
-    target = sanitize_target_query(target)
-    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(
-        request
-    )
-
-    # 1. Clamp candidates to prevent single-request resource exhaustion
+    err, ctx = gate_run(request, target)
+    if err:
+        return err
+    target, signed_token, trial_info = ctx
     safe_candidates = min(max(candidates, 1), 10)
 
-    # 2. Strictly enforce 2-trial limit & circuit breaker for all callers
-    allowed, trial_info = trial_limiter.consume_trial_run(
-        session_id=session_id,
-        fp_hash=fp_hash,
-        ip_str=client_ip,
-        target_name=target,
-        user_agent=user_agent,
-    )
-
-    if not allowed:
-        status_code = (
-            429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
-        )
-        resp = JSONResponse(status_code=status_code, content=trial_info)
-        resp.set_cookie(
-            key=COOKIE_NAME,
-            value=signed_token,
-            max_age=86400 * 365,
-            httponly=True,
-            samesite="lax",
-        )
-        return resp
-
     # 3. Run Autonomous Discovery Campaign
-    api_key = os.getenv("NVIDIA_API_KEY", "").strip()
-    use_mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
-    orchestrator = AgenticScientistOrchestrator(api_key=api_key, mock=use_mock)
+    orchestrator = make_orchestrator()
     dossier = orchestrator.run_discovery_campaign(
         target_query=target, num_candidates=safe_candidates, output_dir=RESULTS_DIR
     )
@@ -604,15 +629,7 @@ def trigger_run(
             for lead in dossier.top_leads
         ],
     }
-    resp = JSONResponse(result)
-    resp.set_cookie(
-        key=COOKIE_NAME,
-        value=signed_token,
-        max_age=86400 * 365,
-        httponly=True,
-        samesite="lax",
-    )
-    return resp
+    return with_cookie(JSONResponse(result), signed_token)
 
 
 @app.get("/api/stream")
@@ -624,46 +641,16 @@ async def stream_council_run(
     Streams each council agent's thoughts, debates, vetoes, and docking scores
     in real time directly into the browser at 60 FPS.
     """
-    if not verify_request_origin(request):
-        return JSONResponse(
-            status_code=403,
-            content={
-                "error": "CSRF_ORIGIN_REJECTED",
-                "message": "Cross-origin execution blocked for security.",
-            },
-        )
-
-    target = sanitize_target_query(target)
+    err, ctx = gate_run(request, target)
+    if err:
+        return err
+    target, signed_token, trial_info = ctx
     safe_candidates = min(max(candidates, 1), 10)
-    session_id, signed_token, fp_hash, client_ip, user_agent = get_client_identifiers(
-        request
-    )
-
-    allowed, trial_info = trial_limiter.consume_trial_run(
-        session_id=session_id,
-        fp_hash=fp_hash,
-        ip_str=client_ip,
-        target_name=target,
-        user_agent=user_agent,
-    )
-    if not allowed:
-        status_code = (
-            429 if trial_info.get("error") == "GLOBAL_DAILY_LIMIT_REACHED" else 403
-        )
-        resp = JSONResponse(status_code=status_code, content=trial_info)
-        resp.set_cookie(
-            key=COOKIE_NAME,
-            value=signed_token,
-            max_age=86400 * 365,
-            httponly=True,
-            samesite="lax",
-        )
-        return resp
 
     import asyncio
     import json
 
-    from src.models import CouncilMessage
+    from bionemo_benchmark.core.models import CouncilMessage
 
     async def event_generator():
         queue: asyncio.Queue = asyncio.Queue()
@@ -685,11 +672,7 @@ async def stream_council_run(
                 },
             )
 
-        api_key = os.getenv("NVIDIA_API_KEY", "").strip()
-        use_mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
-        orch = AgenticScientistOrchestrator(
-            api_key=api_key, mock=use_mock, on_council_dialogue=on_council_dialogue
-        )
+        orch = make_orchestrator(on_council_dialogue=on_council_dialogue)
 
         # Run campaign in background worker thread so SSE stream remains responsive
         future = loop.run_in_executor(
@@ -848,7 +831,7 @@ async def api_fetch_target(request: Request):
             },
         )
 
-    from src.target_scout import TargetScoutAgent
+    from bionemo_benchmark.agents.target_scout import TargetScoutAgent
 
     scout = TargetScoutAgent()
     profile, msg = scout.scout_target(query)
@@ -881,8 +864,8 @@ def get_target_pdb(pdb_id: str):
             content={"error": "Invalid 4-character alphanumeric PDB identifier."},
         )
 
-    # Prevent directory traversal: verify resolved path stays strictly within data/targets
-    target_dir = os.path.abspath(os.path.join(BASE_DIR, "data", "targets"))
+    # Prevent directory traversal: verify resolved path stays strictly within data/pdbs
+    target_dir = os.path.abspath(os.path.join(BASE_DIR, "data", "pdbs"))
     file_path = os.path.abspath(os.path.join(target_dir, f"{clean_id}.pdb"))
     if not file_path.startswith(target_dir):
         return JSONResponse(
@@ -1025,7 +1008,7 @@ async def api_generate_ind_pdf(request: Request):
             },
         }
 
-    from src.ind_dossier import generate_ind_pdf
+    from bionemo_benchmark.reporting.ind_dossier import generate_ind_pdf
 
     try:
         pdf_bytes = generate_ind_pdf(dossier_data, benchmark_data)
@@ -1075,8 +1058,8 @@ async def api_robot_protocol(request: Request):
     except Exception:
         body = {}
 
-    from src.models import RetrosynthesisPlan, RetrosynthesisStep
-    from src.robot_protocol import generate_lab_card, generate_ot2_protocol
+    from bionemo_benchmark.core.models import RetrosynthesisPlan, RetrosynthesisStep
+    from bionemo_benchmark.domain.robot_protocol import generate_lab_card, generate_ot2_protocol
 
     lead_id = (
         SafeSanitizer.sanitize_code_literal(str(body.get("lead_id", "LEAD-001")), 30)
@@ -1219,9 +1202,9 @@ async def api_resistance_evolve(request: Request):
     except (ValueError, TypeError):
         affinity = -9.2
 
-    from src.models import MoleculeCandidate
-    from src.resistance_engine import ResistanceEscapeEngine
-    from src.target_scout import TargetScoutAgent
+    from bionemo_benchmark.core.models import MoleculeCandidate
+    from bionemo_benchmark.agents.resistance_engine import ResistanceEscapeEngine
+    from bionemo_benchmark.agents.target_scout import TargetScoutAgent
 
     api_key = os.getenv("NVIDIA_API_KEY", "").strip()
     mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
@@ -1317,7 +1300,7 @@ def get_hardware_speedup_benchmark():
     h100_hours_10k = round((total_h100_sec * 1000) / 3600.0, 2)
     time_saved_hours = round(cpu_hours_10k - h100_hours_10k, 1)
 
-    from src.nvidia_showcase import GreenComputeProfiler
+    from bionemo_benchmark.reporting.nvidia_showcase import GreenComputeProfiler
 
     green_metrics = GreenComputeProfiler.calculate_campaign_impact(
         cpu_time_sec=total_cpu_sec, gpu_time_sec=total_h100_sec, num_molecules=10000
@@ -1362,7 +1345,7 @@ def get_hardware_speedup_benchmark():
 @app.get("/api/nvidia/multigpu")
 def get_nvidia_multigpu_scaling():
     """Returns cluster scaling curves across 1x to 8x H100 SXM5 NVLink interconnects."""
-    from src.nvidia_showcase import MultiGpuScalingEngine
+    from bionemo_benchmark.reporting.nvidia_showcase import MultiGpuScalingEngine
 
     scaling_data = MultiGpuScalingEngine.simulate_cluster_scaling()
     return JSONResponse(
@@ -1378,7 +1361,7 @@ def get_nvidia_multigpu_scaling():
 @app.get("/api/nvidia/blueprint")
 def get_bionemo_blueprint():
     """Generates official NVIDIA NIM BioNeMo Blueprint spec and Docker Compose setup."""
-    from src.nvidia_showcase import BioNeMoBlueprintGenerator
+    from bionemo_benchmark.reporting.nvidia_showcase import BioNeMoBlueprintGenerator
 
     return JSONResponse(
         {

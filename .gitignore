@@ -35,6 +35,14 @@ Thumbs.db
 
 # Build Artifacts
 *.egg-info/
+dist/
+build/
 dist_npm/
-dist/*.whl
-dist/*.tar.gz
+
+# Binary Executables & Installer Outputs
+*.exe
+
+# Compiled Documentation & Visual Artifacts
+docs/guides/*.pdf
+docs/guides/*.html
+*.pdf

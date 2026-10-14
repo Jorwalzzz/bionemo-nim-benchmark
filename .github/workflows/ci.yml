@@ -28,7 +28,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest mcp biopython tqdm httpx
+          pip install -e ".[dev]"
 
       - name: Prepare Working Directories
         run: |
@@ -36,15 +36,15 @@ jobs:
 
       - name: Run Pytest Test Suite
         env:
-          PYTHONPATH: .
+          PYTHONPATH: src:.
           TRANSFORMERS_OFFLINE: "0"
           HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
         run: |
-          pytest -v tests/test_extreme_stress.py tests/test_jaw_dropping_features.py tests/test_pipeline.py tests/test_esmfold_and_3d.py tests/test_benchmark_widget.py tests/test_mcp_server.py
+          pytest -v tests/
 
       - name: Execute End-to-End Mock Benchmark & Chart Generation
         env:
-          PYTHONPATH: .
+          PYTHONPATH: src:.
         run: |
           python run_benchmark.py --mock --save-plots --iterations 1
 

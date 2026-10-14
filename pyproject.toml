@@ -39,10 +39,37 @@ keywords = [
 ]
 dependencies = [
   "requests>=2.31.0",
-  "rdkit>=2023.9.0",
-  "reportlab>=4.0.0",
+  "rdkit>=2023.09.1",
+  "numpy>=1.26",
+  "pandas>=2.0.0",
+  "matplotlib>=3.8.0",
+  "seaborn>=0.13.0",
+  "python-dotenv>=1.0.0",
+  "reportlab>=4.2.0",
+  "fastapi>=0.110.0",
+  "uvicorn>=0.28.0",
   "pydantic>=2.0.0"
 ]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "mcp>=1.2.0",
+  "biopython>=1.81",
+  "tqdm>=4.66.0"
+]
+cpu = [
+  "torch>=2.0.0",
+  "transformers>=4.35.0"
+]
+all = [
+  "jorwal[dev,cpu]"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["bionemo_benchmark*"]
 
 [project.urls]
 Homepage = "https://github.com/Jorwalzzz/bionemo-nim-benchmark"
@@ -54,3 +81,8 @@ Issues = "https://github.com/Jorwalzzz/bionemo-nim-benchmark/issues"
 [project.scripts]
 jorwal = "serve_cockpit:main"
 jorwal-nim = "serve_cockpit:main"
+bionemo-benchmark = "run_benchmark:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]

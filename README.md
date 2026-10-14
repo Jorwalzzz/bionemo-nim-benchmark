@@ -1,6 +1,6 @@
 # NVIDIA BioNeMo & NIM Inference Benchmark Suite
 
-[![CI / Pytest](https://img.shields.io/badge/pytest-71%20hermetic%20passed-brightgreen.svg)](tests/)
+[![CI / Pytest](https://img.shields.io/badge/pytest-77%20hermetic%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![NVIDIA NIM](https://img.shields.io/badge/NVIDIA-BioNeMo%20NIM-76B900.svg)](https://build.nvidia.com)
 [![Green Compute](https://img.shields.io/badge/ESG-98.4%25%20Energy%20Cut-047857.svg)](#-enterprise-discovery-capabilities-closing-the-loop)
@@ -115,29 +115,37 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 .
 ├── .env.example                # Template configuration for NVIDIA NIM API credentials
 ├── .gitignore                  # Git ignore rules for virtualenvs, caches, and artifacts
+├── pyproject.toml              # Unified packaging specification and dependencies
 ├── README.md                   # Technical documentation and executive benchmark report
-├── docs/
-│   ├── BENCHMARK_REPORT.md         # Empirical benchmark report, scaling analysis & visual embeds
-│   └── NVIDIA_DEVREL_SUBMISSIONS.md # Ready-to-copy submission copy for Forums, LinkedIn & Champions
-├── requirements.txt            # Pinned dependency requirements
 ├── run_benchmark.py            # CLI entry point supporting both live and CI/CD mock execution
+├── serve_cockpit.py            # Interactive Web Cockpit server (FastAPI)
 ├── data/
-│   ├── pdbs/                   # Experimental PDB coordinates for sample targets
-│   └── sample_complexes.json   # 5 diverse protein-ligand targets (76 - 932 aa + FDA drugs)
+│   ├── pdbs/                   # Experimental crystallographic PDB targets (10 structures)
+│   └── sample_complexes.json   # Diverse protein-ligand targets (76 - 932 aa + FDA drugs)
+├── docs/
+│   ├── guides/                 # Comprehensive blueprints and architecture guides
+│   └── reports/                # Benchmark scaling analyses & DevRel submissions
+├── scripts/
+│   ├── installers/             # Universal deployment installers (bat, ps1, sh, cs)
+│   ├── audit/                  # Live HTTP and endpoint security audit scripts
+│   └── ops/                    # Maintenance and operational tooling
 ├── src/
-│   ├── __init__.py             # Source package root
-│   ├── client.py               # Robust NIM REST client (backoff, 429 retries, timers)
-│   ├── baseline.py             # Local PyTorch CPU runner (facebook/esm2_t6_8M_UR50D)
-│   ├── pipeline.py             # Orchestrator integrating RDKit, ESM-2, and DiffDock
-│   └── metrics.py              # Statistical aggregations and publication-grade Seaborn plots
-├── tests/
-│   ├── __init__.py             # Test package root
-│   └── test_pipeline.py        # Comprehensive pytest suite (RDKit, NIM mock, tensor shapes)
-└── results/
-    ├── .gitkeep                # Git tracking placeholder
-    ├── benchmark_summary.csv   # Consolidated tabular benchmark metrics
-    ├── throughput_comparison.png # Publication-grade throughput comparison bar plot
-    └── latency_vs_length.png   # Publication-grade latency scaling curve
+│   ├── __init__.py             # Backward-compatibility import shim
+│   └── bionemo_benchmark/      # Domain-driven modular package
+│       ├── core/               # Baseline, NimBioClient, metrics, models, pipeline
+│       ├── agents/             # Multi-agent AI drug discovery council
+│       ├── infra/              # Sentinel, rate limiting, and message bus
+│       ├── domain/             # PDB utilities, sequence verification, OT-2 robotics
+│       └── reporting/          # IND dossier compiler, visualizer, NVIDIA showcase
+├── web/
+│   ├── index.html              # Main landing portal
+│   ├── cockpit.html            # Interactive WebGL biocompute studio
+│   ├── cockpit.css             # Glassmorphic dark theme styles
+│   ├── cockpit.js              # Real-time state machine & 3Dmol.js viewer
+│   ├── assets/                 # Vector brand icons and logos
+│   └── data/                   # Embedded structural coordinate datasets
+├── tests/                      # 100% hermetic test suite (77 tests)
+└── results/                    # Publication charts, CSV telemetry, FDA dossiers
 ```
 
 ---
@@ -154,14 +162,14 @@ uv venv --python 3.12 .venv
 .venv\Scripts\activate          # On Windows
 # source .venv/bin/activate     # On Linux / macOS
 
-uv pip install -r requirements.txt
+uv pip install -e ".[dev]"
 ```
 
 Alternatively, with standard `venv` and `pip`:
 ```bash
 python -m venv .venv
 source .venv/bin/activate       # On Linux / macOS (.venv\Scripts\activate on Windows)
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ### 2. Environment Configuration

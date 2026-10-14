@@ -21,9 +21,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from mcp.server.fastmcp import FastMCP
 
-from src.client import NimBioClient, CANONICAL_AMINO_ACIDS
-from src.pipeline import BenchmarkPipeline
-from src.pdb_utils import sanitize_pdb_atom_records, generate_synthetic_backbone
+from bionemo_benchmark.core.client import NimBioClient, CANONICAL_AMINO_ACIDS
+from bionemo_benchmark.core.pipeline import BenchmarkPipeline
+from bionemo_benchmark.domain.pdb_utils import sanitize_pdb_atom_records, generate_synthetic_backbone
 
 mcp = FastMCP("bionemo-tools")
 

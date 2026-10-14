@@ -14,15 +14,21 @@ import json
 import logging
 import os
 import sys
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SRC_DIR = os.path.join(BASE_DIR, "src")
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
 from typing import Any, Dict, List
 
 import pandas as pd
 from dotenv import load_dotenv
 
-from src.baseline import LocalCPUBaseline
-from src.client import NimBioClient
-from src.metrics import BenchmarkReporter
-from src.pipeline import BenchmarkPipeline, ComplexBenchmarkRecord
+from bionemo_benchmark.core.baseline import LocalCPUBaseline
+from bionemo_benchmark.core.client import NimBioClient
+from bionemo_benchmark.core.metrics import BenchmarkReporter
+from bionemo_benchmark.core.pipeline import BenchmarkPipeline, ComplexBenchmarkRecord
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -161,9 +167,9 @@ def main() -> None:
         print(
             "\n[*] Executing NVIDIA BioNeMo End-to-End Showcase Campaign (Target: KRAS G12D)..."
         )
-        from src.ind_dossier import generate_ind_pdf
-        from src.orchestrator import AgenticScientistOrchestrator
-        from src.robot_protocol import generate_ot2_protocol
+        from bionemo_benchmark.reporting.ind_dossier import generate_ind_pdf
+        from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
+        from bionemo_benchmark.domain.robot_protocol import generate_ot2_protocol
 
         orch = AgenticScientistOrchestrator(api_key=api_key, mock=is_mock)
         dossier = orch.run_discovery_campaign(
