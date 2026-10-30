@@ -2,7 +2,9 @@
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
+  <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+  <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.innerHTML=''}}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -37,15 +39,36 @@
       --violet-neon: #a855f7;
       --amber-neon: #f59e0b;
       --bg-dark: #04070d;
-      --card-bg: rgba(12, 18, 30, 0.72);
+      --card-bg: rgba(14, 22, 36, 0.82);
       --card-border: rgba(255, 255, 255, 0.08);
     }
 
+    /* Hardware-Accelerated Body & Fixed Background Layer */
     body {
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: var(--bg-dark);
       color: #e2e8f0;
       overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Isolated GPU Background Layer - Zero Repaints During Scroll */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-color: #04070d;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.14) 0%, transparent 60%),
+        radial-gradient(circle at 90% 25%, rgba(0, 241, 253, 0.07) 0%, transparent 45%),
+        radial-gradient(circle at 10% 55%, rgba(168, 85, 247, 0.05) 0%, transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+      pointer-events: none;
+      transform: translateZ(0);
+      will-change: transform;
     }
 
     h1, h2, h3, .font-heading {
@@ -56,37 +79,34 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Ambient Cosmic Mesh Grid */
-    .bg-cosmic-mesh {
-      background-color: #04070d;
-      background-image: 
-        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.18) 0%, transparent 60%),
-        radial-gradient(circle at 90% 25%, rgba(0, 241, 253, 0.10) 0%, transparent 45%),
-        radial-gradient(circle at 10% 55%, rgba(168, 85, 247, 0.08) 0%, transparent 45%),
-        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-      background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
-    }
-
-    /* Glassmorphic Panels */
+    /* Optimized Glassmorphic Panels (12px blur for 60fps scrolling) */
     .glass-panel {
-      background: linear-gradient(135deg, rgba(14, 22, 36, 0.75) 0%, rgba(8, 13, 22, 0.88) 100%);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+      background: linear-gradient(135deg, rgba(14, 22, 36, 0.85) 0%, rgba(8, 13, 22, 0.92) 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--card-border);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transform: translateZ(0);
+      backface-visibility: hidden;
     }
 
     .glass-panel:hover {
       border-color: rgba(118, 185, 0, 0.35);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(118, 185, 0, 0.12);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(118, 185, 0, 0.1);
     }
 
     .glass-nav {
-      background: rgba(8, 13, 22, 0.82);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      background: rgba(8, 13, 22, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      transform: translateZ(0);
+    }
+
+    /* Content Visibility for Instant First Paint and Zero Layout Jitter */
+    .section-contain {
+      content-visibility: auto;
+      contain-intrinsic-size: 1px 600px;
     }
 
     /* Gradient Text */
@@ -106,7 +126,7 @@
     .glow-badge {
       background: linear-gradient(135deg, rgba(118, 185, 0, 0.14) 0%, rgba(0, 241, 253, 0.07) 100%);
       border: 1px solid rgba(118, 185, 0, 0.4);
-      box-shadow: 0 0 20px rgba(118, 185, 0, 0.22);
+      box-shadow: 0 0 15px rgba(118, 185, 0, 0.18);
     }
 
     /* Primary NVIDIA Action Button */
@@ -114,26 +134,14 @@
       background: linear-gradient(135deg, #76b900 0%, #4a7500 100%);
       color: #03060a;
       font-weight: 800;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 8px 30px rgba(118, 185, 0, 0.45);
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-nvidia-glow::after {
-      content: '';
-      position: absolute;
-      top: -50%; left: -50%; width: 200%; height: 200%;
-      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-      transform: rotate(25deg) translateY(-100%);
-      transition: transform 0.6s ease;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: 0 6px 20px rgba(118, 185, 0, 0.4);
+      transform: translateZ(0);
     }
     .btn-nvidia-glow:hover {
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 12px 40px rgba(118, 185, 0, 0.65);
+      transform: translate3d(0, -2px, 0) scale(1.02);
+      box-shadow: 0 10px 30px rgba(118, 185, 0, 0.6);
       background: linear-gradient(135deg, #8bee00 0%, #649c00 100%);
-    }
-    .btn-nvidia-glow:hover::after {
-      transform: rotate(25deg) translateY(100%);
     }
 
     /* Secondary Glass Action Button */
@@ -141,13 +149,14 @@
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.12);
       color: #e2e8f0;
-      transition: all 0.3s ease;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+      transform: translateZ(0);
     }
     .btn-glass:hover {
       background: rgba(255, 255, 255, 0.09);
       border-color: rgba(118, 185, 0, 0.4);
       color: #ffffff;
-      transform: translateY(-2px);
+      transform: translate3d(0, -2px, 0);
     }
 
     /* Control Pills */
@@ -159,14 +168,14 @@
       font-weight: 700;
       padding: 6px 14px;
       border-radius: 9999px;
-      transition: all 0.25s ease;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
       cursor: pointer;
     }
     .ctrl-pill:hover, .ctrl-pill.active {
       color: #03060a;
       background: #76b900;
       border-color: #8bee00;
-      box-shadow: 0 0 16px rgba(118, 185, 0, 0.55);
+      box-shadow: 0 0 14px rgba(118, 185, 0, 0.5);
     }
 
     /* Target Selector Buttons */
@@ -178,7 +187,7 @@
       font-weight: 600;
       padding: 8px 16px;
       border-radius: 12px;
-      transition: all 0.25s ease;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
       cursor: pointer;
     }
     .target-pill:hover {
@@ -190,17 +199,18 @@
       background: linear-gradient(135deg, rgba(118, 185, 0, 0.2) 0%, rgba(0, 241, 253, 0.1) 100%);
       border-color: #76b900;
       color: #ffffff;
-      box-shadow: 0 0 18px rgba(118, 185, 0, 0.35);
+      box-shadow: 0 0 16px rgba(118, 185, 0, 0.35);
     }
 
     /* Pulsing Beacon */
     @keyframes pulse-ring {
       0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.25); opacity: 0.3; }
+      50% { transform: scale(1.2); opacity: 0.35; }
       100% { transform: scale(0.95); opacity: 0.8; }
     }
     .pulse-glow {
       animation: pulse-ring 2.5s infinite ease-in-out;
+      will-change: transform, opacity;
     }
 
     /* Luxury Artifact Cards */
@@ -209,31 +219,32 @@
       background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.008) 100%);
       border: 1px solid rgba(255, 255, 255, 0.07);
       border-radius: 16px;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      transform: translateZ(0);
     }
     .shortcut-card-luxury:hover {
-      transform: translateY(-3px) scale(1.015);
+      transform: translate3d(0, -3px, 0);
     }
     .card-emerald:hover {
       background: linear-gradient(135deg, rgba(118, 185, 0, 0.15) 0%, rgba(118, 185, 0, 0.03) 100%);
       border-color: rgba(118, 185, 0, 0.6);
-      box-shadow: 0 16px 35px -8px rgba(118, 185, 0, 0.35);
+      box-shadow: 0 12px 25px -6px rgba(118, 185, 0, 0.3);
     }
     .card-blue:hover {
       background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.03) 100%);
       border-color: rgba(59, 130, 246, 0.6);
-      box-shadow: 0 16px 35px -8px rgba(59, 130, 246, 0.35);
+      box-shadow: 0 12px 25px -6px rgba(59, 130, 246, 0.3);
     }
     .card-amber:hover {
       background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.03) 100%);
       border-color: rgba(245, 158, 11, 0.6);
-      box-shadow: 0 16px 35px -8px rgba(245, 158, 11, 0.35);
+      box-shadow: 0 12px 25px -6px rgba(245, 158, 11, 0.3);
     }
 
     /* Custom Scrollbar */
     ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
     }
     ::-webkit-scrollbar-track {
       background: #03060a;
@@ -247,7 +258,7 @@
     }
   </style>
 </head>
-<body class="bg-cosmic-mesh min-h-screen flex flex-col selection:bg-emerald-500/30">
+<body class="min-h-screen flex flex-col selection:bg-emerald-500/30">
 
   <!-- FLOATING GLASS NAVBAR -->
   <header class="sticky top-0 z-50 glass-nav">
@@ -326,7 +337,7 @@
 
       <!-- Action Nav Items -->
       <div class="flex items-center gap-3.5">
-        <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 transition-all">
+        <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5 transition-all">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
           <span>Star</span>
           <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">v2.5</span>
@@ -515,7 +526,7 @@
           </div>
 
           <!-- NVIDIA NIM Blueprint -->
-          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/blueprint.yaml" target="_blank" class="shortcut-card-luxury card-emerald flex items-center justify-between p-3.5 cursor-pointer group">
+          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/blueprint.yaml" target="_blank" rel="noopener noreferrer" class="shortcut-card-luxury card-emerald flex items-center justify-between p-3.5 cursor-pointer group">
             <div class="flex items-center gap-3.5">
               <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-lg group-hover:scale-110 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/40 transition-all duration-300 shadow-sm">
                 📦
@@ -532,7 +543,7 @@
           </a>
 
           <!-- FDA IND Section 2 Dossier -->
-          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf" target="_blank" class="shortcut-card-luxury card-blue flex items-center justify-between p-3.5 cursor-pointer group">
+          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf" target="_blank" rel="noopener noreferrer" class="shortcut-card-luxury card-blue flex items-center justify-between p-3.5 cursor-pointer group">
             <div class="flex items-center gap-3.5">
               <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-lg group-hover:scale-110 group-hover:bg-blue-500/20 group-hover:border-blue-500/40 transition-all duration-300 shadow-sm">
                 📄
@@ -579,7 +590,7 @@
   </section>
 
   <!-- EMPIRICAL BENCHMARK MATRIX SECTION -->
-  <section id="benchmarks" class="max-w-7xl mx-auto px-6 py-16">
+  <section id="benchmarks" class="section-contain max-w-7xl mx-auto px-6 py-16">
     <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
       <div>
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-mono font-bold mb-2 border border-emerald-500/30">
@@ -721,7 +732,7 @@
   </section>
 
   <!-- THE 4 NVIDA NIM MICROSERVICE PILLARS SECTION -->
-  <section id="pillars" class="max-w-7xl mx-auto px-6 py-12">
+  <section id="pillars" class="section-contain max-w-7xl mx-auto px-6 py-12">
     <div class="text-center max-w-3xl mx-auto mb-12">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-400 text-xs font-mono font-bold mb-3 border border-cyan-500/30">
         <span>🧬 Architectural Foundation</span>
@@ -812,7 +823,7 @@
   </section>
 
   <!-- OPENTRONS OT-2 WET-LAB ROBOTICS SECTION -->
-  <section id="robotics" class="max-w-7xl mx-auto px-6 py-12">
+  <section id="robotics" class="section-contain max-w-7xl mx-auto px-6 py-12">
     <div class="glass-panel rounded-3xl p-8 border border-white/10 relative overflow-hidden">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         
@@ -842,7 +853,7 @@
             </div>
           </div>
           <div class="pt-2">
-            <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/results/ot2_synthesis_protocol_KRAS_G12D.py" target="_blank" class="btn-glass px-5 py-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-2">
+            <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/results/ot2_synthesis_protocol_KRAS_G12D.py" target="_blank" rel="noopener noreferrer" class="btn-glass px-5 py-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-2">
               <span>View Full Protocol on GitHub</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
             </a>
@@ -882,7 +893,7 @@ metadata = {
   </section>
 
   <!-- DEVELOPER QUICKSTART SECTION -->
-  <section id="quickstart" class="max-w-7xl mx-auto px-6 py-12">
+  <section id="quickstart" class="section-contain max-w-7xl mx-auto px-6 py-12">
     <div class="text-center max-w-3xl mx-auto mb-10">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-mono font-bold mb-3 border border-emerald-500/30">
         <span>⚡ Quickstart</span>
@@ -975,7 +986,7 @@ metadata = {
       <div class="flex items-center gap-3">
         <span class="font-extrabold text-gray-200 tracking-wider">JORWAL™ BioNeMo Benchmark</span>
         <span>•</span>
-        <span>© 2026 <a href="https://github.com/Jorwalzzz" target="_blank" class="text-gray-300 hover:text-emerald-400 font-bold underline transition-colors">Aarav Jorwal (@Jorwalzzz)</a>. All Rights Reserved.</span>
+        <span>© 2026 <a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-emerald-400 font-bold underline transition-colors">Aarav Jorwal (@Jorwalzzz)</a>. All Rights Reserved.</span>
       </div>
       <div class="text-[11px] text-gray-400 text-center md:text-right font-mono space-y-1">
         <div>Architected with NVIDIA BioNeMo & NIM Inference Microservices • Open Source AGPLv3</div>
@@ -984,7 +995,7 @@ metadata = {
     </div>
   </footer>
 
-  <!-- 3DMOL INTERACTIVE ENGINE & UI CONTROLLER SCRIPT -->
+  <!-- 3DMOL INTERACTIVE ENGINE & UI CONTROLLER SCRIPT (GPU-THROTTLED & HARDENED) -->
   <script>
     let heroViewer = null;
     let isSpinning = true;
@@ -1047,15 +1058,32 @@ metadata = {
       
       heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#040810' });
       loadTargetStructure('8AZV');
+
+      // PERFORMANCE OBSERVABILITY: Pause WebGL Render Loop when offscreen to eliminate scroll lag
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (!heroViewer) return;
+            if (entry.isIntersecting) {
+              if (isSpinning) heroViewer.spin("y", 0.7);
+            } else {
+              heroViewer.spin(false);
+            }
+          });
+        }, { threshold: 0.1 });
+        observer.observe(container);
+      }
     });
 
     function loadTargetStructure(pdbId) {
+      // SECURITY GATE: Whitelist 4-character alphanumeric accession IDs to prevent path traversal/SSRF
+      if (!/^[0-9A-Za-z]{4}$/.test(pdbId)) return;
       const cfg = TARGETS[pdbId];
       if (!cfg || !heroViewer) return;
 
       const overlay = document.getElementById('targetLoadingOverlay');
 
-      // Update UI Text immediately
+      // Update UI Text immediately (using textContent for zero DOM XSS)
       document.getElementById('hudPocketLabel').textContent = cfg.pocketLabel;
       document.getElementById('hudLigandLabel').textContent = cfg.ligandLabel;
       document.getElementById('hudVectorLabel').textContent = cfg.vectorLabel;
@@ -1075,7 +1103,7 @@ metadata = {
         overlay.classList.remove('opacity-0', 'pointer-events-none');
       }
 
-      fetch(`https://files.rcsb.org/download/${pdbId}.pdb`)
+      fetch(`https://files.rcsb.org/download/${encodeURIComponent(pdbId)}.pdb`)
         .then(res => {
           if (!res.ok) throw new Error("RCSB fetch failed");
           return res.text();
@@ -1175,8 +1203,9 @@ metadata = {
       const btn = document.getElementById('btnSurf');
       const cfg = TARGETS[currentTarget];
       if (isSurfaceOn && cfg) {
-        surfaceObj = heroViewer.addSurface($3Dmol.SurfaceType.MS, {
-          opacity: 0.55,
+        // PERFORMANCE: Use VDW surface (~15ms) instead of heavy MS (~1500ms) to prevent frame drop
+        surfaceObj = heroViewer.addSurface($3Dmol.SurfaceType.VDW, {
+          opacity: 0.40,
           colorscheme: 'cyanCarbon'
         }, { resi: cfg.pocketRes, resn: cfg.ligandResn });
         if (btn) btn.classList.add('active');
@@ -1206,18 +1235,24 @@ metadata = {
     }
 
     function copySnippet(text, btn) {
+      if (!navigator.clipboard) return;
       navigator.clipboard.writeText(text).then(() => {
         const origHTML = btn.innerHTML;
         btn.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
         setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
+      }).catch(err => {
+        console.warn('Clipboard write error:', err);
       });
     }
 
     function copyCloneCmd(btn) {
+      if (!navigator.clipboard) return;
       navigator.clipboard.writeText("git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git").then(() => {
         const origHTML = btn.innerHTML;
         btn.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
         setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
+      }).catch(err => {
+        console.warn('Clipboard write error:', err);
       });
     }
   </script>

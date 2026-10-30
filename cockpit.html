@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
+<meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
 <script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.innerHTML=''}}</script>
 
@@ -458,7 +460,7 @@ tailwind.config = {
     <span>Architected & engineered by <strong class="text-nvidia-green">Aarav Jorwal (@Jorwalzzz)</strong></span>
   </div>
   <p class="text-gray-500 text-[10px] leading-normal">
-    Special thanks to the <a href="https://developer.nvidia.com" target="_blank" class="text-gray-400 hover:text-nvidia-green underline">NVIDIA Developer Program</a> & <a href="https://build.nvidia.com/explore/discover" target="_blank" class="text-gray-400 hover:text-nvidia-green underline">BioNeMo team</a> for providing the GPU microservices (MolMIM, DiffDock, ESM-2), and the open-source scientific community (RDKit, RCSB PDB, 3Dmol.js).
+    Special thanks to the <a href="https://developer.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-nvidia-green underline">NVIDIA Developer Program</a> & <a href="https://build.nvidia.com/explore/discover" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-nvidia-green underline">BioNeMo team</a> for providing the GPU microservices (MolMIM, DiffDock, ESM-2), and the open-source scientific community (RDKit, RCSB PDB, 3Dmol.js).
   </p>
   <div class="mt-2 flex items-center gap-2 text-[10px] text-gray-500 font-mono">
     <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">AGPLv3 Copyleft</span>
@@ -690,7 +692,7 @@ tailwind.config = {
             <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-[11px] border border-emerald-500/30">1</span>
             <div>
               <div class="font-semibold text-gray-200">Sign Up at build.nvidia.com</div>
-              <div class="text-gray-400 mt-0.5">Visit <a href="https://build.nvidia.com" target="_blank" class="text-nvidia-green hover:underline font-mono">https://build.nvidia.com</a> and sign in with Google, GitHub, or Email.</div>
+              <div class="text-gray-400 mt-0.5">Visit <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-nvidia-green hover:underline font-mono">https://build.nvidia.com</a> and sign in with Google, GitHub, or Email.</div>
             </div>
           </li>
           <li class="flex items-start gap-2.5">
