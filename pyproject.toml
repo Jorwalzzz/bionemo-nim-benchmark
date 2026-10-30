@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jorwal"
 version = "1.0.0"
-description = "JORWAL™ Core: Autonomous multi-agent AI biocompute and molecular intelligence ecosystem."
+description = "Benchmark suite and interactive cockpit for NVIDIA BioNeMo & NIM microservices (ESM-2, DiffDock, MolMIM, ESMFold)."
 readme = "README.md"
 authors = [
   { name = "Jorwal", email = "contact@jorwal.dev" },

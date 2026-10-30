@@ -13,25 +13,25 @@
 [![ORCID iD](https://img.shields.io/badge/ORCID-0009--0008--8922--3599-A6CE39.svg)](https://orcid.org/0009-0008-8922-3599)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
-A production-grade, highly reproducible benchmark repository and **Autonomous AI Drug Discovery Operating System** evaluating **NVIDIA BioNeMo & NIM (Inference Microservices)** endpoints for protein language model embedding generation (**ESM-2**), de novo protein structure prediction (**ESMFold**), small-molecule latent exploration (**MolMIM**), and molecular docking pose prediction (**DiffDock**) against baseline unaccelerated host CPU compute.
+A developer-focused benchmark suite and interactive cockpit evaluating **NVIDIA BioNeMo & NIM (Inference Microservices)** endpoints—including **ESM-2** (embeddings), **ESMFold** (3D structure prediction), **MolMIM** (generative chemistry), and **DiffDock** (molecular docking)—against standard CPU baselines.
 
 ---
 
-## 🌟 Enterprise Discovery Capabilities (Closing the Loop)
+## ✨ Features & Architecture
 
-This platform doesn't just sample molecules—it orchestrates an end-to-end pharmaceutical discovery pipeline from raw target sequence to FDA submission and wet-lab robotics:
+This repository provides both an automated benchmark harness (CLI + CI/CD) and an interactive web cockpit (FastAPI + 3Dmol.js):
 
-1. **🌱 NVIDIA Green Compute & ESG Energy Profiler**: Directly quantifies the energy and carbon advantages of GPU microservices vs. CPU clusters—achieving a **98.4% energy reduction**, offsetting **48kg CO₂e**, and saving $215+ in compute costs per 10,000 screened compounds.
-2. **📦 NVIDIA BioNeMo Blueprint & DGX Reference Architecture**: Exports production-ready `docker-compose.nim.yml` container specs orchestrating `meta/esm2-650m`, `mit/diffdock`, and `nvidia/molmim` with GPU reservations and health probes.
-3. **⚡ Multi-GPU NVLink Scaling Profiler**: Quantifies near-linear 7.8× throughput scaling across 1× to 8× NVIDIA DGX H100 SXM5 nodes with 900 GB/s bidirectional NVLink 4.
-4. **🛡️ Adaptive Resistance Escape Engine**: Detects mutational resistance hotspots via ESM-2 attention variance, simulates clinical resistance challenges (e.g., KRAS G12D → G12C Switch-II escape), measures binding affinity loss, and dispatches NVIDIA MolMIM with latent space CMA-ES steering to evolve counter-designed scaffolds that recover nanomolar affinity.
-5. **📄 Automated FDA IND Clinical Dossier (PDF)**: One click compiles an official 21 CFR Part 312 compliant **FDA IND Section 2 Nonclinical Pharmacology Briefing Document** complete with executive summary, ADMET safety radar, CMC retrosynthesis feasibility, live compute benchmark evidence, a 12-item regulatory checklist, and full AI multi-agent audit trail.
-6. **🤖 Opentrons OT-2 Robotic Pipetting Protocol**: Automatically translates AI-predicted retrosynthesis routes into executable Python automation scripts (Opentrons API Level 2.15) with complete deck layouts, temperature incubation modules, liquid transfers, and companion wet-lab SOP cards.
-7. **🧬 ESMFold De Novo Structure Generation**: Folds arbitrary 20 IUPAC amino acid sequences into atomic 3D coordinates on the fly with per-residue pLDDT confidence coloring.
-8. **⚡ Live Hardware Acceleration Benchmark**: Measures the user's host laptop CPU live and demonstrates a **~50×–70× speedup** when offloading to NVIDIA H100 Tensor Core microservices.
-9. **🧭 10-Step Interactive Guided Tour**: A comprehensive, self-paced walkthrough explaining the platform architecture, underlying science, and NVIDIA technologies with interactive visitor instructions and single-click actions.
+1. **⚡ CPU vs. GPU Inference Benchmarking**: Measures token throughput ($\text{tokens}/\text{sec}$) and latency scaling across sequence lengths (76 to 932 amino acids), comparing host CPU execution with NVIDIA NIM GPU endpoints.
+2. **🧬 Protein Structure Prediction & Embeddings**: Uses ESM-2 for per-residue embeddings and ESMFold for generating 3D macromolecular structures from raw amino acid sequences with pLDDT confidence scores.
+3. **🧪 Molecular Docking & Generative Lead Design**: Uses DiffDock for 3D pose and binding affinity estimation, and MolMIM for exploring small-molecule chemical space.
+4. **🖥️ Interactive Web Cockpit**: Browser dashboard (FastAPI + 3Dmol.js) with live 3D molecular visualization, chemical workbench, and real-time re-docking.
+5. **📄 Candidate Dossier Generator**: Compiles structured markdown summaries and downloadable PDF briefing documents with physicochemical descriptors, ADMET screening, and binding affinity metrics.
+6. **🤖 Opentrons OT-2 Protocol Export**: Generates executable Python liquid-handling scripts (Opentrons API v2.15) and wet-lab SOP cards for automated pipetting verification.
+7. **🌱 Energy & Carbon Comparison**: Calculates estimated compute cost and power reduction when offloading heavy inference from CPU nodes to GPU microservices.
+8. **🔒 100% Hermetic Test Harness**: 77 automated pytest tests with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
+9. **🧭 Interactive Walkthrough**: Built-in 10-step guided tour explaining each component of the pipeline directly inside the web UI.
 
-### 📦 Pre-Compiled Golden Deliverables (Direct Inspection)
+### 📦 Example Generated Outputs
 | Deliverable | Description | Direct Link |
 |---|---|---|
 | **FDA IND Section 2 Briefing Dossier** | Full clinical regulatory briefing document for KRAS G12D | [`results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf`](results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf) |
@@ -280,9 +280,9 @@ This project is licensed under the **GNU Affero General Public License v3.0 (AGP
 - **Enforces Reciprocal Open Science**: Ensures all downstream improvements, algorithmic enhancements, and model integrations remain openly accessible to the scientific community.
 - **Guarantees Author Attribution**: Preserves copyright and original author credit across all distributions and derivatives.
 
-### ⚖️ Worldwide Trademark & Tech Field Exclusivity Notice
-The marks **"JORWAL"**, **"Jorwal"**, **"jorwal"**, **"Jorwalzzz"**, **"JORWAL™ NIM SWARM OS"**, **"JORWAL TECH™"**, **"JORWAL AI™"**, and associated wordmarks, logos, and visual trade dress are exclusive proprietary common-law trademarks of **Jorwal (Jorwalzzz)** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)). 
+### ⚖️ Trademark & Attribution Notice
+The names **"Jorwal"**, **"Jorwalzzz"**, and associated logos are personal and project marks of **Aarav Jorwal** ([github.com/Jorwalzzz](https://github.com/Jorwalzzz)).
 
-All trademark, trade name, and brand identity rights are strictly and worldwide reserved across all capitalizations and variations for the **entire technology, computing, artificial intelligence, software, and cloud industry**. Re-distribution of software under AGPLv3 explicitly does not grant or transfer any rights to the trademarks, trade names, or brand identity of Jorwal.
+While this repository is openly licensed under AGPLv3, the license does not grant permission to use the author's name or project branding for marketing or endorsement of derivative works without prior consent. See [TRADEMARK.md](TRADEMARK.md) for brand guidelines.
 
-For full legal terms, international classifications (Classes 9, 35, 42, 44), and priority claims, see [TRADEMARK.md](TRADEMARK.md).
+
