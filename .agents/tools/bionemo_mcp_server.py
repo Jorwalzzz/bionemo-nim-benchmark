@@ -19,7 +19,20 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from mcp.server.fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except (ImportError, ModuleNotFoundError):
+    try:
+        from mcp.server.mcpserver import MCPServer as FastMCP
+    except (ImportError, ModuleNotFoundError):
+        class FastMCP:  # type: ignore
+            def __init__(self, name="bionemo-tools", **kwargs):
+                self.name = name
+
+            def tool(self, *args, **kwargs):
+                def decorator(func):
+                    return func
+                return decorator
 
 from bionemo_benchmark.core.client import NimBioClient, CANONICAL_AMINO_ACIDS
 from bionemo_benchmark.core.pipeline import BenchmarkPipeline
