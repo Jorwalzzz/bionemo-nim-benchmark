@@ -13,8 +13,8 @@ h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
 .font-mono { font-family: 'JetBrains Mono', monospace; }
 
 /* Glassmorphism 2.0 (Optimized 10px blur + GPU Compositing) */
-.glass { background: rgba(13,17,23,0.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 6px 24px 0 rgba(0, 0, 0, 0.35); transform: translateZ(0); backface-visibility: hidden; }
-.glass-bright { background: rgba(22,27,34,0.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(118,185,0,0.25); box-shadow: 0 8px 30px -8px rgba(118,185,0,0.15); transform: translateZ(0); backface-visibility: hidden; }
+.glass { background: rgba(13,17,23,0.96); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.35); }
+.glass-bright { background: rgba(22,27,34,0.98); border: 1px solid rgba(118,185,0,0.25); box-shadow: 0 6px 20px -6px rgba(118,185,0,0.15); }
 
 /* NVIDIA glow effects */
 .glow-green { box-shadow: 0 0 15px rgba(118,185,0,0.25), 0 0 40px rgba(118,185,0,0.08); }

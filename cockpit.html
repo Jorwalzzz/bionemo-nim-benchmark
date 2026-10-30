@@ -22,12 +22,12 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='28' fill='%2305080c'/%3E%3Cpath d='M60 24 C78 24 94 38 94 56 C94 72 82 86 68 88' stroke='%2376b900' stroke-width='8' fill='none'/%3E%3Cpath d='M60 24 C44 24 26 38 26 56 C26 70 36 84 52 88' stroke='%2300f1fd' stroke-width='6' fill='none'/%3E%3Ccircle cx='60' cy='24' r='6' fill='%2376b900'/%3E%3Ccircle cx='60' cy='88' r='6' fill='%2300f1fd'/%3E%3C/svg%3E"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="./app.min.css"/>
 <link rel="stylesheet" href="./cockpit.css"/>
-<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-<script src="./results/pdb_data.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
+<script src="./results/pdb_data.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 </head>
 <body class="dark bg-grid">
 <!-- ═══════════════════════════════════════════════ HEADER ══════════════ -->
@@ -156,7 +156,7 @@
 </header>
 
 <!-- Interactive 10-Step Guided Tour Card -->
-<div id="tourCardModal" class="hidden fixed bottom-6 right-6 z-[2500] max-w-xl w-[94%] md:w-[560px] p-5 rounded-2xl border border-purple-500/40 bg-[#0d1117]/95 backdrop-blur-2xl shadow-2xl animate-fade-up">
+<div id="tourCardModal" class="hidden fixed bottom-6 right-6 z-[2500] max-w-xl w-[94%] md:w-[560px] p-5 rounded-2xl border border-purple-500/40 bg-[#0d1117]/95  shadow-2xl animate-fade-up">
   <!-- Tour Header -->
   <div class="flex items-center justify-between pb-3 border-b border-surface-border mb-3">
     <div class="flex items-center gap-2.5">

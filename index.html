@@ -22,15 +22,15 @@
   <link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='28' fill='%2305080c'/%3E%3Cpath d='M60 24 C78 24 94 38 94 56 C94 72 82 86 68 88' stroke='%2376b900' stroke-width='8' fill='none'/%3E%3Cpath d='M60 24 C44 24 26 38 26 56 C26 70 36 84 52 88' stroke='%2300f1fd' stroke-width='6' fill='none'/%3E%3Ccircle cx='60' cy='24' r='6' fill='%2376b900'/%3E%3Ccircle cx='60' cy='88' r='6' fill='%2300f1fd'/%3E%3C/svg%3E"/>
 
-  <!-- High-End Typography -->
+  <!-- High-End Typography (Pruned to Active Weights for Instant FCP) -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet"/>
 
   <!-- Compiled High-Performance Stylesheet (Zero Runtime JIT Overhead) -->
   <link rel="stylesheet" href="./app.min.css"/>
-  <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-  <script src="./results/pdb_data.js"></script>
+  <script src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
+  <script src="./results/pdb_data.js" defer></script>
 
   <style>
     :root {
@@ -53,7 +53,7 @@
       position: relative;
     }
 
-    /* Isolated GPU Background Layer - Zero Repaints During Scroll */
+    /* Hardware-Accelerated Isolated Background - Zero VRAM Bloat */
     body::before {
       content: '';
       position: fixed;
@@ -61,15 +61,14 @@
       z-index: -1;
       background-color: #04070d;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.14) 0%, transparent 60%),
-        radial-gradient(circle at 90% 25%, rgba(0, 241, 253, 0.07) 0%, transparent 45%),
-        radial-gradient(circle at 10% 55%, rgba(168, 85, 247, 0.05) 0%, transparent 45%),
+        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 90% 25%, rgba(0, 241, 253, 0.06) 0%, transparent 45%),
+        radial-gradient(circle at 10% 55%, rgba(168, 85, 247, 0.04) 0%, transparent 45%),
         linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
       background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
       pointer-events: none;
       transform: translateZ(0);
-      will-change: transform;
     }
 
     h1, h2, h3, .font-heading {
@@ -80,34 +79,26 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Optimized Glassmorphic Panels (12px blur for 60fps scrolling) */
+    /* 60/120 FPS High-Performance Cybernetic Panels (Zero GPU Compositor Blur Overhead) */
     .glass-panel {
-      background: linear-gradient(135deg, rgba(14, 22, 36, 0.85) 0%, rgba(8, 13, 22, 0.92) 100%);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: linear-gradient(135deg, rgba(14, 22, 36, 0.95) 0%, rgba(8, 13, 22, 0.98) 100%);
       border: 1px solid var(--card-border);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      transform: translateZ(0);
-      backface-visibility: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .glass-panel:hover {
       border-color: rgba(118, 185, 0, 0.35);
-      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(118, 185, 0, 0.1);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 16px rgba(118, 185, 0, 0.1);
     }
 
     .glass-nav {
-      background: rgba(8, 13, 22, 0.88);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(6, 10, 18, 0.95);
       border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-      transform: translateZ(0);
     }
 
-    /* Content Visibility for Instant First Paint and Zero Layout Jitter */
+    /* Smooth Containment Without Scroll Recalculation Stutter */
     .section-contain {
-      content-visibility: auto;
-      contain-intrinsic-size: 1px 600px;
+      contain: style;
     }
 
     /* Gradient Text */
@@ -446,12 +437,12 @@
           </div>
 
           <!-- Affinity Metric Callout -->
-          <div id="targetAffinityBadge" class="absolute top-4 right-4 z-10 font-mono text-xs px-3.5 py-1.5 rounded-xl bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-bold backdrop-blur-xl shadow-lg">
+          <div id="targetAffinityBadge" class="absolute top-4 right-4 z-10 font-mono text-xs px-3.5 py-1.5 rounded-xl bg-[#06121e]/90 text-emerald-300 border border-emerald-500/40 font-bold shadow-lg">
             ⚡ Estimated ΔG: -9.40 kcal/mol
           </div>
 
           <!-- Loading Spinner Indicator (Hidden by default) -->
-          <div id="targetLoadingOverlay" class="absolute inset-0 bg-[#040810]/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 opacity-0 pointer-events-none">
+          <div id="targetLoadingOverlay" class="absolute inset-0 bg-[#040810]/90 z-20 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 opacity-0 pointer-events-none">
             <div class="w-8 h-8 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin"></div>
             <span class="text-xs font-mono text-emerald-300">Fetching atomic structure from RCSB PDB...</span>
           </div>
@@ -982,7 +973,7 @@ metadata = {
   </section>
 
   <!-- FOOTER TRADEMARK & COPYRIGHT OWNERSHIP -->
-  <footer class="border-t border-white/5 bg-[#03060a]/90 py-10 mt-16 backdrop-blur-xl">
+  <footer class="border-t border-white/5 bg-[#03060a]/95 py-10 mt-16">
     <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-gray-500">
       <div class="flex items-center gap-3">
         <span class="font-extrabold text-gray-200 tracking-wider">JORWAL™ BioNeMo Benchmark</span>
@@ -1055,25 +1046,45 @@ metadata = {
 
     document.addEventListener("DOMContentLoaded", () => {
       const container = document.getElementById('hero3DStage');
-      if (!container || typeof $3Dmol === 'undefined') return;
-      
-      heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#040810' });
-      loadTargetStructure('8AZV');
+      if (!container) return;
 
-      // PERFORMANCE OBSERVABILITY: Pause WebGL Render Loop when offscreen to eliminate scroll lag
-      if ('IntersectionObserver' in window) {
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
+      // Defer WebGL context allocation by 60ms so initial DOM, text, and badges paint with 0ms hitch
+      setTimeout(() => {
+        if (typeof $3Dmol === 'undefined') return;
+        heroViewer = $3Dmol.createViewer(container, { backgroundColor: '#040810', id: 'heroMolCanvas' });
+        loadTargetStructure('8AZV');
+
+        // Scroll Performance Sentinel: halt WebGL spin loop immediately while user is scrolling
+        let scrollTimer = null;
+        window.addEventListener('scroll', () => {
+          if (!heroViewer) return;
+          heroViewer.spin(false);
+          clearTimeout(scrollTimer);
+          scrollTimer = setTimeout(() => {
             if (!heroViewer) return;
-            if (entry.isIntersecting) {
-              if (isSpinning) heroViewer.spin("y", 0.7);
-            } else {
-              heroViewer.spin(false);
+            const rect = container.getBoundingClientRect();
+            const inView = rect.top < window.innerHeight && rect.bottom > 0;
+            if (inView && isSpinning) {
+              heroViewer.spin("y", 0.35);
             }
-          });
-        }, { threshold: 0.1 });
-        observer.observe(container);
-      }
+          }, 150);
+        }, { passive: true });
+
+        // Viewport Visibility: pause WebGL render loop completely when off-screen
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+              if (!heroViewer) return;
+              if (entry.isIntersecting) {
+                if (isSpinning) heroViewer.spin("y", 0.35);
+              } else {
+                heroViewer.spin(false);
+              }
+            });
+          }, { threshold: 0.05 });
+          observer.observe(container);
+        }
+      }, 60);
     });
 
     function loadTargetStructure(pdbId) {
@@ -1164,7 +1175,7 @@ metadata = {
       heroViewer.zoomTo({ resn: cfg.ligandResn });
       heroViewer.render();
       if (isSpinning) {
-        heroViewer.spin("y", 0.7);
+        heroViewer.spin("y", 0.35);
       }
     }
 
@@ -1184,7 +1195,7 @@ metadata = {
     function toggleSpin() {
       if (!heroViewer) return;
       isSpinning = !isSpinning;
-      heroViewer.spin(isSpinning ? "y" : false, 0.7);
+      heroViewer.spin(isSpinning ? "y" : false, 0.35);
       const btn = document.getElementById('btnSpin');
       if (btn) btn.classList.toggle('active', isSpinning);
     }
