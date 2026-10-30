@@ -2,18 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'"/>
 <meta name="referrer" content="no-referrer"/>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Agentic BioNeMo — AI Drug Discovery Scientist</title>
-<meta name="description" content="Autonomous multi-agent AI platform for target-to-lead drug discovery powered by NVIDIA BioNeMo NIMs (MolMIM, DiffDock, ESM-2)."/>
+<title>NVIDIA BioNeMo Benchmark Cockpit — Interactive 3D Discovery Studio</title>
+<meta name="description" content="Interactive 3D molecular cockpit for target-to-lead modeling and benchmarking with NVIDIA BioNeMo NIMs. Built by Aarav Jorwal (@Jorwalzzz)."/>
+<meta property="og:title" content="NVIDIA BioNeMo Benchmark Cockpit"/>
+<meta property="og:description" content="Interactive 3D molecular modeling cockpit for target-to-lead modeling and benchmarking with NVIDIA BioNeMo NIMs."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/cockpit.html"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="NVIDIA BioNeMo Benchmark Cockpit"/>
+<meta name="twitter:description" content="Interactive 3D molecular modeling cockpit for target-to-lead modeling and benchmarking with NVIDIA BioNeMo NIMs."/>
+<link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/cockpit.html"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
-<script src="results/pdb_data.js"></script>
+<script src="./results/pdb_data.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
