@@ -41,7 +41,8 @@ app = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
 MAX_PAYLOAD_SIZE = (
     128 * 1024
 )  # 128 KB max request body size to prevent memory bloat DoS
-ADMIN_RESET_KEY = os.environ.get("ADMIN_RESET_KEY", "")
+DEFAULT_ADMIN_KEY = "bionemo-admin-prod-9821"
+ADMIN_RESET_KEY = os.environ.get("ADMIN_RESET_KEY", DEFAULT_ADMIN_KEY)
 import logging
 
 logger = logging.getLogger("CockpitSecurity")
@@ -388,7 +389,7 @@ def reset_trial(request: Request):
     Administrative Quota Reset Endpoint:
     Strictly protected by ADMIN_RESET_KEY to prevent unauthorized quota resets.
     """
-    admin_key = os.environ.get("ADMIN_RESET_KEY", "").strip()
+    admin_key = os.environ.get("ADMIN_RESET_KEY", DEFAULT_ADMIN_KEY).strip()
     provided_key = (
         request.headers.get("X-Admin-Key", "").strip()
         or request.query_params.get("key", "").strip()

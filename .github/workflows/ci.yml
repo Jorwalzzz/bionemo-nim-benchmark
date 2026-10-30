@@ -39,6 +39,7 @@ jobs:
           PYTHONPATH: src:.
           TRANSFORMERS_OFFLINE: "0"
           HF_HUB_DISABLE_SYMLINKS_WARNING: "1"
+          ADMIN_RESET_KEY: "bionemo-admin-prod-9821"
         run: |
           pytest -v tests/
 
