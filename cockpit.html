@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
 <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
@@ -19,108 +19,17 @@
 <meta name="twitter:title" content="NVIDIA BioNeMo Benchmark Cockpit"/>
 <meta name="twitter:description" content="Interactive 3D molecular modeling cockpit for target-to-lead modeling and benchmarking with NVIDIA BioNeMo NIMs."/>
 <link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/cockpit.html"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='28' fill='%2305080c'/%3E%3Cpath d='M60 24 C78 24 94 38 94 56 C94 72 82 86 68 88' stroke='%2376b900' stroke-width='8' fill='none'/%3E%3Cpath d='M60 24 C44 24 26 38 26 56 C26 70 36 84 52 88' stroke='%2300f1fd' stroke-width='6' fill='none'/%3E%3Ccircle cx='60' cy='24' r='6' fill='%2376b900'/%3E%3Ccircle cx='60' cy='88' r='6' fill='%2300f1fd'/%3E%3C/svg%3E"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./app.min.css"/>
+<link rel="stylesheet" href="./cockpit.css"/>
 <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
 <script src="./results/pdb_data.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-tailwind.config = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
-      colors: {
-        nvidia: { green: '#76b900', bright: '#a3e635' },
-        cyber: { cyan: '#00f1fd', purple: '#a855f7', blue: '#3b82f6' },
-        surface: { base: '#080c12', card: '#0d1117', elevated: '#161b22', border: '#21262d' }
-      },
-      animation: {
-        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
-        'slide-in': 'slideIn 0.4s ease-out',
-        'fade-up': 'fadeUp 0.5s ease-out',
-        'scan-line': 'scanLine 3s linear infinite',
-        'float': 'float 3s ease-in-out infinite',
-        'agent-run': 'agentRun 1.5s ease-in-out infinite',
-      },
-      keyframes: {
-        pulseGlow: { '0%,100%': { opacity: '0.6' }, '50%': { opacity: '1' } },
-        slideIn: { from: { opacity: '0', transform: 'translateX(-20px)' }, to: { opacity: '1', transform: 'translateX(0)' } },
-        fadeUp: { from: { opacity: '0', transform: 'translateY(16px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
-        scanLine: { '0%': { top: '0%' }, '100%': { top: '100%' } },
-        float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-6px)' } },
-        agentRun: { '0%,100%': { boxShadow: '0 0 5px rgba(118,185,0,0.3)' }, '50%': { boxShadow: '0 0 20px rgba(118,185,0,0.8), 0 0 40px rgba(118,185,0,0.3)' } },
-      }
-    }
-  }
-}
-</script>
-<link rel="stylesheet" href="cockpit.css">
 </head>
 <body class="dark bg-grid">
-
-<!-- ═══════════════════════════════════════════════ CYBERNETIC BOOTLOADER ══════ -->
-<div id="biosBootloader" class="fixed inset-0 z-[9999] bg-[#05080c] flex flex-col items-center justify-center font-mono select-none transition-opacity duration-700 ease-out">
-  <!-- Glowing Hex Background Orb -->
-  <div class="absolute w-96 h-96 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none"></div>
-
-  <div class="relative z-10 w-full max-w-lg p-6 space-y-4">
-    <!-- NVIDIA Logo & Header -->
-    <div class="flex items-center gap-3 pb-3 border-b border-surface-border">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#76b900] to-[#3a5d00] flex items-center justify-center shadow-lg shadow-emerald-500/30">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-      </div>
-      <div>
-        <div class="text-sm font-bold text-white tracking-wider flex items-center gap-2">
-          <span>NVIDIA BIONEMO™ AGENTIC SCIENTIST</span>
-          <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">BOOT V2.4</span>
-        </div>
-        <div class="text-[10px] text-gray-400">Autonomous Molecular Intelligence & NIM Orchestration</div>
-      </div>
-    </div>
-
-    <!-- Diagnostic Terminal Log Output -->
-    <div class="space-y-1.5 text-xs text-gray-300 bg-[#090d14]/90 p-4 rounded-xl border border-surface-border min-h-[140px]">
-      <div id="bootLine1" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
-        <span class="text-emerald-400 font-bold">▶ [SYSTEM]</span>
-        <span>Initializing TensorRT-LLM Microservice Handshakes...</span>
-      </div>
-      <div id="bootLine2" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
-        <span class="text-cyan-400 font-bold">▶ [ESMFOLD]</span>
-        <span>Loading 3D Alpha-Carbon Backbone De Novo Kernel...</span>
-      </div>
-      <div id="bootLine3" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
-        <span class="text-purple-400 font-bold">▶ [MOLMIM]</span>
-        <span>Calibrating Latent CMA-ES Property Steering Embeddings...</span>
-      </div>
-      <div id="bootLine4" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
-        <span class="text-amber-400 font-bold">▶ [DIFFDOCK]</span>
-        <span>Mounting SE(3) Equivariant Diffusion Score Network...</span>
-      </div>
-      <div id="bootLine5" class="flex items-center gap-2 opacity-0 transition-opacity duration-300">
-        <span class="text-emerald-400 font-bold">▶ [SECURITY]</span>
-        <span class="text-emerald-300 font-semibold">NIST GDM-100 Dual-Use Biosecurity Gate: ENGAGED [SAFE]</span>
-      </div>
-    </div>
-
-    <!-- Animated Progress Bar -->
-    <div class="space-y-1.5">
-      <div class="flex justify-between text-[10px] text-gray-400">
-        <span id="bootProgressLabel">Booting Swarm Sub-Agents...</span>
-        <span id="bootProgressPct" class="text-emerald-400 font-bold">0%</span>
-      </div>
-      <div class="w-full bg-gray-800/80 rounded-full h-1.5 overflow-hidden">
-        <div id="bootProgressBar" class="h-full bg-gradient-to-r from-emerald-500 via-cyan-400 to-[#76b900] transition-all duration-300 ease-out" style="width: 0%;"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-
 <!-- ═══════════════════════════════════════════════ HEADER ══════════════ -->
 <header class="glass sticky top-0 z-50 border-b border-surface-border">
   <div class="flex items-center justify-between px-6 h-14">
@@ -330,7 +239,7 @@ tailwind.config = {
 
           <!-- Tab 1: Presets -->
           <div id="targetTabPresets">
-            <select id="targetSelect" class="w-full text-sm rounded-lg px-3 py-2.5 font-medium focus:outline-none focus:ring-2 transition-all" style="background: #161b22; border: 1px solid #30363d; color: #e6edf3;" onchange="updateTargetInfo()">
+            <select id="targetSelect" aria-label="Target Selection" class="w-full text-sm rounded-lg px-3 py-2.5 font-medium focus:outline-none focus:ring-2 transition-all" style="background: #161b22; border: 1px solid #30363d; color: #e6edf3;" onchange="updateTargetInfo()">
               <option value="KRAS G12D">🧬 KRAS G12D (Colon/Lung Cancer)</option>
               <option value="EGFR T790M">🔬 EGFR T790M (Lung Cancer)</option>
               <option value="SARS-CoV-2 Mpro">🦠 SARS-CoV-2 Mpro (COVID-19)</option>
@@ -341,7 +250,7 @@ tailwind.config = {
           <!-- Tab 2: RCSB PDB -->
           <div id="targetTabRcsb" class="hidden">
             <div class="flex gap-1.5">
-              <input type="text" id="customTargetInput" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
+              <input type="text" id="customTargetInput" aria-label="Custom RCSB PDB ID" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
               <button type="button" onclick="fetchCustomTarget()" class="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors">Fetch</button>
             </div>
             <p class="text-[10px] text-gray-500 mt-1">Fetches experimental crystallographic receptor from RCSB PDB.</p>
@@ -354,7 +263,7 @@ tailwind.config = {
                 <span class="text-[11px] text-gray-400">Amino Acid Sequence</span>
                 <span class="text-[10px] text-cyan-400 font-mono" id="seqLenBadge">0 aa</span>
               </div>
-              <textarea id="esmfoldSeqInput" rows="3" placeholder="Paste FASTA or amino acid sequence (e.g. MTEYKLVVV...)" oninput="updateSeqCount()" class="w-full text-[11px] p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 font-mono focus:border-cyan-400 focus:outline-none resize-none"></textarea>
+              <textarea id="esmfoldSeqInput" aria-label="ESMFold Amino Acid Sequence" rows="3" placeholder="Paste FASTA or amino acid sequence (e.g. MTEYKLVVV...)" oninput="updateSeqCount()" class="w-full text-[11px] p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 font-mono focus:border-cyan-400 focus:outline-none resize-none"></textarea>
             </div>
             <div>
               <div class="text-[10px] text-gray-400 mb-1">Quick Load Oncogenic Mutants:</div>
@@ -389,7 +298,7 @@ tailwind.config = {
         <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
           📦 Candidates: <span id="candidateNum" class="text-nvidia-green">10</span>
         </label>
-        <input type="range" id="candidateSlider" min="4" max="20" value="10" class="w-full accent-green-500 cursor-pointer" oninput="document.getElementById('candidateNum').textContent=this.value"/>
+        <input type="range" id="candidateSlider" aria-label="Candidate Count Slider" min="4" max="20" value="10" class="w-full accent-green-500 cursor-pointer" oninput="document.getElementById('candidateNum').textContent=this.value"/>
       </div>
 <div class="mb-5">
   <div class="flex justify-between items-center mb-1.5">
@@ -1105,7 +1014,7 @@ tailwind.config = {
           <span>Copy Markdown</span>
         </button>
       </div>
-      <textarea id="forumPostContent" rows="14" class="w-full text-xs font-mono p-4 rounded-xl bg-[#010409] border border-[#21262d] text-gray-200 select-all focus:outline-none focus:border-purple-400 resize-none leading-relaxed"></textarea>
+      <textarea id="forumPostContent" aria-label="NVIDIA Developer Forum Post Text" rows="14" class="w-full text-xs font-mono p-4 rounded-xl bg-[#010409] border border-[#21262d] text-gray-200 select-all focus:outline-none focus:border-purple-400 resize-none leading-relaxed"></textarea>
       
       <div class="flex justify-end pt-2">
         <button onclick="closeForumModal()" class="px-4 py-2 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">

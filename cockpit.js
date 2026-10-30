@@ -730,7 +730,7 @@ function staticQuota(consume) {
   return { allowed: rem > 0, runs_used: used, runs_remaining: rem, max_runs: 2, is_locked: rem <= 0 };
 }
 
-async function fetchTrialStatus() {
+async function fetchTrialStatus() { if (window.location.protocol === 'file:' || window.location.hostname.endsWith('github.io')) { updateTrialUI(staticQuota(0)); return; }
   try {
     const res = await fetch('/api/trial-status', {
       headers: { 'X-Client-Fingerprint': CLIENT_FP }
@@ -951,9 +951,9 @@ async function runDiscovery() {
   document.getElementById('runLabel').textContent = 'Authorizing & Running...';
 
   // ─ Anti-Bypass Backend Enforcement ─
-  let backendData = null;
+  let backendData = null; const isStaticHost = window.location.protocol === 'file:' || window.location.hostname.endsWith('github.io');
   try {
-    const res = await fetch(`/api/run?target=${encodeURIComponent(target)}&candidates=${candidates}`, {
+    const res = isStaticHost ? { ok: false, status: 0 } : await fetch(`/api/run?target=${encodeURIComponent(target)}&candidates=${candidates}`, {
       method: 'POST',
       headers: {
         'X-Client-Fingerprint': CLIENT_FP
@@ -991,7 +991,7 @@ async function runDiscovery() {
       currentTargetMeanPlddt = backendData.mean_plddt || 0.0;
     }
   } catch (err) {
-    console.warn('API run warning:', err);
+    if (!isStaticHost) console.warn('API run warning:', err);
   }
   if (!backendData) {
     // Static mode: consume a run (server-side limiter unavailable)
@@ -1231,7 +1231,7 @@ function selectLead(i) {
           <span>🧪 Chemical Workbench</span>
           <span class="text-[10px] text-gray-500 font-mono">Live Re-Dock</span>
         </div>
-        <input type="text" id="workbenchSmilesInput" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
+        <input type="text" id="workbenchSmilesInput" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
         
         <div class="grid grid-cols-3 gap-1 mb-2">
           <button type="button" onclick="tweakSmiles('fluorine')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+F Fluorine</button>

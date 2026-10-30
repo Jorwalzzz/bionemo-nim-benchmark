@@ -2,7 +2,7 @@
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
@@ -20,14 +20,15 @@
   <meta name="twitter:title" content="NVIDIA BioNeMo & NIM Inference Benchmark"/>
   <meta name="twitter:description" content="High-performance computational biology benchmark suite comparing NVIDIA BioNeMo microservices against CPU baselines."/>
   <link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='28' fill='%2305080c'/%3E%3Cpath d='M60 24 C78 24 94 38 94 56 C94 72 82 86 68 88' stroke='%2376b900' stroke-width='8' fill='none'/%3E%3Cpath d='M60 24 C44 24 26 38 26 56 C26 70 36 84 52 88' stroke='%2300f1fd' stroke-width='6' fill='none'/%3E%3Ccircle cx='60' cy='24' r='6' fill='%2376b900'/%3E%3Ccircle cx='60' cy='88' r='6' fill='%2300f1fd'/%3E%3C/svg%3E"/>
 
   <!-- High-End Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 
-  <!-- CDNs -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Compiled High-Performance Stylesheet (Zero Runtime JIT Overhead) -->
+  <link rel="stylesheet" href="./app.min.css"/>
   <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
   <script src="./results/pdb_data.js"></script>
 
