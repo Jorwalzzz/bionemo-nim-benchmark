@@ -533,6 +533,15 @@ function evaluateClientRedock(smiles, targetName) {
   };
 }
 
+function triggerRedockFromWorkbench() {
+  const smilesInput = document.getElementById('workbenchSmilesInput');
+  const smiles = smilesInput ? smilesInput.value : '';
+  let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
+  if (currentTargetTab === 'esmfold') target = 'ESMFold De Novo';
+  else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'RCSB Target';
+  redockModifiedLead(smiles, target);
+}
+
 async function redockModifiedLead(smiles, targetName) {
   showToast('⚡ Dr. Elena re-docking modified lead in 3D...');
   let data = null;
@@ -1127,17 +1136,21 @@ function selectLead(i) {
   if (currentTargetTab === 'esmfold') target = 'ESMFold De Novo';
   else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput').value || '').trim() || 'RCSB Target';
   const info = TARGETS[target] || { pdb: 'CUSTOM', color: '#76b900' };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeLeadId = esc(lead.id);
+  const safeVerdict = esc(lead.verdict);
+  const safeSmiles = esc(lead.smiles || 'CC(=O)Nc1ccc(O)cc1');
   
   document.getElementById('dossierPanel').innerHTML = `
     <div class="space-y-3 animate-fade-up">
       <div class="p-3 rounded-xl" style="background: rgba(118,185,0,0.06); border: 1px solid rgba(118,185,0,0.2);">
         <div class="flex items-center justify-between mb-1">
-          <div class="font-mono font-bold text-sm text-white">${lead.id}</div>
+          <div class="font-mono font-bold text-sm text-white">${safeLeadId}</div>
           <span class="text-[10px] font-mono text-gray-400">ΔG <strong class="text-nvidia-green">${lead.affinity.toFixed(2)}</strong></span>
         </div>
         <div class="flex gap-1.5 flex-wrap">
           ${lead.pareto ? '<span class="badge-green">PARETO OPTIMAL</span>' : ''}
-          <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${lead.verdict}</span>
+          <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${safeVerdict}</span>
           <span class="badge-cyan">Round ${lead.round || 1}</span>
         </div>
       </div>
@@ -1188,7 +1201,7 @@ function selectLead(i) {
           <span>🧪 Chemical Workbench</span>
           <span class="text-[10px] text-gray-500 font-mono">Live Re-Dock</span>
         </div>
-        <input type="text" id="workbenchSmilesInput" value="${lead.smiles || 'CC(=O)Nc1ccc(O)cc1'}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
+        <input type="text" id="workbenchSmilesInput" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
         
         <div class="grid grid-cols-3 gap-1 mb-2">
           <button type="button" onclick="tweakSmiles('fluorine')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+F Fluorine</button>
@@ -1196,7 +1209,7 @@ function selectLead(i) {
           <button type="button" onclick="tweakSmiles('pyridine')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Swap Pyridine</button>
         </div>
 
-        <button type="button" onclick="redockModifiedLead(document.getElementById('workbenchSmilesInput').value, '${target}')" class="w-full py-1.5 btn-cta text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5">
+        <button type="button" onclick="triggerRedockFromWorkbench()" class="w-full py-1.5 btn-cta text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5">
           <span>⚡ Instant Re-Dock Modified Lead</span>
         </button>
         <div id="redockAffinityDisplay" class="mt-1.5 text-center text-xs"></div>

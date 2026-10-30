@@ -116,11 +116,11 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
     )
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://3Dmol.org https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
-        "connect-src 'self' https://health.api.nvidia.com https://integrate.api.nvidia.com https://files.rcsb.org;"
+        "connect-src 'self' https://health.api.nvidia.com https://integrate.api.nvidia.com https://files.rcsb.org https://raw.githubusercontent.com;"
     )
     if "server" in response.headers:
         del response.headers["server"]
@@ -217,6 +217,8 @@ def verify_request_origin(request: Request) -> bool:
             hostname == "huggingface.co"
             or hostname.endswith(".hf.space")
             or hostname.endswith(".huggingface.co")
+            or hostname == "github.io"
+            or hostname.endswith(".github.io")
         ):
             return True
     except Exception:
@@ -539,8 +541,8 @@ def get_download_checksums():
 @app.get("/api/setup-guide")
 def get_setup_guide():
     return {
-        "windows_powershell": "irm https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/install.ps1 | iex",
-        "unix_curl": "curl -sSL https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/install.sh | bash",
+        "windows_powershell": "irm https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.ps1 | iex",
+        "unix_curl": "curl -sSL https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.sh | bash",
         "docker": "git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git && cd bionemo-nim-benchmark && docker compose up",
         "github": "https://github.com/Jorwalzzz/bionemo-nim-benchmark",
         "note": "Free Mock Mode works with zero API credits. Add NVIDIA_API_KEY to .env on your local instance for live GPU inference.",
