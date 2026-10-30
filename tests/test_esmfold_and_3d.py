@@ -4,8 +4,8 @@ Part of NVIDIA BioNeMo Agentic Scientist Suite.
 Copyright (C) 2026 Jorwalzzz.
 """
 
-from src.models import TargetProfile
-from src.target_scout import TargetScoutAgent
+from bionemo_benchmark.core.models import TargetProfile
+from bionemo_benchmark.agents.target_scout import TargetScoutAgent
 
 
 def test_amino_acid_sequence_detection():

@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import pytest
 
-from src.baseline import BaselineProfileResult, LocalCPUBaseline
-from src.client import DiffDockResponse, ESM2Response, NimBioClient
-from src.pipeline import (
+from bionemo_benchmark.core.baseline import BaselineProfileResult, LocalCPUBaseline
+from bionemo_benchmark.core.client import DiffDockResponse, ESM2Response, NimBioClient
+from bionemo_benchmark.core.pipeline import (
     BenchmarkPipeline,
     ComplexBenchmarkRecord,
 )
@@ -185,7 +185,7 @@ class TestPdbUtils:
     """Tests PDB fetching, atom filtering, and synthetic backbone generation."""
 
     def test_sanitize_pdb_atom_records(self):
-        from src.pdb_utils import sanitize_pdb_atom_records
+        from bionemo_benchmark.domain.pdb_utils import sanitize_pdb_atom_records
 
         raw = "HEADER  TEST PROTEIN\nATOM      1  N   MET A   1      27.340  24.430   2.610  1.00  9.67           N\nHETATM 9999  O   HOH A 200      12.000  10.000   5.000  1.00 15.00           O\nEND\n"
         sanitized = sanitize_pdb_atom_records(raw)
@@ -195,7 +195,7 @@ class TestPdbUtils:
         assert sanitized.strip().endswith("END")
 
     def test_generate_synthetic_backbone(self):
-        from src.pdb_utils import generate_synthetic_backbone
+        from bionemo_benchmark.domain.pdb_utils import generate_synthetic_backbone
 
         seq = "MQIFVKTLTG"
         pdb_str = generate_synthetic_backbone(seq)
@@ -205,7 +205,7 @@ class TestPdbUtils:
         assert pdb_str.strip().endswith("END")
 
     def test_resolve_protein_structure_cached_or_synthetic(self):
-        from src.pdb_utils import resolve_protein_structure
+        from bionemo_benchmark.domain.pdb_utils import resolve_protein_structure
 
         # 1UBQ should be in cache or fetched
         pdb_out = resolve_protein_structure(pdb_id="1UBQ", sequence="MQIFVKTLTG")

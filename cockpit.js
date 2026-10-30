@@ -1365,32 +1365,107 @@ function showToast(msg) {
 }
 
 // ─── Download Installer ───────────────────────────────────────────────────
-function downloadInstaller(type) {
+async function downloadInstaller(type) {
   const isLocalServer = window.location.protocol.startsWith('http') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const file = type === 'windows' ? 'install.bat' : 'install.sh';
-  const url = isLocalServer
-    ? `/api/download/installer-${type}`
-    : `https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/${file}`;
+  let file = 'install.bat';
+  if (type === 'unix') file = 'install.sh';
+  else if (type === 'powershell') file = 'install.ps1';
 
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = file;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast(`📥 Downloading ${file}...`);
-}
+  showToast('Preparing ' + file + '...');
 
-function downloadDossier() {
-  const isLocalServer = window.location.protocol.startsWith('http') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const candidateUrls = [];
   if (isLocalServer) {
-    window.open('/api/dossier', '_blank');
+    candidateUrls.push('/api/download/installer-' + type);
+  }
+  // Same-origin relative paths (GitHub Pages and static local server)
+  candidateUrls.push('./scripts/installers/' + file);
+  candidateUrls.push('scripts/installers/' + file);
+  // Raw GitHub CDN fallback (Access-Control-Allow-Origin: *)
+  candidateUrls.push('https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/' + file);
+
+  let blob = null;
+  for (const url of candidateUrls) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const content = await res.text();
+        if (content && content.length > 50) {
+          blob = new Blob([content], { type: 'application/octet-stream' });
+          break;
+        }
+      }
+    } catch (e) {
+      // Continue to next candidate URL
+    }
+  }
+
+  if (blob) {
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = blobUrl;
+    a.download = file;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 1500);
+    showToast('Downloaded ' + file + '! Run it to launch.');
   } else {
-    window.open('results/CANDIDATE_SELECTION_DOSSIER.md', '_blank');
+    const fallbackUrl = 'https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/' + file;
+    window.open(fallbackUrl, '_blank');
+    showToast('Opening ' + file + ' directly in new tab...');
   }
 }
-function downloadSDF() {
-  window.open('results/top_leads_docked.sdf', '_blank');
+
+async function downloadDossier() {
+  const isLocalServer = window.location.protocol.startsWith('http') && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const file = 'CANDIDATE_SELECTION_DOSSIER.md';
+  const url = isLocalServer ? '/api/dossier' : 'results/CANDIDATE_SELECTION_DOSSIER.md';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const blob = new Blob([text], { type: 'text/markdown' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = file;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 1000);
+    showToast('Dossier (.md) downloaded!');
+  } catch (e) {
+    window.open(url, '_blank');
+  }
+}
+
+async function downloadSDF() {
+  const file = 'top_leads_docked.sdf';
+  const url = 'results/top_leads_docked.sdf';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const blob = new Blob([text], { type: 'chemical/x-mdl-sdfile' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = file;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 1000);
+    showToast('Docked Poses (.sdf) downloaded!');
+  } catch (e) {
+    window.open(url, '_blank');
+  }
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────

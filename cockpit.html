@@ -613,7 +613,7 @@ tailwind.config = {
             📥 Download install.bat &nbsp;(Universal Windows Setup)
           </button>
           <div class="text-center text-xs text-gray-400 mt-2">Zero configuration. Automatically creates Python 3.12 environment, verifies NVIDIA NIM credentials, and launches Cockpit.</div>
-          <div class="text-center text-xs text-gray-500 mt-1">Direct script: <a href="https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.bat" target="_blank" download class="underline hover:text-emerald-400">install.bat</a></div>
+          <div class="text-center text-xs text-gray-500 mt-1">Direct script: <a href="javascript:void(0)" onclick="downloadInstaller('windows')" class="underline hover:text-emerald-400">install.bat</a> &bull; <a href="javascript:void(0)" onclick="downloadInstaller('powershell')" class="underline hover:text-cyan-400">install.ps1</a></div>
         </div>
         <div class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2 mt-5">Or: PowerShell 1-Liner</div>
         <div class="code-box">
@@ -633,7 +633,7 @@ tailwind.config = {
           <button onclick="downloadInstaller('unix')" class="btn-cta w-full text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
             📥 Download install.sh (Run with bash)
           </button>
-          <div class="text-center text-xs text-gray-600 mt-2">Save and run: <code class="font-mono" style="color: var(--nvidia-green);">bash install.sh</code></div>
+          <div class="text-center text-xs text-gray-600 mt-2">Save and run: <a href="javascript:void(0)" onclick="downloadInstaller('unix')" class="underline font-mono" style="color: var(--nvidia-green);">bash install.sh</a></div>
         </div>
         <div class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2 mt-5">Or: cURL 1-Liner</div>
         <div class="code-box">

@@ -13,7 +13,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from serve_cockpit import app
-from src.security_sentinel import (
+from bionemo_benchmark.infra.security_sentinel import (
     BiosecurityScreener,
     SafeSanitizer,
     SecretScrubber,
@@ -100,8 +100,8 @@ def test_code_literal_injection_sanitization():
 
 
 def test_robot_protocol_generation_escapes_injection():
-    from src.models import RetrosynthesisPlan, RetrosynthesisStep
-    from src.robot_protocol import generate_ot2_protocol
+    from bionemo_benchmark.core.models import RetrosynthesisPlan, RetrosynthesisStep
+    from bionemo_benchmark.domain.robot_protocol import generate_ot2_protocol
 
     malicious_step = RetrosynthesisStep(
         step_number=1,
@@ -196,7 +196,7 @@ def test_biosecurity_target_query_rejection(client):
 
 
 def test_green_compute_profiler_and_tco():
-    from src.nvidia_showcase import GreenComputeProfiler
+    from bionemo_benchmark.reporting.nvidia_showcase import GreenComputeProfiler
 
     impact = GreenComputeProfiler.calculate_campaign_impact(
         cpu_time_sec=22.8, gpu_time_sec=0.401, num_molecules=10000

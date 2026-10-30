@@ -7,7 +7,7 @@
 [![NIM Blueprint](https://img.shields.io/badge/NVIDIA%20Blueprint-DGX%20Ready-76B900.svg)](#-enterprise-discovery-capabilities-closing-the-loop)
 [![FDA IND](https://img.shields.io/badge/FDA%20IND-21%20CFR%20312%20Automated-blue.svg)](results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf)
 [![Opentrons OT-2](https://img.shields.io/badge/Robotics-Opentrons%20OT--2%20Ready-amber.svg)](results/ot2_synthesis_protocol_KRAS_G12D.py)
-[![Adaptive Resistance](https://img.shields.io/badge/Resistance%20Escape-ESM--2%20%2B%20MolMIM-purple.svg)](src/resistance_engine.py)
+[![Adaptive Resistance](https://img.shields.io/badge/Resistance%20Escape-ESM--2%20%2B%20MolMIM-purple.svg)](src/bionemo_benchmark/agents/resistance_engine.py)
 [![PyPI Version](https://img.shields.io/pypi/v/jorwal-nim.svg?color=blue)](https://pypi.org/project/jorwal-nim/)
 [![npm Version](https://img.shields.io/npm/v/jorwal-nim.svg?color=red)](https://www.npmjs.com/package/jorwal-nim)
 [![ORCID iD](https://img.shields.io/badge/ORCID-0009--0008--8922--3599-A6CE39.svg)](https://orcid.org/0009-0008-8922-3599)

@@ -11,9 +11,9 @@ import os
 import pytest
 from rdkit import Chem
 
-from src.docking_agent import BiophysicsDockingAgent
-from src.models import MoleculeCandidate, TargetProfile
-from src.target_scout import RESTRICTED_PATHOGEN_SIGNATURES, screen_biosecurity_dual_use
+from bionemo_benchmark.agents.docking_agent import BiophysicsDockingAgent
+from bionemo_benchmark.core.models import MoleculeCandidate, TargetProfile
+from bionemo_benchmark.agents.target_scout import RESTRICTED_PATHOGEN_SIGNATURES, screen_biosecurity_dual_use
 
 
 class TestDrArisThorneBiophysics:
@@ -108,7 +108,7 @@ class TestApolloDevRelMetrics:
     """Tests Apollo's benchmark telemetry and speedup calculations."""
 
     def test_speedup_ratios_validity(self):
-        from src.metrics import calculate_speedup
+        from bionemo_benchmark.core.metrics import calculate_speedup
 
         cpu_time = 58.4
         gpu_time = 1.0
