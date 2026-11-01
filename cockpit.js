@@ -792,56 +792,21 @@ async function fetchTrialStatus() { if (window.location.protocol === 'file:' || 
 }
 
 function updateTrialUI(status) {
-  trialState = status;
-  const badge = document.getElementById('trialBadge');
+  trialState = status || { allowed: true, runs_remaining: 9999, is_locked: false };
   const dot = document.getElementById('trialDot');
   const text = document.getElementById('trialText');
-  const unlockLink = document.getElementById('unlockLink');
-  const fullAppNavBtn = document.getElementById('fullAppNavBtn');
   const runBtn = document.getElementById('runBtn');
   const runLabel = document.getElementById('runLabel');
 
-  const isLocalActive = isLocalServer || (status.runs_remaining && status.runs_remaining > 10) || status.is_local_mode;
-
-  if (isLocalActive) {
-    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-    if (text) text.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">🟢 Local Workstation Active</span> <span class="text-gray-400 text-[11px] font-mono">(Unlimited Discovery Mode)</span>`;
-    if (unlockLink) unlockLink.style.display = 'none';
-    if (fullAppNavBtn) fullAppNavBtn.style.display = 'none';
-    if (runBtn && !isRunning) {
-      runBtn.onclick = () => runCampaign();
-      runBtn.style.background = '';
-      runBtn.style.border = '';
-    }
-    if (runLabel && !isRunning) {
-      runLabel.textContent = '🚀 Run Autonomous Discovery (Local GPU/CPU Engine)';
-    }
-    return;
+  if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+  if (text) text.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Interactive Discovery Studio</span> <span class="text-gray-400 text-[11px] font-mono">• Full Pipeline Active</span>`;
+  if (runBtn && !isRunning) {
+    runBtn.onclick = () => runCampaign();
+    runBtn.style.background = '';
+    runBtn.style.border = '';
   }
-
-  if (status.is_locked || status.runs_remaining === 0) {
-    if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse";
-    if (text) text.innerHTML = `<span class="text-red-400 font-bold">🔒 Free Trial Expired (2/2 Runs Used)</span> • `;
-    if (unlockLink) unlockLink.style.display = 'inline';
-    if (fullAppNavBtn) fullAppNavBtn.style.display = 'inline-flex';
-    if (runBtn && !isRunning) {
-      runBtn.onclick = () => openInstallModal(true);
-      runBtn.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(118, 185, 0, 0.15))';
-      runBtn.style.border = '1px solid rgba(239, 68, 68, 0.6)';
-      if (runLabel) runLabel.textContent = '🔒 Free Trial Limit Reached (2/2 Used) — Get Full Local App';
-    }
-  } else if (status.runs_remaining === 1) {
-    if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse";
-    if (text) text.innerHTML = `<span class="text-yellow-400 font-semibold">⚡ Free Trial: 1 Demo Run Left</span> • `;
-    if (unlockLink) unlockLink.style.display = 'inline';
-    if (fullAppNavBtn) fullAppNavBtn.style.display = 'inline-flex';
-    if (runLabel && !isRunning) runLabel.textContent = '🚀 Run Discovery (1 Free Demo Run Left)';
-  } else {
-    if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse";
-    if (text) text.innerHTML = `<span class="text-gray-300 font-medium">Free Trial: 2 Demo Runs Available</span> • `;
-    if (unlockLink) unlockLink.style.display = 'inline';
-    if (fullAppNavBtn) fullAppNavBtn.style.display = 'inline-flex';
-    if (runLabel && !isRunning) runLabel.textContent = '🚀 Run Autonomous Discovery (2 Free Demo Runs)';
+  if (runLabel && !isRunning) {
+    runLabel.textContent = '🚀 Run Autonomous Discovery';
   }
 }
 
@@ -1491,15 +1456,8 @@ async function runDiscovery() {
     if (!isStaticHost) console.warn('API run warning:', err);
   }
   if (!backendData) {
-    // Static mode: consume a run (server-side limiter unavailable)
+    // Static mode: active without lockout
     const q = staticQuota(1);
-    if (!q.allowed && q.runs_used >= 2 && trialState.runs_remaining <= 0) {
-      isRunning = false;
-      document.getElementById('runBtn').disabled = false;
-      updateTrialUI(q);
-      openInstallModal(true);
-      return;
-    }
     updateTrialUI(q);
   }
 
@@ -1615,28 +1573,11 @@ async function runDiscovery() {
   document.getElementById('streamDot').style.background = '#76b900';
   isRunning = false;
 
-  const isLocalActive = isLocalServer || (trialState.runs_remaining && trialState.runs_remaining > 10) || trialState.is_local_mode;
-
-  if (isLocalActive) {
-    document.getElementById('runBtn').disabled = false;
-    document.getElementById('runBtn').onclick = () => runCampaign();
-    document.getElementById('runBtn').style.background = '';
-    document.getElementById('runBtn').style.border = '';
-    document.getElementById('runLabel').textContent = '🚀 Run Autonomous Discovery (Local GPU/CPU Engine)';
-  } else if (trialState.is_locked || trialState.runs_remaining === 0) {
-    document.getElementById('runBtn').disabled = false;
-    document.getElementById('runBtn').onclick = () => openInstallModal(true);
-    document.getElementById('runBtn').style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(118, 185, 0, 0.15))';
-    document.getElementById('runBtn').style.border = '1px solid rgba(239, 68, 68, 0.6)';
-    document.getElementById('runLabel').textContent = '🔒 Free Trial Limit Reached (2/2 Used) — Get Full Local App';
-    showToast('🎉 Free Trial Complete! Launch the Full Local App for unlimited discovery.');
-    setTimeout(() => {
-      openInstallModal(true);
-    }, 1200);
-  } else {
-    document.getElementById('runBtn').disabled = false;
-    document.getElementById('runLabel').textContent = `🚀 Run Discovery (${trialState.runs_remaining} Free Demo Runs Left)`;
-  }
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('runBtn').onclick = () => runCampaign();
+  document.getElementById('runBtn').style.background = '';
+  document.getElementById('runBtn').style.border = '';
+  document.getElementById('runLabel').textContent = '🚀 Run Autonomous Discovery';
 }
 
 // ─── Render Leads ─────────────────────────────────────────────────────────
@@ -1862,26 +1803,14 @@ function renderPareto() {
   });
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────
-function openInstallModal(isTrialExpired=false) {
+// ─── Desktop App (In Progress) Modal ──────────────────────────────────────
+function openInstallModal() {
   const modal = document.getElementById('installModal');
-  const alertBox = document.getElementById('trialExpiredAlert');
-  if (isTrialExpired || trialState.is_locked || trialState.runs_remaining === 0) {
-    if (alertBox) alertBox.classList.remove('hidden');
-    const t = document.getElementById('modalTitle');
-    if (t) t.textContent = '🔒 Free Trial Limit Reached (2 of 2 Runs Used)';
-    const s = document.getElementById('modalSubtitle');
-    if (s) s.textContent = 'You have completed both free demo runs across this device/network. To screen unlimited targets, custom PDBs, and 10,000+ candidates, launch the Full Local App:';
-  } else {
-    if (alertBox) alertBox.classList.add('hidden');
-    const t = document.getElementById('modalTitle');
-    if (t) t.textContent = 'Install Full Agentic BioNeMo';
-    const s = document.getElementById('modalSubtitle');
-    if (s) s.textContent = 'Fully automated setup — zero config headache. Works on any machine.';
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
   }
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
-  document.body.classList.add('modal-open');
 }
 function closeInstallModal() {
   const modal = document.getElementById('installModal');

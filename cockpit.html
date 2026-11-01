@@ -125,16 +125,15 @@
       <span class="hidden lg:inline-flex items-center gap-1.5 text-[11px] text-gray-400 font-mono ml-2 pl-2 border-l border-gray-700"><span>Architected by <strong class="text-gray-200">Aarav Jorwal (@Jorwalzzz)</strong></span></span>
     </div>
 
-    <!-- Center: Trial Banner -->
-    <div id="trialBadge" class="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all" style="background: rgba(118,185,0,0.06); border: 1px solid rgba(118,185,0,0.2);">
-      <span id="trialDot" class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
-      <span id="trialText" class="text-gray-300 font-medium">Free Trial: Checking quota...</span>
-      <span id="unlockLink" class="text-nvidia-green font-semibold cursor-pointer hover:underline" onclick="openInstallModal()">Unlock Full Version →</span>
+    <!-- Center: Platform Status -->
+    <div id="trialBadge" class="hidden md:flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs" style="background: rgba(118,185,0,0.06); border: 1px solid rgba(118,185,0,0.2);">
+      <span id="trialDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span id="trialText" class="text-gray-300 font-medium">Interactive Discovery Studio • Full Pipeline Active</span>
     </div>
 
     <!-- Right: CTA + Status -->
     <div class="flex items-center gap-3">
-      <div class="hidden md:flex items-center gap-1.5 text-xs text-gray-500">
+      <div id="runtimeModeStatus" class="hidden md:flex items-center gap-1.5 text-xs text-gray-400">
         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
         <span id="runtimeModeLabel">Mock Mode Active</span>
       </div>
@@ -148,10 +147,10 @@
         <span class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
         <span>⚡ Benchmark</span>
       </button>
-      <button id="fullAppNavBtn" onclick="openInstallModal()" class="btn-cta text-white text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 glow-green">
-        <span>⚡ Full App</span>
+      <button id="fullAppNavBtn" onclick="openInstallModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all">
+        <span>🚧 Desktop App: In Progress</span>
       </button>
-    </div>
+    </div></div>
   </div>
 </header>
 
@@ -473,185 +472,79 @@
   </aside>
 </div>
 
-<!-- ═══════════════════════════════════════════════ INSTALL MODAL ════════ -->
+<!-- ═══════════════════════════════════════════════ DESKTOP APP (IN PROGRESS) MODAL ════════ -->
 <div id="installModal" class="modal-backdrop hidden" style="display: none;" onclick="closeModalOnBackdrop(event)">
-  <div class="modal-card p-0 animate-fade-up" onclick="event.stopPropagation()">
+  <div class="modal-card max-w-xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <!-- Modal Header -->
-    <div class="p-6 border-b border-surface-border">
-      <div class="flex items-start justify-between">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <div class="w-5 h-5 rounded flex items-center justify-center" style="background: linear-gradient(135deg, #76b900, #4a7a00);">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="white"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.81 6-4.72 7.28L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.95 2.55 2 6.82 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5v-5l-2.28 2.28C6.81 18 5 15.21 5 12c0-4.08 3.05-7.44 7-7.93V2.05z"/></svg>
-            </div>
-            <h2 id="modalTitle" class="text-base font-bold text-white">Install Full Agentic BioNeMo</h2>
-          </div>
-          <p id="modalSubtitle" class="text-xs text-gray-500">Fully automated setup — zero config headache. Works on any machine.</p>
+    <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-base font-bold">
+          🚧
         </div>
-        <button onclick="closeInstallModal()" class="text-gray-600 hover:text-gray-300 text-xl leading-none p-1">×</button>
+        <div>
+          <h2 id="modalTitle" class="text-base font-bold text-white flex items-center gap-2">
+            <span>Standalone Desktop App</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">In Progress</span>
+          </h2>
+          <p id="modalSubtitle" class="text-xs text-gray-400">Native offline workstation packaging under active engineering</p>
+        </div>
       </div>
+      <button onclick="closeInstallModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none transition-colors">&times;</button>
+    </div>
 
-      <!-- Trial Expired Warning Banner -->
-      <div id="trialExpiredAlert" class="hidden mt-3 p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-xs animate-fade-in">
-        <div class="flex items-center gap-2 font-bold text-red-400 mb-1">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-          <span>Free Trial Quota Reached (2 of 2 Runs Used)</span>
+    <!-- Modal Body -->
+    <div class="p-6 space-y-4 text-xs">
+      <!-- Status Notice -->
+      <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-2">
+        <div class="flex items-center gap-2 font-bold text-amber-400">
+          <span>⚙️ Engineering Roadmap Status: Q1 2027</span>
         </div>
         <p class="text-gray-300 leading-relaxed">
-          Demo trials are strictly limited to 2 discovery campaigns per device and network to protect GPU and API credits. To run <strong>unlimited campaigns</strong> with custom PDB targets, 10,000+ candidates, and GPU acceleration, launch the automated local installer below.
+          The standalone 1-click native desktop installer (single-executable Tauri/Electron bundle with pre-packaged RDKit and embedded CUDA inference) is currently under active development.
         </p>
       </div>
 
-      <!-- Mode toggle -->
-      <div class="mt-4 p-3 rounded-xl" style="background: rgba(118,185,0,0.06); border: 1px solid rgba(118,185,0,0.15);">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: var(--nvidia-green);"></span>
-          <span class="text-xs font-semibold" style="color: var(--nvidia-green);">Free & Open Source — GNU AGPLv3 Copyleft (100% Free Forever)</span>
-        </div>
-        <div class="text-xs text-gray-500">Works instantly in free Mock Mode. Add your NVIDIA API Key for live GPU inference on real targets.</div>
-      </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="px-6 pt-4">
-      <div class="flex gap-2 flex-wrap">
-        <button class="tab-btn active" onclick="switchTab('windows')" id="tab-windows">🪟 Windows</button>
-        <button class="tab-btn" onclick="switchTab('unix')" id="tab-unix">🍎 macOS / Linux</button>
-        <button class="tab-btn" onclick="switchTab('docker')" id="tab-docker">🐳 Docker</button>
-        <button class="tab-btn" onclick="switchTab('key')" id="tab-key">🔑 Free NVIDIA Key</button>
-        <button class="tab-btn" onclick="switchTab('compare')" id="tab-compare">⚖️ Trial vs Full</button>
-      </div>
-    </div>
-
-    <!-- Tab Content -->
-    <div class="p-6">
-
-      <!-- Windows Tab -->
-      <div id="pane-windows">
-        <div class="mb-4">
-          <button onclick="downloadInstaller('windows')" class="btn-cta w-full text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm glow-green-intense">
-            📥 Download install.bat &nbsp;(Universal Windows Setup)
-          </button>
-          <div class="text-center text-xs text-gray-400 mt-2">Zero configuration. Automatically creates Python 3.12 environment, verifies NVIDIA NIM credentials, and launches Cockpit.</div>
-          <div class="text-center text-xs text-gray-500 mt-1">Direct script: <a href="javascript:void(0)" onclick="downloadInstaller('windows')" class="underline hover:text-emerald-400">install.bat</a> &bull; <a href="javascript:void(0)" onclick="downloadInstaller('powershell')" class="underline hover:text-cyan-400">install.ps1</a></div>
-        </div>
-        <div class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2 mt-5">Or: PowerShell 1-Liner</div>
-        <div class="code-box">
-          <span id="ps-cmd">irm https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.ps1 | iex</span>
-          <button class="copy-btn" onclick="copyCode('ps-cmd', this)">Copy</button>
-        </div>
-        <div class="mt-4 text-xs text-gray-600 space-y-1">
-          <div>⏱️ Setup takes ~2-3 minutes</div>
-          <div>✅ Requires Python 3.10+ and Git (auto-checked)</div>
-          <div>🔓 Free Mock Mode works with no API key</div>
-        </div>
-      </div>
-
-      <!-- Unix Tab -->
-      <div id="pane-unix" class="hidden">
-        <div class="mb-4">
-          <button onclick="downloadInstaller('unix')" class="btn-cta w-full text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-sm">
-            📥 Download install.sh (Run with bash)
-          </button>
-          <div class="text-center text-xs text-gray-600 mt-2">Save and run: <a href="javascript:void(0)" onclick="downloadInstaller('unix')" class="underline font-mono" style="color: var(--nvidia-green);">bash install.sh</a></div>
-        </div>
-        <div class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2 mt-5">Or: cURL 1-Liner</div>
-        <div class="code-box">
-          <span id="curl-cmd">curl -sSL https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.sh | bash</span>
-          <button class="copy-btn" onclick="copyCode('curl-cmd', this)">Copy</button>
-        </div>
-        <div class="mt-4 text-xs text-gray-600 space-y-1">
-          <div>🍎 Supports macOS (Homebrew) and Ubuntu/Debian</div>
-          <div>⏱️ Setup takes ~2-3 minutes</div>
-          <div>✅ Requires Python 3.10+ (auto-checked)</div>
-        </div>
-      </div>
-
-      <!-- Docker Tab -->
-      <div id="pane-docker" class="hidden">
-        <div class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">One Command — Any Platform</div>
-        <div class="code-box">
-          <span id="docker-cmd">git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git && cd bionemo-nim-benchmark && docker compose up</span>
-          <button class="copy-btn" onclick="copyCode('docker-cmd', this)">Copy</button>
-        </div>
-        <div class="mt-4 text-xs text-gray-600 space-y-1">
-          <div>🐳 Requires Docker Desktop installed</div>
-          <div>🔒 Fully isolated container environment</div>
-          <div>🌍 Works identically on Windows, macOS, Linux</div>
-        </div>
-        <div class="mt-4 p-3 rounded-xl text-xs" style="background: rgba(0,241,253,0.05); border: 1px solid rgba(0,241,253,0.2);">
-          <span style="color: var(--cyber-cyan);">💡 Pro tip:</span> <span class="text-gray-400">Set <code class="font-mono" style="color: var(--nvidia-green);">NVIDIA_API_KEY</code> in <code>.env</code> before running to enable live GPU inference via NVIDIA NIM cloud endpoints.</span>
-        </div>
-      </div>
-
-      <!-- Free NVIDIA Key Guide Tab -->
-      <div id="pane-key" class="hidden">
-        <div class="rounded-xl p-4 mb-4" style="background: linear-gradient(135deg, rgba(118,185,0,0.1), rgba(0,241,253,0.06)); border: 1px solid rgba(118,185,0,0.3);">
-          <div class="text-sm font-bold text-gray-200 mb-1 flex items-center gap-2">
-            <span>⚡</span>
-            <span>How to Claim 1,000 Free NVIDIA NIM GPU Credits</span>
+      <!-- What works right now -->
+      <div class="space-y-2">
+        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">What is Available & Working Today</div>
+        <div class="p-3 rounded-xl bg-[#121822] border border-surface-border space-y-2">
+          <div class="flex items-start gap-2.5">
+            <span class="text-emerald-400 font-bold">✓</span>
+            <div>
+              <strong class="text-white">Full Web Discovery Studio (Current Page):</strong>
+              <div class="text-gray-400">Interactive 3D molecular viewer, chemical workbench, retrosynthesis steps, and Opentrons OT-2 code generation are 100% active.</div>
+            </div>
           </div>
-          <p class="text-xs text-gray-400 leading-relaxed">
-            NVIDIA provides <strong>1,000 free inference credits</strong> to all developers for testing hosted biological foundation models (MolMIM, DiffDock, ESM-2). No credit card required!
-          </p>
-        </div>
-
-        <ol class="space-y-3 text-xs text-gray-300 mb-4">
-          <li class="flex items-start gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-[11px] border border-emerald-500/30">1</span>
+          <div class="flex items-start gap-2.5">
+            <span class="text-emerald-400 font-bold">✓</span>
             <div>
-              <div class="font-semibold text-gray-200">Sign Up at build.nvidia.com</div>
-              <div class="text-gray-400 mt-0.5">Visit <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-nvidia-green hover:underline font-mono">https://build.nvidia.com</a> and sign in with Google, GitHub, or Email.</div>
+              <strong class="text-white">Developer / CLI Benchmark Suite:</strong>
+              <div class="text-gray-400">Clone and run directly from source with Python 3.12:</div>
+              <div class="mt-1.5 p-2 rounded bg-black/50 font-mono text-[11px] text-emerald-400 border border-surface-border select-all">
+                git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git<br/>
+                cd bionemo-nim-benchmark<br/>
+                python run_benchmark.py --mock
+              </div>
             </div>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-[11px] border border-emerald-500/30">2</span>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <span class="text-emerald-400 font-bold">✓</span>
             <div>
-              <div class="font-semibold text-gray-200">Generate an API Key</div>
-              <div class="text-gray-400 mt-0.5">Navigate to any BioNeMo NIM (<strong class="text-gray-200">MolMIM</strong> or <strong class="text-gray-200">DiffDock</strong>) and click the green <strong class="text-emerald-400 font-mono">"Get API Key"</strong> button. Your key starts with <code class="font-mono text-nvidia-green">nvapi-...</code>.</div>
+              <strong class="text-white">Live NVIDIA NIM Cloud Microservices:</strong>
+              <div class="text-gray-400">Add your free <code class="text-emerald-400 font-mono">NVIDIA_API_KEY</code> from <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-nvidia-green hover:underline">build.nvidia.com</a> to benchmark hosted ESM-2 and DiffDock models.</div>
             </div>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-[11px] border border-emerald-500/30">3</span>
-            <div>
-              <div class="font-semibold text-gray-200">Paste into your .env File</div>
-              <div class="text-gray-400 mt-0.5">Open the <code class="font-mono text-gray-300">.env</code> file in your downloaded project folder and set:</div>
-              <div class="code-box mt-1.5 font-mono text-[11px] text-nvidia-green">NVIDIA_API_KEY=nvapi-your-key-here<br/>USE_MOCK=false</div>
-            </div>
-          </li>
-        </ol>
-
-        <div class="p-3 rounded-lg text-xs" style="background: rgba(33,38,45,0.6); border: 1px solid #30363d;">
-          <span class="text-amber-400 font-semibold">💡 Zero Credits? No Problem!</span>
-          <p class="text-gray-400 mt-0.5">Agentic BioNeMo automatically falls back to high-fidelity offline medchem simulation mode if no API key is provided. You can run 100% unlimited campaigns locally without paying a single cent.</p>
+          </div>
         </div>
       </div>
 
-      <!-- Compare Tab -->
-      <div id="pane-compare" class="hidden">
-        <div class="rounded-xl overflow-hidden border border-surface-border">
-          <table class="w-full text-xs">
-            <thead>
-              <tr class="border-b border-surface-border" style="background: rgba(22,27,34,0.8);">
-                <th class="text-left py-2.5 px-4 text-gray-400 font-semibold">Feature</th>
-                <th class="text-center py-2.5 px-4 text-gray-400 font-semibold">Trial</th>
-                <th class="text-center py-2.5 px-4 font-semibold" style="color: var(--nvidia-green);">Full App</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-surface-border">
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">Targets</td><td class="text-center py-2.5 text-gray-500">4 preset</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">Any PDB</td></tr>
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">Candidate Generation</td><td class="text-center py-2.5 text-gray-500">Demo sim</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">Unlimited</td></tr>
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">NVIDIA NIM GPU Inference</td><td class="text-center py-2.5 text-gray-500">❌</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">✅ Live</td></tr>
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">Data Privacy</td><td class="text-center py-2.5 text-gray-500">Cloud</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">100% Local</td></tr>
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">SDF / PyMOL Export</td><td class="text-center py-2.5 text-gray-500">Limited</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">Full Batch</td></tr>
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">Custom SMILES Input</td><td class="text-center py-2.5 text-gray-500">❌</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">✅</td></tr>
-              <tr class="hover:bg-surface-elevated transition-colors"><td class="py-2.5 px-4 text-gray-300">Cost</td><td class="text-center py-2.5 text-gray-500">Free</td><td class="text-center py-2.5" style="color: var(--nvidia-green);">Free & Open Source</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="mt-4 text-center">
-          <button onclick="switchTab('windows'); " class="btn-cta text-white text-xs font-bold px-6 py-2.5 rounded-lg">⚡ Install Now — Free Forever</button>
-        </div>
+      <!-- Footer CTA -->
+      <div class="pt-2 flex justify-between items-center">
+        <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition-colors">
+          <span>⭐ Star on GitHub for Release Updates</span>
+        </a>
+        <button onclick="closeInstallModal()" class="px-5 py-2 rounded-lg bg-surface-elevated text-white text-xs font-semibold hover:bg-white/10 transition-colors">
+          Close
+        </button>
       </div>
     </div>
   </div>
