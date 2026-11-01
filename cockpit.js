@@ -856,7 +856,712 @@ function getClientFingerprint() {
 }
 const CLIENT_FP = getClientFingerprint();
 
-let trialState = { allowed: true, runs_used: 0, runs_remaining: 2, max_runs: 2, is_locked: false };
+let trialState = { allowed: true, runs_used: 0, runs_remaining: 5, max_runs: 5, is_locked: false };
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SYNCHRONIZED 3:00 PM IST (09:30 UTC) DAILY QUOTA & AUTHENTICATION ENGINE
+// ═════════════════════════════════════════════════════════════════════════════
+
+const IST_RESET_OFFSET_SECONDS = 34200; // 09:30:00 UTC = 15:00:00 IST
+const MAX_DAILY_RUNS = 5;
+
+function computeISTCycleInfo(epochSec) {
+  const now = epochSec !== undefined ? epochSec : Math.floor(Date.now() / 1000);
+  const cycleIndex = Math.floor((now - IST_RESET_OFFSET_SECONDS) / 86400);
+  const nextResetEpoch = (cycleIndex + 1) * 86400 + IST_RESET_OFFSET_SECONDS;
+  const secondsRemaining = Math.max(0, nextResetEpoch - now);
+  const h = String(Math.floor(secondsRemaining / 3600)).padStart(2, '0');
+  const m = String(Math.floor((secondsRemaining % 3600) / 60)).padStart(2, '0');
+  const s = String(secondsRemaining % 60).padStart(2, '0');
+  return {
+    cycleIndex,
+    cycleKey: `ist_cycle_${cycleIndex}`,
+    nextResetEpoch,
+    secondsRemaining,
+    countdown: `${h}:${m}:${s}`
+  };
+}
+
+class ClientAuthManager {
+  constructor() {
+    this.user = null;
+    this.token = null;
+    this.pendingAction = null;
+    this.isStaticHost = window.location.protocol === 'file:' || 
+                        window.location.hostname.endsWith('github.io') ||
+                        (window.location.hostname === 'localhost' && window.location.port === '8080');
+  }
+
+  async init() {
+    try {
+      const stored = localStorage.getItem('bionemo_auth_session');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.user) {
+          this.user = parsed.user;
+          this.token = parsed.token;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse cached auth session:', e);
+    }
+
+    if (!this.isStaticHost) {
+      try {
+        const headers = this.token ? { 'Authorization': `Bearer ${this.token}` } : {};
+        const res = await fetch('/api/auth/me', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            this.user = data.user;
+          } else if (!data.authenticated && this.token) {
+            this.user = null;
+            this.token = null;
+            localStorage.removeItem('bionemo_auth_session');
+          }
+        }
+      } catch (err) {
+        console.warn('Backend auth endpoint unreachable; using local session:', err);
+      }
+    }
+
+    this.renderHUD();
+    setInterval(() => this.tick(), 1000);
+  }
+
+  isLoggedIn() {
+    return !!this.user;
+  }
+
+  getCurrentUser() {
+    return this.user;
+  }
+
+  getQuota() {
+    const cycle = computeISTCycleInfo();
+    if (!this.user) {
+      return {
+        allowed: false,
+        runs_used: 0,
+        runs_remaining: MAX_DAILY_RUNS,
+        max_runs: MAX_DAILY_RUNS,
+        is_locked: false,
+        requires_login: true,
+        ...cycle
+      };
+    }
+
+    const quotaKey = `bionemo_quota_${this.user.id || this.user.user_id || 'demo'}_${cycle.cycleKey}`;
+    let runsUsed = 0;
+    try {
+      runsUsed = parseInt(localStorage.getItem(quotaKey) || '0', 10);
+      if (isNaN(runsUsed) || runsUsed < 0) runsUsed = 0;
+    } catch (e) {
+      runsUsed = 0;
+    }
+
+    const runsRemaining = Math.max(0, MAX_DAILY_RUNS - runsUsed);
+    return {
+      allowed: runsRemaining > 0,
+      runs_used: runsUsed,
+      runs_remaining: runsRemaining,
+      max_runs: MAX_DAILY_RUNS,
+      is_locked: runsRemaining <= 0,
+      requires_login: false,
+      ...cycle
+    };
+  }
+
+  consumeRun() {
+    if (!this.user) return false;
+    const cycle = computeISTCycleInfo();
+    const quotaKey = `bionemo_quota_${this.user.id || this.user.user_id || 'demo'}_${cycle.cycleKey}`;
+    let runsUsed = 0;
+    try {
+      runsUsed = parseInt(localStorage.getItem(quotaKey) || '0', 10);
+      if (isNaN(runsUsed) || runsUsed < 0) runsUsed = 0;
+    } catch (e) {
+      runsUsed = 0;
+    }
+
+    if (runsUsed >= MAX_DAILY_RUNS) {
+      return false;
+    }
+
+    runsUsed += 1;
+    try {
+      localStorage.setItem(quotaKey, String(runsUsed));
+    } catch (e) {
+      console.warn('Storage quota update warning:', e);
+    }
+    this.renderHUD();
+    return true;
+  }
+
+  async login(email, password) {
+    email = (email || '').trim().toLowerCase();
+    password = (password || '').trim();
+
+    if (!this.isStaticHost) {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.user = data.user;
+          this.token = data.token;
+          localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+          this.renderHUD();
+          return { success: true, user: this.user };
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          return { success: false, message: errData.message || 'Invalid email or password.' };
+        }
+      } catch (err) {
+        console.warn('Backend login error, attempting local validation:', err);
+      }
+    }
+
+    if (email === 'evaluator@bionemo.org' && password === 'DemoResearcher2026!') {
+      return this.demoLogin();
+    }
+
+    try {
+      const usersRaw = localStorage.getItem('bionemo_registered_users');
+      const users = usersRaw ? JSON.parse(usersRaw) : {};
+      if (users[email] && users[email].password === password) {
+        const u = users[email];
+        this.user = { id: u.id, email: u.email, full_name: u.full_name, organization: u.organization };
+        this.token = `static_tok_${u.id}_${Date.now()}`;
+        localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+        this.renderHUD();
+        return { success: true, user: this.user };
+      }
+    } catch (e) {
+      console.warn('Local account verification error:', e);
+    }
+
+    return { success: false, message: 'Invalid credentials. For instant demo access, use the 1-Click Evaluator Sign In.' };
+  }
+
+  async demoLogin() {
+    if (!this.isStaticHost) {
+      try {
+        const res = await fetch('/api/auth/demo-login', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          this.user = data.user;
+          this.token = data.token;
+          localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+          this.renderHUD();
+          return { success: true, user: this.user };
+        }
+      } catch (e) {
+        console.warn('Backend demo-login failed, falling back to client demo session:', e);
+      }
+    }
+
+    this.user = {
+      id: 'usr_evaluator_2026',
+      email: 'evaluator@bionemo.org',
+      full_name: 'BioNeMo Peer Evaluator',
+      organization: 'Global Bio-Computational Initiative'
+    };
+    this.token = `eval_token_${Date.now()}`;
+    localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+    this.renderHUD();
+    return { success: true, user: this.user };
+  }
+
+  async register(fullName, organization, email, password) {
+    fullName = (fullName || 'Researcher').trim();
+    organization = (organization || 'Independent').trim();
+    email = (email || '').trim().toLowerCase();
+    password = (password || '').trim();
+
+    if (!email || !email.includes('@')) {
+      return { success: false, message: 'Valid email address required.' };
+    }
+    if (password.length < 6) {
+      return { success: false, message: 'Password must be at least 6 characters.' };
+    }
+
+    if (!this.isStaticHost) {
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ full_name: fullName, organization, email, password })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.user = data.user;
+          this.token = data.token;
+          localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+          this.renderHUD();
+          return { success: true, user: this.user };
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          return { success: false, message: errData.message || 'Registration failed.' };
+        }
+      } catch (err) {
+        console.warn('Backend register error, saving to client store:', err);
+      }
+    }
+
+    try {
+      const usersRaw = localStorage.getItem('bionemo_registered_users');
+      const users = usersRaw ? JSON.parse(usersRaw) : {};
+      if (users[email]) {
+        return { success: false, message: 'An account with this email already exists. Please sign in.' };
+      }
+      const newId = `usr_${Math.random().toString(36).substring(2, 10)}`;
+      users[email] = {
+        id: newId,
+        email,
+        full_name: fullName,
+        organization,
+        password,
+        created_at: Math.floor(Date.now() / 1000)
+      };
+      localStorage.setItem('bionemo_registered_users', JSON.stringify(users));
+
+      this.user = { id: newId, email, full_name: fullName, organization };
+      this.token = `static_tok_${newId}_${Date.now()}`;
+      localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+      this.renderHUD();
+      return { success: true, user: this.user };
+    } catch (e) {
+      return { success: false, message: 'Failed to save account locally.' };
+    }
+  }
+
+  logout() {
+    if (!this.isStaticHost) {
+      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    }
+    this.user = null;
+    this.token = null;
+    try {
+      localStorage.removeItem('bionemo_auth_session');
+    } catch (e) {}
+    this.renderHUD();
+    showToast('👋 Signed out of researcher session.');
+  }
+
+  async submitFeedback(payload) {
+    if (!this.user) {
+      return { success: false, message: 'Authentication required to submit feedback.' };
+    }
+
+    if (!this.isStaticHost) {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.recordLocalFeedback(payload);
+          return { success: true, message: data.message || 'Feedback submitted.' };
+        }
+      } catch (e) {
+        console.warn('Backend feedback error; storing locally:', e);
+      }
+    }
+
+    this.recordLocalFeedback(payload);
+    return { success: true, message: 'Scientific feedback recorded successfully.' };
+  }
+
+  recordLocalFeedback(payload) {
+    try {
+      const existingRaw = localStorage.getItem('bionemo_feedback_store');
+      const list = existingRaw ? JSON.parse(existingRaw) : [];
+      const entry = {
+        id: `fb-${Math.random().toString(36).substring(2, 8)}`,
+        timestamp: Math.floor(Date.now() / 1000),
+        user_email: this.user.email,
+        full_name: this.user.full_name,
+        organization: this.user.organization,
+        category: payload.category || 'General',
+        rating: payload.rating || 5,
+        comments: payload.comments || '',
+        target_name: payload.target_name || 'KRAS G12D'
+      };
+      list.unshift(entry);
+      localStorage.setItem('bionemo_feedback_store', JSON.stringify(list.slice(0, 50)));
+    } catch (e) {
+      console.warn('Feedback local storage write error:', e);
+    }
+  }
+
+  getLocalFeedback() {
+    try {
+      const existingRaw = localStorage.getItem('bionemo_feedback_store');
+      if (!existingRaw) return [];
+      const list = JSON.parse(existingRaw);
+      if (!this.user) return [];
+      return list.filter(item => item.user_email === this.user.email);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  tick() {
+    const quota = this.getQuota();
+    const modalEl = document.getElementById('quotaModalCountdown');
+    if (modalEl) {
+      modalEl.textContent = quota.countdown;
+    }
+
+    const hudCountdown = document.getElementById('hudCountdownText');
+    if (hudCountdown) {
+      hudCountdown.textContent = `⏳ ${quota.countdown} (3:00 PM IST)`;
+    }
+
+    if (quota.secondsRemaining === 86399) {
+      this.renderHUD();
+      showToast('🎉 Synchronized 3:00 PM IST cycle refreshed! 5 new discovery runs granted.');
+    }
+  }
+
+  renderHUD() {
+    const container = document.getElementById('authHudContainer');
+    if (!container) return;
+
+    const quota = this.getQuota();
+
+    if (!this.user) {
+      container.innerHTML = `
+        <button id="authBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
+          <span>🔑 Sign In</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/40 border border-white/20">5 Runs/Day</span>
+        </button>
+      `;
+    } else {
+      const shortEmail = this.user.email.length > 20 ? this.user.email.substring(0, 18) + '...' : this.user.email;
+      const pillColor = quota.runs_remaining > 0 ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-red-500/15 text-red-300 border-red-500/40 animate-pulse';
+
+      container.innerHTML = `
+        <div class="flex items-center gap-2">
+          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-gray-300">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span title="${this.user.email}">${shortEmail}</span>
+          </div>
+
+          <div class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold ${pillColor}" title="Synchronized refresh at 3:00 PM IST">
+            <span>⚡ ${quota.runs_remaining}/${quota.max_runs}</span>
+          </div>
+
+          <div id="hudCountdownText" class="hidden md:inline-flex text-[11px] font-mono text-amber-300/90 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20" title="Universal synchronized reset at 3:00 PM IST (09:30 UTC)">
+            ⏳ ${quota.countdown} (3:00 PM IST)
+          </div>
+
+          <button onclick="handleLogout()" title="Sign Out" class="px-2 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
+            ✕
+          </button>
+        </div>
+      `;
+    }
+
+    const trialText = document.getElementById('trialText');
+    if (trialText) {
+      if (!this.user) {
+        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Discovery Studio</span> <span class="text-amber-300 text-[11px] font-mono">• Sign in for 5 free runs/day</span>`;
+      } else {
+        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">${this.user.organization || 'Research Lab'}</span> <span class="text-cyan-300 text-[11px] font-mono">• ${quota.runs_remaining} runs left (resets 3:00 PM IST)</span>`;
+      }
+    }
+  }
+}
+
+const clientAuth = new ClientAuthManager();
+
+function openAuthModal(noticeMessage) {
+  const modal = document.getElementById('authModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+
+  if (noticeMessage) {
+    showToast(noticeMessage);
+  }
+  switchAuthTab('login');
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+  }
+}
+
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('authLoginForm');
+  const regForm = document.getElementById('authRegisterForm');
+  const tabLogin = document.getElementById('authTabLogin');
+  const tabReg = document.getElementById('authTabRegister');
+  const errLogin = document.getElementById('authLoginError');
+  const errReg = document.getElementById('authRegError');
+
+  if (errLogin) { errLogin.textContent = ''; errLogin.classList.add('hidden'); }
+  if (errReg) { errReg.textContent = ''; errReg.classList.add('hidden'); }
+
+  if (tab === 'login') {
+    if (loginForm) { loginForm.style.display = 'block'; loginForm.classList.remove('hidden'); }
+    if (regForm) { regForm.style.display = 'none'; regForm.classList.add('hidden'); }
+    if (tabLogin) { tabLogin.className = 'flex-1 py-1.5 text-xs font-bold rounded-md bg-emerald-600 text-white transition-all'; }
+    if (tabReg) { tabReg.className = 'flex-1 py-1.5 text-xs font-semibold rounded-md text-gray-400 hover:text-white transition-all'; }
+  } else {
+    if (loginForm) { loginForm.style.display = 'none'; loginForm.classList.add('hidden'); }
+    if (regForm) { regForm.style.display = 'block'; regForm.classList.remove('hidden'); }
+    if (tabLogin) { tabLogin.className = 'flex-1 py-1.5 text-xs font-semibold rounded-md text-gray-400 hover:text-white transition-all'; }
+    if (tabReg) { tabReg.className = 'flex-1 py-1.5 text-xs font-bold rounded-md bg-emerald-600 text-white transition-all'; }
+  }
+}
+
+async function handleAuthLogin(event) {
+  if (event) event.preventDefault();
+  const emailEl = document.getElementById('authLoginEmail');
+  const pwdEl = document.getElementById('authLoginPassword');
+  const errEl = document.getElementById('authLoginError');
+  const btn = document.getElementById('authLoginSubmitBtn');
+
+  const email = emailEl ? emailEl.value : '';
+  const password = pwdEl ? pwdEl.value : '';
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Verifying credentials...'; }
+  if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+  const res = await clientAuth.login(email, password);
+  if (btn) { btn.disabled = false; btn.textContent = 'Sign In to Workspace'; }
+
+  if (res.success) {
+    closeAuthModal();
+    showToast(`✅ Welcome back, ${res.user.full_name || res.user.email}! (5 runs/day active)`);
+    if (clientAuth.pendingAction === 'feedback') {
+      clientAuth.pendingAction = null;
+      openFeedbackModal();
+    } else if (clientAuth.pendingAction === 'discovery') {
+      clientAuth.pendingAction = null;
+      runDiscovery();
+    }
+  } else {
+    if (errEl) {
+      errEl.textContent = res.message || 'Login failed. Please check credentials.';
+      errEl.classList.remove('hidden');
+    }
+  }
+}
+
+async function handleDemoLogin() {
+  const errEl = document.getElementById('authLoginError');
+  if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+  const res = await clientAuth.demoLogin();
+  if (res.success) {
+    closeAuthModal();
+    showToast(`⚡ 1-Click Reviewer Access granted: evaluator@bionemo.org`);
+    if (clientAuth.pendingAction === 'feedback') {
+      clientAuth.pendingAction = null;
+      openFeedbackModal();
+    } else if (clientAuth.pendingAction === 'discovery') {
+      clientAuth.pendingAction = null;
+      runDiscovery();
+    }
+  } else {
+    showToast('⚠️ Demo login failed. Please try again.');
+  }
+}
+
+async function handleAuthRegister(event) {
+  if (event) event.preventDefault();
+  const nameEl = document.getElementById('authRegName');
+  const orgEl = document.getElementById('authRegOrg');
+  const emailEl = document.getElementById('authRegEmail');
+  const pwdEl = document.getElementById('authRegPassword');
+  const errEl = document.getElementById('authRegError');
+  const btn = document.getElementById('authRegSubmitBtn');
+
+  const name = nameEl ? nameEl.value : '';
+  const org = orgEl ? orgEl.value : '';
+  const email = emailEl ? emailEl.value : '';
+  const password = pwdEl ? pwdEl.value : '';
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
+  if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+  const res = await clientAuth.register(name, org, email, password);
+  if (btn) { btn.disabled = false; btn.textContent = 'Create Researcher Account'; }
+
+  if (res.success) {
+    closeAuthModal();
+    showToast(`🎉 Account created! Welcome ${res.user.full_name}. 5 runs allocated for today.`);
+    if (clientAuth.pendingAction === 'feedback') {
+      clientAuth.pendingAction = null;
+      openFeedbackModal();
+    } else if (clientAuth.pendingAction === 'discovery') {
+      clientAuth.pendingAction = null;
+      runDiscovery();
+    }
+  } else {
+    if (errEl) {
+      errEl.textContent = res.message || 'Registration failed.';
+      errEl.classList.remove('hidden');
+    }
+  }
+}
+
+function handleLogout() {
+  clientAuth.logout();
+}
+
+function openQuotaModal() {
+  const modal = document.getElementById('quotaExhaustedModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+  const quota = clientAuth.getQuota();
+  const countEl = document.getElementById('quotaModalCountdown');
+  if (countEl) countEl.textContent = quota.countdown;
+}
+
+function closeQuotaModal() {
+  const modal = document.getElementById('quotaExhaustedModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+  }
+}
+
+function openFeedbackModal() {
+  if (!clientAuth.isLoggedIn()) {
+    clientAuth.pendingAction = 'feedback';
+    openAuthModal('Please sign in or register to submit scientific feedback.');
+    return;
+  }
+
+  const modal = document.getElementById('feedbackModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.remove('hidden');
+
+  const user = clientAuth.getCurrentUser();
+  const idEl = document.getElementById('feedbackUserIdentity');
+  if (idEl && user) {
+    idEl.textContent = `${user.email} (${user.organization || 'Independent'})`;
+  }
+
+  const targetSelect = document.getElementById('targetSelect');
+  const currentTarget = targetSelect ? targetSelect.value : 'KRAS G12D';
+  const targetEl = document.getElementById('feedbackTargetComplex');
+  if (targetEl) {
+    targetEl.value = `${currentTarget} (Active Exploration Complex)`;
+  }
+
+  renderFeedbackHistory();
+}
+
+function closeFeedbackModal() {
+  const modal = document.getElementById('feedbackModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+  }
+}
+
+function renderFeedbackHistory() {
+  const container = document.getElementById('feedbackHistoryContainer');
+  const listEl = document.getElementById('feedbackHistoryList');
+  if (!container || !listEl) return;
+
+  const history = clientAuth.getLocalFeedback();
+  if (history.length === 0) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  container.classList.remove('hidden');
+  listEl.innerHTML = history.slice(0, 5).map(item => `
+    <div class="p-2 rounded bg-black/40 border border-surface-border text-[11px] space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-cyan-300 font-bold">${item.category}</span>
+        <span class="text-amber-300 font-bold">★ ${item.rating}/5</span>
+      </div>
+      <p class="text-gray-300 leading-snug break-words">${item.comments}</p>
+      <div class="text-[9px] text-gray-500">${new Date(item.timestamp * 1000).toLocaleString()} • ${item.target_name}</div>
+    </div>
+  `).join('');
+}
+
+async function handleFeedbackSubmit(event) {
+  if (event) event.preventDefault();
+  const categoryEl = document.getElementById('feedbackCategory');
+  const ratingEl = document.getElementById('feedbackRating');
+  const commentsEl = document.getElementById('feedbackComments');
+  const errEl = document.getElementById('feedbackFormError');
+  const btn = document.getElementById('feedbackSubmitBtn');
+  const targetSelect = document.getElementById('targetSelect');
+
+  const category = categoryEl ? categoryEl.value : 'General';
+  const rating = ratingEl ? parseInt(ratingEl.value, 10) : 5;
+  const comments = commentsEl ? commentsEl.value.trim() : '';
+  const target_name = targetSelect ? targetSelect.value : 'KRAS G12D';
+
+  if (!comments) {
+    if (errEl) {
+      errEl.textContent = 'Please enter your feedback comments before submitting.';
+      errEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting feedback...'; }
+  if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+  const res = await clientAuth.submitFeedback({
+    category,
+    rating,
+    comments,
+    target_name
+  });
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Submit Scientific Feedback'; }
+
+  if (res.success) {
+    if (commentsEl) commentsEl.value = '';
+    closeFeedbackModal();
+    showToast('💬 Thank you! Your scientific feedback has been recorded.');
+  } else {
+    if (errEl) {
+      errEl.textContent = res.message || 'Submission failed.';
+      errEl.classList.remove('hidden');
+    }
+  }
+}
+
+// Window object exports
+window.openAuthModal = openAuthModal;
+window.closeAuthModal = closeAuthModal;
+window.switchAuthTab = switchAuthTab;
+window.handleAuthLogin = handleAuthLogin;
+window.handleDemoLogin = handleDemoLogin;
+window.handleAuthRegister = handleAuthRegister;
+window.handleLogout = handleLogout;
+window.openQuotaModal = openQuotaModal;
+window.closeQuotaModal = closeQuotaModal;
+window.openFeedbackModal = openFeedbackModal;
+window.closeFeedbackModal = closeFeedbackModal;
+window.handleFeedbackSubmit = handleFeedbackSubmit;
+window.clientAuth = clientAuth;
 
 
 async function resetTrialQuota() {
@@ -877,39 +1582,15 @@ function staticQuota(consume) {
   return { allowed: true, runs_used: 0, runs_remaining: 9999, max_runs: 9999, is_locked: false };
 }
 
-async function fetchTrialStatus() { if (window.location.protocol === 'file:' || window.location.hostname.endsWith('github.io')) { updateTrialUI(staticQuota(0)); return; }
-  try {
-    const res = await fetch('/api/trial-status', {
-      headers: { 'X-Client-Fingerprint': CLIENT_FP }
-    });
-    if (res.ok) {
-      const data = await res.json();
-      updateTrialUI(data);
-      return;
-    }
-  } catch (e) {
-    console.warn('API trial status unavailable in static/GitHub Pages mode:', e);
+async function fetchTrialStatus() {
+  if (window.clientAuth) {
+    await window.clientAuth.init();
   }
-  // Static mode: signed localStorage quota (tamper => locked)
-  updateTrialUI(staticQuota(0));
 }
 
 function updateTrialUI(status) {
-  trialState = status || { allowed: true, runs_remaining: 9999, is_locked: false };
-  const dot = document.getElementById('trialDot');
-  const text = document.getElementById('trialText');
-  const runBtn = document.getElementById('runBtn');
-  const runLabel = document.getElementById('runLabel');
-
-  if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-  if (text) text.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Interactive Discovery Studio</span> <span class="text-gray-400 text-[11px] font-mono">• Full Pipeline Active</span>`;
-  if (runBtn && !isRunning) {
-    runBtn.onclick = () => runDiscovery();
-    runBtn.style.background = '';
-    runBtn.style.border = '';
-  }
-  if (runLabel && !isRunning) {
-    runLabel.textContent = '🚀 Run Autonomous Discovery';
+  if (window.clientAuth) {
+    window.clientAuth.renderHUD();
   }
 }
 
@@ -1504,9 +2185,24 @@ function logEntry(icon, agent, role, text, color) {
 async function runDiscovery() {
   if (isRunning) return;
 
-  // Unmetered Web Studio Discovery (Never Lock Out the Researcher)
-  trialState.is_locked = false;
-  trialState.runs_remaining = 9999;
+  // Gate check 1: Researcher Authentication Required
+  if (!clientAuth.isLoggedIn()) {
+    clientAuth.pendingAction = 'discovery';
+    openAuthModal('Please sign in or register to access the free trial discovery pipeline (5 runs/day).');
+    return;
+  }
+
+  // Gate check 2: Quota Limit (5 runs / 24 hours synchronized at 3:00 PM IST)
+  const quota = clientAuth.getQuota();
+  if (quota.runs_remaining <= 0) {
+    openQuotaModal();
+    return;
+  }
+
+  // Consume 1 run
+  clientAuth.consumeRun();
+
+
 
   isRunning = true;
   const targetSelect = document.getElementById('targetSelect');

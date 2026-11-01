@@ -15,6 +15,10 @@ __pycache__/
 .trial_secret
 data/.trial_secret
 data/trial_ledger.json
+data/.auth_secret
+data/users_auth.json
+data/feedback_submissions.json
+.auth_secret
 trial_ledger.json
 
 # Results & Artifacts

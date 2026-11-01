@@ -178,6 +178,15 @@
         <span class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
         <span>⚡ Benchmark</span>
       </button>
+      <button aria-label="Submit Feedback" id="feedbackNavBtn" onclick="openFeedbackModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 flex items-center gap-1.5 transition-all">
+        <span>💬 Feedback</span>
+      </button>
+      <div id="authHudContainer" class="flex items-center gap-2">
+        <button aria-label="Sign In or Register" id="authBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
+          <span>🔑 Sign In</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/30 border border-white/20">5 Runs/Day</span>
+        </button>
+      </div>
       <button aria-label="Desktop App Status & Developer Letter" id="fullAppNavBtn" onclick="openInstallModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all">
           <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
           <span>🌱 Desktop App Status</span>
@@ -894,6 +903,226 @@
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ AUTHENTICATION MODAL ══════ -->
+<div id="authModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeAuthModal()">
+  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+    <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
+          🔑
+        </div>
+        <div>
+          <h3 id="authModalTitle" class="text-base font-bold text-white flex items-center gap-2">
+            <span>Researcher Authentication</span>
+          </h3>
+          <p class="text-xs text-gray-400">Access Free Trial Discovery Runs (5 runs/day)</p>
+        </div>
+      </div>
+      <button aria-label="Close dialog" onclick="closeAuthModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+    </div>
+
+    <!-- Sync Notice Banner -->
+    <div class="px-5 py-2.5 bg-emerald-950/30 border-b border-emerald-500/20 text-xs text-emerald-300 flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span>Daily quota: <strong>5 runs / 24 hours</strong>. Synchronized reset at <strong>3:00 PM IST (09:30 UTC)</strong>.</span>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <!-- Tabs -->
+      <div class="flex rounded-lg bg-black/40 p-1 border border-surface-border">
+        <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-emerald-600 text-white transition-all">Sign In</button>
+        <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-gray-400 hover:text-white transition-all">Register New</button>
+      </div>
+
+      <!-- Quick Evaluator 1-Click Button -->
+      <div class="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30">
+        <div class="text-[11px] text-purple-300 font-semibold mb-1 flex items-center gap-1.5">
+          <span>⚡ Instant Reviewer Access:</span>
+        </div>
+        <button onclick="handleDemoLogin()" class="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2">
+          <span>1-Click Evaluator Sign In</span>
+          <span class="text-[10px] font-mono text-purple-200 bg-black/30 px-1.5 py-0.5 rounded">evaluator@bionemo.org</span>
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="authLoginForm" onsubmit="handleAuthLogin(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
+          <input type="email" id="authLoginEmail" required placeholder="dr.smith@institution.edu" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Password</label>
+          <input type="password" id="authLoginPassword" required placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div id="authLoginError" class="text-xs text-red-400 hidden"></div>
+        <button type="submit" id="authLoginSubmitBtn" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md">
+          Sign In to Workspace
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="authRegisterForm" onsubmit="handleAuthRegister(event)" class="space-y-3 hidden" style="display: none;">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Full Name</label>
+          <input type="text" id="authRegName" required placeholder="Dr. Jane Doe" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Institution / Organization</label>
+          <input type="text" id="authRegOrg" required placeholder="Stanford Bioengineering / Independent" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
+          <input type="email" id="authRegEmail" required placeholder="dr.doe@stanford.edu" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Password (Min 6 characters)</label>
+          <input type="password" id="authRegPassword" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+        </div>
+        <div id="authRegError" class="text-xs text-red-400 hidden"></div>
+        <button type="submit" id="authRegSubmitBtn" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md">
+          Create Researcher Account
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ QUOTA EXHAUSTED MODAL ══════ -->
+<div id="quotaExhaustedModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeQuotaModal()">
+  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+    <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 font-bold text-sm">
+          ⏳
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>Daily Discovery Quota Reached</span>
+          </h3>
+          <p class="text-xs text-gray-400">5 of 5 Free Runs Used for Current Cycle</p>
+        </div>
+      </div>
+      <button aria-label="Close dialog" onclick="closeQuotaModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+    </div>
+
+    <div class="p-6 space-y-4 text-center">
+      <div class="p-4 rounded-xl bg-red-950/20 border border-red-500/30 text-left space-y-2">
+        <div class="text-xs font-bold text-red-300">Synchronized Daily Refresh Period:</div>
+        <p class="text-xs text-gray-300 leading-relaxed">
+          The global discovery pipeline refreshes for all researchers simultaneously at <strong>3:00 PM IST (09:30 UTC)</strong> every day.
+        </p>
+      </div>
+
+      <!-- Live Countdown Card -->
+      <div class="p-4 rounded-xl bg-black/60 border border-surface-border">
+        <div class="text-[11px] text-gray-400 uppercase tracking-wider font-semibold mb-1">Time Remaining Until Next 5-Run Refill</div>
+        <div id="quotaModalCountdown" class="text-3xl font-mono font-extrabold text-amber-400 tracking-wider">
+          --:--:--
+        </div>
+        <div class="text-[10px] text-gray-500 mt-1">Refreshes next at 3:00 PM IST (09:30 UTC)</div>
+      </div>
+
+      <!-- Offline Alternative -->
+      <div class="p-3.5 rounded-xl bg-[#161b22] border border-surface-border text-left space-y-2">
+        <div class="text-xs font-bold text-gray-200">Need Unlimited Runs Right Now?</div>
+        <p class="text-xs text-gray-400 leading-relaxed">
+          Deploy the open-source CLI or Desktop App locally on your GPU/CPU workstation for 100% unlimited, unmetered discovery campaigns with your own NVIDIA API key.
+        </p>
+        <button onclick="closeQuotaModal(); openInstallModal();" class="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/20 transition-all flex items-center justify-center gap-1.5">
+          <span>🌱 View Desktop App & Local Setup</span>
+        </button>
+      </div>
+
+      <button onclick="closeQuotaModal()" class="w-full py-2 text-xs text-gray-400 hover:text-white transition-colors">
+        Dismiss & Browse Loaded Results
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ AUTHENTICATED FEEDBACK MODAL ══════ -->
+<div id="feedbackModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeFeedbackModal()">
+  <div class="modal-card max-w-lg p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+    <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold text-sm">
+          💬
+        </div>
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <span>Scientific Feedback & Evaluation</span>
+          </h3>
+          <p class="text-xs text-gray-400">Peer review and community evaluation log</p>
+        </div>
+      </div>
+      <button aria-label="Close dialog" onclick="closeFeedbackModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+    </div>
+
+    <!-- Submitter Identity Pill -->
+    <div class="px-5 py-2.5 bg-[#121822] border-b border-surface-border flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2">
+        <span class="text-gray-400">Researcher:</span>
+        <span id="feedbackUserIdentity" class="font-mono text-cyan-300 font-semibold">dr.alex@stanford.edu</span>
+      </div>
+      <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">Verified Session</span>
+    </div>
+
+    <form id="feedbackForm" onsubmit="handleFeedbackSubmit(event)" class="p-6 space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-gray-300 mb-1">Target Evaluation Complex</label>
+        <input type="text" id="feedbackTargetComplex" readonly class="w-full px-3 py-2 rounded-lg bg-black/40 border border-surface-border text-gray-300 font-mono text-xs focus:outline-none" value="KRAS G12D (PDB: 8AFB)" />
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Category</label>
+          <select id="feedbackCategory" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-cyan-500">
+            <option value="Lead Candidates">Lead Candidates & Docking</option>
+            <option value="ESMFold Structure">ESMFold 3D Structure</option>
+            <option value="ADMET & Druggability">ADMET & Druggability</option>
+            <option value="Retrosynthesis">Retrosynthesis & OT-2</option>
+            <option value="UI & Performance">UI & Performance</option>
+            <option value="General Evaluation">General Peer Review</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-300 mb-1">Scientific Quality Rating</label>
+          <select id="feedbackRating" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-amber-300 text-xs font-bold focus:outline-none focus:border-cyan-500">
+            <option value="5">★★★★★ (5/5) Publication Grade</option>
+            <option value="4">★★★★☆ (4/5) High Confidence</option>
+            <option value="3">★★★☆☆ (3/5) Acceptable Baseline</option>
+            <option value="2">★★☆☆☆ (2/5) Needs Tuning</option>
+            <option value="1">★☆☆☆☆ (1/5) Discrepancy Found</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-gray-300 mb-1">Scientific Observations / Peer Review Notes</label>
+        <textarea id="feedbackComments" required rows="4" placeholder="Detail your experimental observations, pose validation against crystallographic data, or suggestions for the bio-computational pipeline..." class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-cyan-500 resize-none"></textarea>
+      </div>
+
+      <div id="feedbackFormError" class="text-xs text-red-400 hidden"></div>
+
+      <div class="flex items-center justify-between pt-2">
+        <button type="button" onclick="closeFeedbackModal()" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
+          Cancel
+        </button>
+        <button type="submit" id="feedbackSubmitBtn" class="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-md transition-all">
+          Submit Scientific Feedback
+        </button>
+      </div>
+
+      <!-- Previous Submissions Box -->
+      <div id="feedbackHistoryContainer" class="mt-4 pt-4 border-t border-surface-border hidden">
+        <div class="text-[11px] font-semibold text-gray-400 mb-2">Your Previous Submissions:</div>
+        <div id="feedbackHistoryList" class="space-y-2 max-h-36 overflow-y-auto text-xs font-mono"></div>
+      </div>
+    </form>
   </div>
 </div>
 
