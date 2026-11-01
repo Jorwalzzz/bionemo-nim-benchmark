@@ -286,8 +286,14 @@ namespace JorwalNimSetup
                 SetStatus("Executing automated setup & dependency bootstrap...", 75);
                 Log("[4/6] Bootstrapping Python & dependencies via install.bat...");
 
+                string installBat = Path.Combine(targetDir, "install.bat");
+                if (!File.Exists(installBat))
+                {
+                    installBat = Path.Combine(targetDir, "scripts", "installers", "install.bat");
+                }
+
                 ProcessStartInfo psi = new ProcessStartInfo();
-                psi.FileName = Path.Combine(targetDir, "install.bat");
+                psi.FileName = installBat;
                 psi.Arguments = "--setup-wizard";
                 psi.WorkingDirectory = targetDir;
                 psi.CreateNoWindow = true;

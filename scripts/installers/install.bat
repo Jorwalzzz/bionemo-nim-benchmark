@@ -57,9 +57,22 @@ if not exist .env (
     echo NVIDIA_API_KEY=>> .env
 )
 
-echo [5/5] Starting the cockpit at http://localhost:8000
+if not exist run.bat (
+    echo @echo off> run.bat
+    echo cd /d "%%~dp0">> run.bat
+    echo title BioNeMo Discovery Cockpit>> run.bat
+    echo .venv\Scripts\python.exe serve_cockpit.py --open>> run.bat
+    echo pause>> run.bat
+)
+
+if "%~1"=="--setup-wizard" (
+    echo Setup completed for wizard.
+    exit /b 0
+)
+
+echo [5/5] Starting the cockpit at http://localhost:8000/cockpit.html
 echo Keep this window open. Press Ctrl+C to stop.
-start "" cmd /c "timeout /t 5 /nobreak >nul & start http://localhost:8000"
+start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:8000/cockpit.html"
 .venv\Scripts\python.exe serve_cockpit.py
 echo.
 echo The server stopped. See any error above.

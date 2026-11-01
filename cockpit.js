@@ -796,12 +796,34 @@ function updateTrialUI(status) {
   const badge = document.getElementById('trialBadge');
   const dot = document.getElementById('trialDot');
   const text = document.getElementById('trialText');
+  const unlockLink = document.getElementById('unlockLink');
+  const fullAppNavBtn = document.getElementById('fullAppNavBtn');
   const runBtn = document.getElementById('runBtn');
   const runLabel = document.getElementById('runLabel');
+
+  const isLocalActive = isLocalServer || (status.runs_remaining && status.runs_remaining > 10) || status.is_local_mode;
+
+  if (isLocalActive) {
+    if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+    if (text) text.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">🟢 Local Workstation Active</span> <span class="text-gray-400 text-[11px] font-mono">(Unlimited Discovery Mode)</span>`;
+    if (unlockLink) unlockLink.style.display = 'none';
+    if (fullAppNavBtn) fullAppNavBtn.style.display = 'none';
+    if (runBtn && !isRunning) {
+      runBtn.onclick = () => runCampaign();
+      runBtn.style.background = '';
+      runBtn.style.border = '';
+    }
+    if (runLabel && !isRunning) {
+      runLabel.textContent = '🚀 Run Autonomous Discovery (Local GPU/CPU Engine)';
+    }
+    return;
+  }
 
   if (status.is_locked || status.runs_remaining === 0) {
     if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse";
     if (text) text.innerHTML = `<span class="text-red-400 font-bold">🔒 Free Trial Expired (2/2 Runs Used)</span> • `;
+    if (unlockLink) unlockLink.style.display = 'inline';
+    if (fullAppNavBtn) fullAppNavBtn.style.display = 'inline-flex';
     if (runBtn && !isRunning) {
       runBtn.onclick = () => openInstallModal(true);
       runBtn.style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(118, 185, 0, 0.15))';
@@ -811,10 +833,14 @@ function updateTrialUI(status) {
   } else if (status.runs_remaining === 1) {
     if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse";
     if (text) text.innerHTML = `<span class="text-yellow-400 font-semibold">⚡ Free Trial: 1 Demo Run Left</span> • `;
+    if (unlockLink) unlockLink.style.display = 'inline';
+    if (fullAppNavBtn) fullAppNavBtn.style.display = 'inline-flex';
     if (runLabel && !isRunning) runLabel.textContent = '🚀 Run Discovery (1 Free Demo Run Left)';
   } else {
     if (dot) dot.className = "w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse";
     if (text) text.innerHTML = `<span class="text-gray-300 font-medium">Free Trial: 2 Demo Runs Available</span> • `;
+    if (unlockLink) unlockLink.style.display = 'inline';
+    if (fullAppNavBtn) fullAppNavBtn.style.display = 'inline-flex';
     if (runLabel && !isRunning) runLabel.textContent = '🚀 Run Autonomous Discovery (2 Free Demo Runs)';
   }
 }
@@ -1422,7 +1448,7 @@ async function runDiscovery() {
   document.getElementById('runLabel').textContent = 'Authorizing & Running...';
 
   // ─ Anti-Bypass Backend Enforcement ─
-  let backendData = null; const isStaticHost = window.location.protocol === 'file:' || window.location.hostname.endsWith('github.io');
+  let backendData = null;
   try {
     const res = isStaticHost ? { ok: false, status: 0 } : await fetch(`/api/run?target=${encodeURIComponent(target)}&candidates=${candidates}`, {
       method: 'POST',
@@ -1589,7 +1615,15 @@ async function runDiscovery() {
   document.getElementById('streamDot').style.background = '#76b900';
   isRunning = false;
 
-  if (trialState.is_locked || trialState.runs_remaining === 0) {
+  const isLocalActive = isLocalServer || (trialState.runs_remaining && trialState.runs_remaining > 10) || trialState.is_local_mode;
+
+  if (isLocalActive) {
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('runBtn').onclick = () => runCampaign();
+    document.getElementById('runBtn').style.background = '';
+    document.getElementById('runBtn').style.border = '';
+    document.getElementById('runLabel').textContent = '🚀 Run Autonomous Discovery (Local GPU/CPU Engine)';
+  } else if (trialState.is_locked || trialState.runs_remaining === 0) {
     document.getElementById('runBtn').disabled = false;
     document.getElementById('runBtn').onclick = () => openInstallModal(true);
     document.getElementById('runBtn').style.background = 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(118, 185, 0, 0.15))';

@@ -25,9 +25,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="./app.min.css"/>
 <link rel="stylesheet" href="./cockpit.css"/>
-<script src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
+<script src="./vendor/3Dmol-min.js" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
 <script src="./results/pdb_data.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+<script src="./vendor/chart.umd.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'" defer></script>
 </head>
 <body class="dark bg-grid">
 <!-- ═══════════════════════════════════════════════ HEADER ══════════════ -->
@@ -129,14 +129,14 @@
     <div id="trialBadge" class="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-full text-xs transition-all" style="background: rgba(118,185,0,0.06); border: 1px solid rgba(118,185,0,0.2);">
       <span id="trialDot" class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
       <span id="trialText" class="text-gray-300 font-medium">Free Trial: Checking quota...</span>
-      <span class="text-nvidia-green font-semibold cursor-pointer hover:underline" onclick="openInstallModal()">Unlock Full Version →</span>
+      <span id="unlockLink" class="text-nvidia-green font-semibold cursor-pointer hover:underline" onclick="openInstallModal()">Unlock Full Version →</span>
     </div>
 
     <!-- Right: CTA + Status -->
     <div class="flex items-center gap-3">
       <div class="hidden md:flex items-center gap-1.5 text-xs text-gray-500">
         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-        Mock Mode Active
+        <span id="runtimeModeLabel">Mock Mode Active</span>
       </div>
       <a href="./index.html" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
         <span>← Home</span>
@@ -148,7 +148,7 @@
         <span class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
         <span>⚡ Benchmark</span>
       </button>
-      <button onclick="openInstallModal()" class="btn-cta text-white text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 glow-green">
+      <button id="fullAppNavBtn" onclick="openInstallModal()" class="btn-cta text-white text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 glow-green">
         <span>⚡ Full App</span>
       </button>
     </div>

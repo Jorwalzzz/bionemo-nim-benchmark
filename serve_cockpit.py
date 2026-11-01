@@ -23,6 +23,10 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
+# Default local executions to full unlimited workstation mode (no demo trial nag for local clients)
+if "PORT" not in os.environ and not os.environ.get("DISABLE_TRIAL_LIMIT"):
+    os.environ["DISABLE_TRIAL_LIMIT"] = "true"
+
 import uvicorn
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import (
@@ -240,6 +244,9 @@ if os.path.exists(ASSETS_DIR):
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 if os.path.exists(DATA_DIR):
     app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
+VENDOR_DIR = os.path.join(BASE_DIR, "vendor")
+if os.path.exists(VENDOR_DIR):
+    app.mount("/vendor", StaticFiles(directory=VENDOR_DIR), name="vendor")
 
 COOKIE_NAME = "bionemo_trial_session"
 trial_limiter = TrialLimiter()
@@ -1320,9 +1327,9 @@ def main(argv=None):
     port = args.port if cloud else _free_port("127.0.0.1", args.port)
     if args.open:
         threading.Timer(
-            1.5, webbrowser.open, [f"http://localhost:{port}"]
+            1.5, webbrowser.open, [f"http://localhost:{port}/cockpit.html"]
         ).start()
-    print(f"JORWAL NIM cockpit: http://localhost:{port}  (Ctrl+C to stop)")
+    print(f"BioNeMo Discovery Cockpit: http://localhost:{port}/cockpit.html  (Ctrl+C to stop)")
     uvicorn.run(app, host=args.host, port=port, reload=False)
 
 
