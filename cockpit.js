@@ -1,6 +1,13 @@
 // --- Block 1 ---
 if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.innerHTML=''}}
 
+// Host Sentinel (detects GitHub Pages / Cloudflare Pages / Static vs Local Workstation server)
+const isStaticHost = window.location.protocol === 'file:' || 
+                     window.location.hostname.endsWith('github.io') || 
+                     window.location.hostname.endsWith('pages.dev');
+const isLocalServer = window.location.protocol.startsWith('http') && 
+                      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 // --- Block 5 ---
 let selectedRounds = 2;
 let currentCustomPdb = null;
