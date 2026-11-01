@@ -321,12 +321,19 @@ def gate_run(request: Request, target: str):
     return None, (target, token, info)
 
 
+@app.get("/app.min.css")
 @app.get("/cockpit.css")
 @app.get("/cockpit.js")
-def get_cockpit_asset(request: Request):
-    """Serves root cockpit CSS and JavaScript assets."""
+@app.get("/input.css")
+@app.get("/favicon.ico")
+def get_root_asset(request: Request):
+    """Serves root web assets with correct content-type."""
     name = request.url.path.lstrip("/")
-    return FileResponse(os.path.join(BASE_DIR, name))
+    fpath = os.path.join(BASE_DIR, name)
+    if os.path.isfile(fpath):
+        media_type = "text/css" if name.endswith(".css") else "application/javascript" if name.endswith(".js") else None
+        return FileResponse(fpath, media_type=media_type)
+    return JSONResponse(status_code=404, content={"error": f"Asset {name} not found"})
 
 
 @app.get("/cockpit.html", response_class=HTMLResponse)
