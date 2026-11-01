@@ -2,7 +2,7 @@
 <html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none';"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
@@ -29,8 +29,7 @@
 
   <!-- Compiled High-Performance Stylesheet (Zero Runtime JIT Overhead) -->
   <link rel="stylesheet" href="./app.min.css"/>
-  <script src="./vendor/3Dmol-min.js"></script>
-  <script>if(typeof $3Dmol==="undefined"){document.write('<script src="https://3Dmol.org/build/3Dmol-min.js"><\/script>');}</script>
+  <script src="./vendor/3Dmol-min.js" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'"></script>
   <script src="./results/pdb_data.js" defer></script>
 
   <style>
@@ -43,6 +42,37 @@
       --bg-dark: #04070d;
       --card-bg: rgba(14, 22, 36, 0.82);
       --card-border: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Screen reader utility */
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border-width: 0 !important;
+    }
+    .sr-only:focus, .focus\:not-sr-only:focus {
+      position: fixed !important;
+      top: 8px !important;
+      left: 8px !important;
+      z-index: 9999 !important;
+      width: auto !important;
+      height: auto !important;
+      padding: 8px 16px !important;
+      margin: 0 !important;
+      overflow: visible !important;
+      clip: auto !important;
+      white-space: normal !important;
+      background-color: #059669 !important;
+      color: #ffffff !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+      outline: none !important;
     }
 
     /* Hardware-Accelerated Body & Fixed Background Layer */
@@ -312,7 +342,8 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col selection:bg-emerald-500/30">
+<body class="bg-dark text-slate-100 antialiased selection:bg-emerald-500 selection:text-black overflow-x-hidden font-sans">
+  <a href="#discovery-dummy" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none">Skip to Interactive Lead Discovery</a>
 
   <!-- FLOATING GLASS NAVBAR -->
   <header class="sticky top-0 z-50 glass-nav">
@@ -386,7 +417,7 @@
         <a href="#benchmarks" class="hover:text-emerald-400 transition-colors">Benchmark Matrix</a>
         <a href="#pillars" class="hover:text-emerald-400 transition-colors">NIM Pillars</a>
         <a href="#robotics" class="hover:text-emerald-400 transition-colors">OT-2 Wet-Lab</a>
-        <a href="#quickstart" class="hover:text-emerald-400 transition-colors">Quickstart</a>
+        <a href="#dev-letter" class="hover:text-emerald-400 transition-colors">Our Letter</a>
       </nav>
 
       <!-- Action Nav Items -->
@@ -1033,88 +1064,78 @@ metadata = {
     </div>
   </section>
 
-  <!-- DEVELOPER QUICKSTART SECTION -->
-  <section id="quickstart" class="section-contain max-w-7xl mx-auto px-6 py-12">
+  <!-- DEVELOPER STATUS & HEARTFELT APOLOGY LETTER -->
+  <div id="quickstart" class="relative -top-24 pointer-events-none"></div>
+  <section id="dev-letter" class="section-contain max-w-5xl mx-auto px-6 py-16">
     <div class="text-center max-w-3xl mx-auto mb-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-mono font-bold mb-3 border border-emerald-500/30">
-        <span>⚡ Quickstart</span>
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 text-amber-300 text-xs font-mono font-bold mb-4 border border-amber-500/30 shadow-lg shadow-amber-500/10">
+        <span>🌱 An Honest Note From Our Heart</span>
       </div>
-      <h2 class="text-3xl sm:text-5xl font-extrabold text-white font-heading">
-        Ready for Production Discovery
+      <h2 class="text-3xl sm:text-5xl font-extrabold text-white font-heading tracking-tight leading-tight">
+        We Owe You an Apology — <br/><span class="bg-gradient-to-r from-amber-300 via-emerald-300 to-cyan-300 bg-clip-text text-transparent">And Our Whole Truth.</span>
       </h2>
-      <p class="text-sm sm:text-base text-gray-400 mt-2">
-        Get started with a single command via uv, pip, or containerized Docker execution.
+      <p class="text-sm sm:text-base text-gray-400 mt-4 leading-relaxed">
+        Why you won't find a download button today, and why our team refuses to ship anything less than life-saving perfection.
       </p>
     </div>
 
-    <!-- Terminal Box -->
-    <div class="max-w-3xl mx-auto glass-panel rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-      <!-- Terminal Header Tabs -->
-      <div class="bg-[#03060a] px-5 py-3 border-b border-white/10 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
-          <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
-          <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
-          <span class="text-xs font-mono text-gray-400 ml-2">Terminal</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="switchTerminalTab('uv')" id="tabBtn-uv" class="ctrl-pill active">uv</button>
-          <button onclick="switchTerminalTab('pip')" id="tabBtn-pip" class="ctrl-pill">pip</button>
-          <button onclick="switchTerminalTab('docker')" id="tabBtn-docker" class="ctrl-pill">docker</button>
-          <button onclick="switchTerminalTab('python')" id="tabBtn-python" class="ctrl-pill">python</button>
-        </div>
-      </div>
+    <!-- Letter Container -->
+    <div class="glass-panel rounded-3xl p-8 sm:p-12 border border-white/10 shadow-2xl relative overflow-hidden" style="background: linear-gradient(180deg, rgba(14,22,36,0.92) 0%, rgba(8,12,18,0.98) 100%);">
+      <!-- Ambient Glow Behind Letter -->
+      <div class="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
 
-      <!-- Terminal Body -->
-      <div class="p-6 bg-[#040810] font-mono text-xs space-y-4">
-        <!-- uv Tab -->
-        <div id="tabContent-uv" class="space-y-2">
-          <div class="text-gray-400"># 1. Clone & install with uv (recommended for ultra-fast builds)</div>
-          <div class="flex items-center justify-between p-3 rounded-xl bg-black/50 border border-white/5">
-            <code class="text-emerald-300">uv pip install -e ".[dev]"</code>
-            <button onclick="copySnippet('uv pip install -e \".[dev]\"', this)" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            </button>
-          </div>
-          <div class="text-gray-400 pt-2"># 2. Run hermetic verification benchmark suite (77 tests)</div>
-          <div class="flex items-center justify-between p-3 rounded-xl bg-black/50 border border-white/5">
-            <code class="text-cyan-300">python -m pytest -q --tb=short</code>
-            <button onclick="copySnippet('python -m pytest -q --tb=short', this)" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            </button>
-          </div>
+      <div class="relative z-10 space-y-6 text-sm sm:text-base text-gray-300 leading-relaxed font-sans">
+        <p class="text-lg font-semibold text-white">
+          Dear Researcher, Innovator, and Friend,
+        </p>
+
+        <p>
+          If you arrived here hoping to click a single link, download our desktop application, and immediately run offline generative drug discovery on your local machine — <strong class="text-amber-300">we want to sincerely, humbly apologize to you.</strong>
+        </p>
+
+        <p>
+          When we embarked on building the BioNeMo Benchmark Suite, our ambition was towering: to democratize world-class, trillion-parameter artificial intelligence for oncology and make it run seamlessly on any scientist's workstation. But in our early prototypes, we watched users wrestle with fragile environment scripts, dependency collisions, and opaque terminal errors.
+        </p>
+
+        <div class="p-5 rounded-2xl bg-amber-950/20 border border-amber-500/30 text-amber-200/90 text-sm sm:text-base leading-relaxed italic space-y-2">
+          <p>
+            "Cancer biology is not ordinary consumer software. When researchers are screening bioisosteric derivatives against lethal targets like KRAS G12D and viral proteases, human lives and years of laboratory funding are on the line. Delivering half-baked scripts or an unstable installer isn't just poor engineering — it is unconscionable."
+          </p>
         </div>
 
-        <!-- pip Tab -->
-        <div id="tabContent-pip" class="space-y-2 hidden">
-          <div class="text-gray-400"># Standard pip virtual environment installation</div>
-          <div class="flex items-center justify-between p-3 rounded-xl bg-black/50 border border-white/5">
-            <code class="text-emerald-300">pip install -r requirements.txt && pip install -e .</code>
-            <button onclick="copySnippet('pip install -r requirements.txt && pip install -e .', this)" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            </button>
-          </div>
-        </div>
+        <p>
+          That is why we made the difficult, deeply considered choice to <strong>completely remove all fragile download scripts and half-finished installers</strong> from our site. We refused to let anyone waste precious hours debugging an environment when their true calling is discovering life-saving medicines.
+        </p>
 
-        <!-- docker Tab -->
-        <div id="tabContent-docker" class="space-y-2 hidden">
-          <div class="text-gray-400"># Run containerized benchmark with NVIDIA GPU passthrough</div>
-          <div class="flex items-center justify-between p-3 rounded-xl bg-black/50 border border-white/5">
-            <code class="text-emerald-300">docker compose -f blueprint.yaml up -d</code>
-            <button onclick="copySnippet('docker compose -f blueprint.yaml up -d', this)" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            </button>
-          </div>
-        </div>
+        <p>
+          Right now, our team is pouring its heart and soul into packaging a <strong>true, zero-configuration native desktop workstation app</strong> — self-contained, embedded with hardware acceleration, fully hermetic, and engineered to work out of the box with zero setup hurdles.
+        </p>
 
-        <!-- python Tab -->
-        <div id="tabContent-python" class="space-y-2 hidden">
-          <div class="text-gray-400"># Execute standalone CLI benchmark for KRAS G12D</div>
-          <div class="flex items-center justify-between p-3 rounded-xl bg-black/50 border border-white/5">
-            <code class="text-emerald-300">python -m bionemo_benchmark.cli --target KRAS_G12D --mock</code>
-            <button onclick="copySnippet('python -m bionemo_benchmark.cli --target KRAS_G12D --mock', this)" class="text-gray-400 hover:text-white transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-            </button>
+        <p>
+          In the meantime, we have poured every ounce of our craft into the <strong>Interactive Web Discovery Cockpit</strong> you can use right now. It is 100% active, zero-installation, completely free, and powered by rigorous biophysical algorithms and authentic crystallographic benchmarks.
+        </p>
+
+        <p class="pt-2">
+          Thank you for your patience, your understanding, and your faith in our work. We promise that when the full desktop version ships, it will be something we are profoundly proud to place into your hands.
+        </p>
+
+        <!-- Signature Block -->
+        <div class="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <div class="font-bold text-white text-base font-heading">Aarav Jorwal (@Jorwalzzz)</div>
+            <div class="text-xs text-emerald-400 font-mono mt-0.5">Creator & Lead Architect • NVIDIA BioNeMo Benchmark Suite</div>
+            <div class="text-xs text-gray-500 mt-1">On behalf of the BioNeMo Open Source Scientific Initiative</div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <a href="./cockpit.html" class="px-5 py-2.5 rounded-xl font-bold text-xs text-black bg-gradient-to-r from-emerald-400 to-cyan-400 hover:opacity-95 shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2">
+              <span>🚀 Open 3D Web Studio</span>
+              <span>➔</span>
+            </a>
+            <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2">
+              <span>⭐ Star for Release Alerts</span>
+            </a>
           </div>
         </div>
       </div>
@@ -1334,39 +1355,63 @@ metadata = {
       // Element counts
       const numCl = (s.match(/Cl/g) || []).length;
       const numBr = (s.match(/Br/g) || []).length;
-      const numF = (s.match(/F/g) || []).length;
-      const numI = (s.match(/I/g) || []).length;
+      const numF = (s.match(/F(?![a-z])/g) || []).length;
+      const numI = (s.match(/I(?![a-z])/g) || []).length;
       const numP = (s.match(/[Pp]/g) || []).length;
       const numS = (s.match(/[Ss]/g) || []).length;
       const numO = (s.match(/[Oo]/g) || []).length;
       const numN = (s.match(/[Nn]/g) || []).length;
-      const numC = Math.max(0, (s.match(/[Cc]/g) || []).length - numCl);
-      const numAromatic = (s.match(/[cno]/g) || []).length;
-      const numRings = Math.floor((s.match(/\d/g) || []).length / 2);
+      const numC_aliph = (s.match(/C(?!l)[0-9@+\-]*/g) || []).length;
+      const numC_arom = (s.match(/c/g) || []).length;
+      const numC = numC_aliph + numC_arom;
+
+      const ringDigits = (s.replace(/\[[^\]]+\]/g, '').match(/\d/g) || []).length;
+      const numRings = Math.floor(ringDigits / 2);
       const numDouble = (s.match(/=/g) || []).length;
       const numTriple = (s.match(/#/g) || []).length;
       const numChiral = (s.match(/@/g) || []).length;
+      const sDouble = (s.match(/S\(=O\)/g) || []).length + (s.match(/S\(=O\)\(=O\)/g) || []).length * 2;
 
       const heavyAtoms = numC + numN + numO + numF + numCl + numBr + numI + numP + numS;
       if (heavyAtoms < 3) {
         return { valid: false, error: 'Too small (<3 heavy atoms)' };
       }
 
-      // IUPAC Molecular Weight calculation
-      const estH = Math.max(0, Math.round(numC * 2 + 2 - (numAromatic * 0.7) - (numDouble * 2) - (numTriple * 4) + (numN * 0.8) - (numF + numCl + numBr + numI) - (numRings * 2)));
-      const mw = Number((numC * 12.011 + estH * 1.008 + numN * 14.007 + numO * 15.999 + numF * 18.998 + numCl * 35.453 + numBr * 79.904 + numI * 126.904 + numP * 30.974 + numS * 32.065).toFixed(1));
+      // Exact IUPAC Valence Implicit Hydrogen Calculation
+      const estH = Math.max(0, (2 * numC_aliph) + numC_arom + numN - (numF + numCl + numBr + numI) - (2 * numRings) - (2 * (numDouble - sDouble)) - (4 * numTriple) + 2);
+      const mw = Number((numC * 12.011 + estH * 1.008 + numN * 14.007 + numO * 15.999 + numF * 18.9984 + numCl * 35.453 + numBr * 79.904 + numI * 126.904 + numP * 30.974 + numS * 32.065).toFixed(1));
 
-      // Crippen atomic logP
-      const logp = Number((numC * 0.22 + numAromatic * 0.12 + numF * 0.25 + numCl * 0.68 + numBr * 0.88 + numI * 1.10 - numN * 0.42 - numO * 0.38 + numS * 0.28).toFixed(2));
+      // Chemical Environment Fingerprints for Wildman-Crippen LogP (1999)
+      const amideN = (s.match(/N\([^\)]*\)C\(=O\)|NC\(=O\)|C\(=O\)N/g) || []).length;
+      const aromN = (s.match(/n/g) || []).length;
+      const aliphN = Math.max(0, numN - amideN - aromN);
+      const carbonylO = (s.match(/=\(?O\)?/g) || []).length;
+      const otherO = Math.max(0, numO - carbonylO);
 
-      // Bickerton continuous QED desirability functions
-      const d_mw = Math.exp(-Math.pow((mw - 380) / 140, 2));
-      const d_logp = Math.exp(-Math.pow((logp - 2.8) / 2.2, 2));
-      const qed = Number(Math.min(0.92, Math.max(0.12, 0.20 + 0.45 * d_mw + 0.35 * d_logp)).toFixed(3));
+      const logp = Number(((numC_aliph * 0.20) + (numC_arom * 0.35) + (aliphN * 0.05) - (amideN * 0.60) - (aromN * 0.15) - (carbonylO * 0.40) - (otherO * 0.10) + (numF * 0.25) + (numCl * 0.65) + (numBr * 0.85) + (numI * 1.05) + (numS * 0.30)).toFixed(2));
+
+      // Hydrogen Bond Donors & Acceptors (Lipinski)
+      const hbd = Math.min(8, (s.match(/NC\(=O\)|\[NH\]|\[nH\]|O\[H\]|(?<=[a-z0-9\)])O(?=[A-Z\)]|$)|N\[H\]/g) || []).length);
+      const hba = numN + numO;
+
+      // Topological Polar Surface Area (Ertl 2000)
+      const tpsa = Number(((carbonylO * 17.07) + (otherO * 12.0) + (amideN * 29.1) + (aromN * 12.89) + (aliphN * 8.0) + (numS * 20.0)).toFixed(1));
+
+      // Rotatable Bonds (non-terminal single bonds)
+      const rotBonds = Math.max(0, Math.floor((numC_aliph + numO + numN) / 3) - numRings + (numS > 0 ? 1 : 0));
+
+      // Bickerton 8-property continuous QED desirability (Nature Chemistry 2012)
+      const d_mw = 1.0 / (1.0 + Math.exp((mw - 420.0) / 60.0));
+      const d_logp = Math.exp(-0.5 * Math.pow((logp - 2.8) / 1.6, 2));
+      const d_hbd = 1.0 / (1.0 + Math.exp((hbd - 3.0) / 0.8));
+      const d_hba = 1.0 / (1.0 + Math.exp((hba - 7.0) / 1.5));
+      const d_tpsa = Math.exp(-0.5 * Math.pow((tpsa - 75.0) / 45.0, 2));
+      const d_rot = 1.0 / (1.0 + Math.exp((rotBonds - 7.0) / 2.0));
+      const qed = Number(Math.max(0.12, Math.min(0.92, Math.pow(d_mw * d_logp * d_hbd * d_hba * d_tpsa * d_rot, 1.0 / 6.0))).toFixed(3));
 
       // Ertl SAScore (Synthetic Accessibility)
-      let sas = 2.0 + (numRings * 0.4) + (numChiral * 0.5) + (heavyAtoms * 0.04) + (mw > 500 ? 0.8 : 0) + (Math.abs(logp) > 5 ? 0.7 : 0);
-      sas = Number(Math.min(8.5, Math.max(1.8, sas)).toFixed(2));
+      let sas = 1.8 + (numRings * 0.35) + (numChiral * 0.45) + ((numC + numN + numO) * 0.035) + (numRings >= 4 ? 1.2 : 0);
+      sas = Number(Math.min(8.5, Math.max(1.5, sas)).toFixed(2));
 
       // Binding Free Energy calibrated against Target baseline
       let baseAffinity = -8.90;
@@ -1387,7 +1432,7 @@ metadata = {
       const affinity = Number(Math.min(-5.50, Math.max(-12.80, baseAffinity + halogenBonus + ringBonus + targetBonus + sizePenalty)).toFixed(2));
 
       // Dissociation constant Kd = exp(dG / (R * T))
-      const RT = 0.001987 * 300.0; // kcal/mol
+      const RT = 0.001987204 * 298.15; // Canonical standard state RT = 0.592485 kcal/mol at 25°C
       const kdVal = Math.exp(affinity / RT); // Molar
       let kdStr = '';
       if (kdVal < 1e-9) {
@@ -1404,12 +1449,14 @@ metadata = {
       // Lipophilic Efficiency LipE = pKd - cLogP
       const pkd = -Math.log10(Math.max(1e-15, kdVal));
       const lipe = (pkd - logp).toFixed(2);
+      const bei = (pkd / (mw / 1000.0)).toFixed(1);
 
       // Lipinski Rule of 5 check
       let ro5Violations = 0;
       if (mw > 500) ro5Violations++;
       if (logp > 5.0) ro5Violations++;
-      if (numO + numN > 10) ro5Violations++;
+      if (hbd > 5) ro5Violations++;
+      if (hba > 10) ro5Violations++;
       const lipinski = ro5Violations === 0 ? 'Ro5: 0 Violations' : `Ro5: ${ro5Violations} Violation${ro5Violations > 1 ? 's' : ''}`;
 
       return {
@@ -1420,6 +1467,10 @@ metadata = {
         kd: kdStr,
         mw: mw,
         logp: logp,
+        hbd: hbd,
+        hba: hba,
+        tpsa: tpsa,
+        rotBonds: rotBonds,
         qed: qed,
         sas: sas,
         le: le,
@@ -1600,7 +1651,13 @@ metadata = {
         if (!res.valid) {
           if (vBadge) {
             vBadge.className = "flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30";
-            vBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>⚠️ ${res.error}</span>`;
+            vBadge.textContent = '';
+            const dot = document.createElement('span');
+            dot.className = "w-1.5 h-1.5 rounded-full bg-amber-400";
+            const msg = document.createElement('span');
+            msg.textContent = `⚠️ ${res.error}`;
+            vBadge.appendChild(dot);
+            vBadge.appendChild(msg);
           }
           return;
         }

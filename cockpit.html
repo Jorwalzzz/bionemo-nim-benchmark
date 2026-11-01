@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests;"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none';"/>
 <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
@@ -23,20 +23,51 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;800&family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="./app.min.css"/>
-<link rel="stylesheet" href="./cockpit.css"/>
+<link rel="stylesheet" href="./app.min.css?v=2.2.1"/>
+<link rel="stylesheet" href="./cockpit.css?v=2.2.1"/>
+<style>
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border-width: 0 !important;
+}
+.sr-only:focus, .focus\:not-sr-only:focus {
+  position: fixed !important;
+  top: 8px !important;
+  left: 8px !important;
+  z-index: 9999 !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 8px 16px !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+}
+</style>
 <script src="./vendor/3Dmol-min.js" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
 <script src="./results/pdb_data.js" defer></script>
 <script src="./vendor/chart.umd.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'" defer></script>
 </head>
 <body class="dark bg-grid">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none">Skip to main cockpit workspace</a>
 <!-- ═══════════════════════════════════════════════ HEADER ══════════════ -->
 <header class="glass sticky top-0 z-50 border-b border-surface-border">
   <div class="flex items-center justify-between px-6 h-14">
     <!-- Logo & Brand -->
     <div class="flex items-center gap-3">
       <div class="w-8 h-8 rounded-lg overflow-hidden border border-emerald-500/40 shadow-md shadow-emerald-500/20 flex items-center justify-center bg-[#04070c]">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="32" height="32" class="w-8 h-8 block" style="width: 32px; height: 32px; min-width: 32px; min-height: 32px;" fill="none">
   <defs>
     <!-- Background Gradient -->
     <radialGradient id="plateGlow" cx="50%" cy="30%" r="70%">
@@ -140,16 +171,17 @@
       <a href="./index.html" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
         <span>← Home</span>
       </a>
-      <button onclick="startInteractiveTour()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: 1px solid rgba(236, 72, 153, 0.5);">
+      <button aria-label="Start guided tour" onclick="startInteractiveTour()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: 1px solid rgba(236, 72, 153, 0.5);">
         <span>🧭 Guide</span>
       </button>
-      <button onclick="openBenchmarkModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105 glow-green" style="background: linear-gradient(135deg, rgba(118,185,0,0.25), rgba(0,241,253,0.15)); border: 1px solid rgba(118,185,0,0.6);">
+      <button aria-label="Open hardware benchmark" onclick="openBenchmarkModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105 glow-green" style="background: linear-gradient(135deg, rgba(118,185,0,0.25), rgba(0,241,253,0.15)); border: 1px solid rgba(118,185,0,0.6);">
         <span class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
         <span>⚡ Benchmark</span>
       </button>
-      <button id="fullAppNavBtn" onclick="openInstallModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all">
-        <span>🚧 Desktop App: In Progress</span>
-      </button>
+      <button aria-label="Desktop App Status & Developer Letter" id="fullAppNavBtn" onclick="openInstallModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span>🌱 Desktop App Status</span>
+        </button>
     </div></div>
   </div>
 </header>
@@ -169,7 +201,7 @@
         </div>
       </div>
     </div>
-    <button onclick="closeInteractiveTour()" class="text-gray-500 hover:text-white text-lg leading-none p-1 transition-colors">✕</button>
+    <button aria-label="Close dialog" onclick="closeInteractiveTour()" class="text-gray-500 hover:text-white text-lg leading-none p-1 transition-colors">✕</button>
   </div>
 
   <!-- Progress Bar (10 steps) -->
@@ -204,24 +236,24 @@
   <!-- Actions & Navigation -->
   <div class="flex items-center justify-between pt-2 border-t border-surface-border">
     <div class="flex items-center gap-2">
-      <button id="btnTourPrev" onclick="prevTourStep()" class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white rounded-lg bg-white/5 border border-white/10 transition-colors">
+      <button aria-label="Previous step" id="btnTourPrev" onclick="prevTourStep()" class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white rounded-lg bg-white/5 border border-white/10 transition-colors">
         ◀ Previous
       </button>
-      <button id="btnTourAction" onclick="executeTourAction()" class="px-3 py-1.5 text-xs font-bold text-cyan-300 hover:text-white rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 transition-all flex items-center gap-1">
+      <button aria-label="Execute step action" id="btnTourAction" onclick="executeTourAction()" class="px-3 py-1.5 text-xs font-bold text-cyan-300 hover:text-white rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 transition-all flex items-center gap-1">
         ⚡ Try This Step
       </button>
     </div>
-    <button id="btnTourNext" onclick="nextTourStep()" class="px-4 py-1.5 text-xs font-bold text-white rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 shadow-md shadow-purple-500/20 transition-all flex items-center gap-1">
+    <button aria-label="Next step" id="btnTourNext" onclick="nextTourStep()" class="px-4 py-1.5 text-xs font-bold text-white rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 shadow-md shadow-purple-500/20 transition-all flex items-center gap-1">
       <span>Next Step ➔</span>
     </button>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════ MAIN GRID ════════════ -->
-<div class="flex h-[calc(100vh-56px)] overflow-hidden">
+<div id="main-content" class="flex flex-col lg:flex-row min-h-[calc(100vh-56px)] lg:h-[calc(100vh-56px)] overflow-y-auto lg:overflow-hidden">
 
   <!-- LEFT SIDEBAR: Control Panel -->
-  <aside class="flex flex-col w-72 xl:w-80 flex-shrink-0 border-r border-surface-border overflow-y-auto" style="background: var(--surface-card);">
+  <aside class="flex flex-col w-full lg:w-72 xl:w-80 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-surface-border overflow-y-auto" style="background: var(--surface-card);">
     <div class="p-5">
       <!-- Target Selector -->
               <!-- Target Selection Tabs -->
@@ -231,9 +263,9 @@
             <span id="targetModeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRESET</span>
           </div>
           <div class="grid grid-cols-3 gap-1 bg-[#101620] p-1 rounded-lg border border-surface-border mb-2.5">
-            <button type="button" onclick="switchTargetTab('presets')" id="tabBtnPresets" class="py-1 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all">Presets</button>
-            <button type="button" onclick="switchTargetTab('rcsb')" id="tabBtnRcsb" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">RCSB PDB</button>
-            <button type="button" onclick="switchTargetTab('esmfold')" id="tabBtnEsmfold" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">🧬 ESMFold</button>
+            <button aria-label="Switch to target presets" type="button" onclick="switchTargetTab('presets')" id="tabBtnPresets" class="py-1 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all">Presets</button>
+            <button aria-label="Switch to RCSB PDB target input" type="button" onclick="switchTargetTab('rcsb')" id="tabBtnRcsb" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">RCSB PDB</button>
+            <button aria-label="Switch to ESMFold de novo folding" type="button" onclick="switchTargetTab('esmfold')" id="tabBtnEsmfold" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">🧬 ESMFold</button>
           </div>
 
           <!-- Tab 1: Presets -->
@@ -250,7 +282,7 @@
           <div id="targetTabRcsb" class="hidden">
             <div class="flex gap-1.5">
               <input type="text" id="customTargetInput" aria-label="Custom RCSB PDB ID" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
-              <button type="button" onclick="fetchCustomTarget()" class="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors">Fetch</button>
+              <button aria-label="Fetch target structure from RCSB PDB" type="button" onclick="fetchCustomTarget()" class="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors">Fetch</button>
             </div>
             <p class="text-[10px] text-gray-500 mt-1">Fetches experimental crystallographic receptor from RCSB PDB.</p>
           </div>
@@ -267,12 +299,12 @@
             <div>
               <div class="text-[10px] text-gray-400 mb-1">Quick Load Oncogenic Mutants:</div>
               <div class="flex flex-wrap gap-1">
-                <button type="button" onclick="loadEsmPreset('kras')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">KRAS G12D</button>
-                <button type="button" onclick="loadEsmPreset('braf')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">BRAF V600E</button>
-                <button type="button" onclick="loadEsmPreset('mpro')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Mpro C145A</button>
+                <button aria-label="Load de novo protein sequence preset" type="button" onclick="loadEsmPreset('kras')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">KRAS G12D</button>
+                <button aria-label="Load de novo protein sequence preset" type="button" onclick="loadEsmPreset('braf')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">BRAF V600E</button>
+                <button aria-label="Load de novo protein sequence preset" type="button" onclick="loadEsmPreset('mpro')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Mpro C145A</button>
               </div>
             </div>
-            <button type="button" onclick="foldDeNovoSequence()" class="w-full py-1.5 text-xs font-bold rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors">
+            <button aria-label="Fold de novo sequence with ESMFold" type="button" onclick="foldDeNovoSequence()" class="w-full py-1.5 text-xs font-bold rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors">
               <span>🧬 Fold De Novo Structure (ESMFold)</span>
             </button>
           </div>
@@ -305,14 +337,14 @@
     <span id="roundsDisplay" class="text-xs font-bold text-cyan-400 font-mono">2 Rounds</span>
   </div>
   <div class="grid grid-cols-3 gap-1.5">
-    <button type="button" onclick="setRounds(1)" id="btn-round-1" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">1 (Fast)</button>
-    <button type="button" onclick="setRounds(2)" id="btn-round-2" class="py-1.5 text-xs rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-bold transition-colors">2 (Evolve)</button>
-    <button type="button" onclick="setRounds(3)" id="btn-round-3" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">3 (Deep)</button>
+    <button aria-label="Set optimization rounds" type="button" onclick="setRounds(1)" id="btn-round-1" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">1 (Fast)</button>
+    <button aria-label="Set optimization rounds" type="button" onclick="setRounds(2)" id="btn-round-2" class="py-1.5 text-xs rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-bold transition-colors">2 (Evolve)</button>
+    <button aria-label="Set optimization rounds" type="button" onclick="setRounds(3)" id="btn-round-3" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">3 (Deep)</button>
   </div>
 </div>
 
       <!-- Run Button -->
-      <button id="runBtn" onclick="runDiscovery()" class="btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4">
+      <button aria-label="Run autonomous molecular discovery" id="runBtn" onclick="runDiscovery()" class="btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4">
         <svg id="runIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         <span id="runLabel">🚀 Run Autonomous Discovery</span>
       </button>
@@ -379,7 +411,7 @@
 </aside>
 
   <!-- CENTER: Main Cockpit Canvas -->
-  <main class="flex-1 flex flex-col overflow-hidden">
+  <main class="flex-1 flex flex-col min-w-0 overflow-y-auto lg:overflow-hidden">
 
     <!-- Progress Bar -->
     <div class="h-0.5 w-full" style="background: var(--surface-border);">
@@ -472,78 +504,63 @@
   </aside>
 </div>
 
-<!-- ═══════════════════════════════════════════════ DESKTOP APP (IN PROGRESS) MODAL ════════ -->
+<!-- ═══════════════════════════════════════════════ DESKTOP APP STATUS & APOLOGY MODAL ════════ -->
 <div id="installModal" class="modal-backdrop hidden" style="display: none;" onclick="closeModalOnBackdrop(event)">
   <div class="modal-card max-w-xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <!-- Modal Header -->
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-base font-bold">
-          🚧
+        <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-300 text-lg">
+          🌱
         </div>
         <div>
           <h2 id="modalTitle" class="text-base font-bold text-white flex items-center gap-2">
-            <span>Standalone Desktop App</span>
+            <span>Our Sincere Apology & Status Note</span>
             <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">In Progress</span>
           </h2>
-          <p id="modalSubtitle" class="text-xs text-gray-400">Native offline workstation packaging under active engineering</p>
+          <p id="modalSubtitle" class="text-xs text-gray-400">Why we removed downloading scripts & our commitment to you</p>
         </div>
       </div>
-      <button onclick="closeInstallModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none transition-colors">&times;</button>
+      <button aria-label="Close dialog" onclick="closeInstallModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none transition-colors">&times;</button>
     </div>
 
     <!-- Modal Body -->
     <div class="p-6 space-y-4 text-xs">
-      <!-- Status Notice -->
       <div class="p-4 rounded-xl bg-amber-950/20 border border-amber-500/30 space-y-2">
-        <div class="flex items-center gap-2 font-bold text-amber-400">
-          <span>⚙️ Engineering Roadmap Status: Q1 2027</span>
+        <div class="flex items-center gap-2 font-bold text-amber-300 text-sm">
+          <span>💌 An Honest Word From Aarav Jorwal</span>
         </div>
-        <p class="text-gray-300 leading-relaxed">
-          The standalone 1-click native desktop installer (single-executable Tauri/Electron bundle with pre-packaged RDKit and embedded CUDA inference) is currently under active development.
+        <p class="text-gray-300 leading-relaxed text-xs">
+          If you were looking for an offline download button today, <strong class="text-amber-200">we apologize from the bottom of our hearts.</strong> We made the conscious decision to completely take down all download commands and temporary scripts.
         </p>
       </div>
 
-      <!-- What works right now -->
-      <div class="space-y-2">
-        <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">What is Available & Working Today</div>
-        <div class="p-3 rounded-xl bg-[#121822] border border-surface-border space-y-2">
-          <div class="flex items-start gap-2.5">
-            <span class="text-emerald-400 font-bold">✓</span>
-            <div>
-              <strong class="text-white">Full Web Discovery Studio (Current Page):</strong>
-              <div class="text-gray-400">Interactive 3D molecular viewer, chemical workbench, retrosynthesis steps, and Opentrons OT-2 code generation are 100% active.</div>
-            </div>
-          </div>
-          <div class="flex items-start gap-2.5">
-            <span class="text-emerald-400 font-bold">✓</span>
-            <div>
-              <strong class="text-white">Developer / CLI Benchmark Suite:</strong>
-              <div class="text-gray-400">Clone and run directly from source with Python 3.12:</div>
-              <div class="mt-1.5 p-2 rounded bg-black/50 font-mono text-[11px] text-emerald-400 border border-surface-border select-all">
-                git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git<br/>
-                cd bionemo-nim-benchmark<br/>
-                python run_benchmark.py --mock
-              </div>
-            </div>
-          </div>
-          <div class="flex items-start gap-2.5">
-            <span class="text-emerald-400 font-bold">✓</span>
-            <div>
-              <strong class="text-white">Live NVIDIA NIM Cloud Microservices:</strong>
-              <div class="text-gray-400">Add your free <code class="text-emerald-400 font-mono">NVIDIA_API_KEY</code> from <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-nvidia-green hover:underline">build.nvidia.com</a> to benchmark hosted ESM-2 and DiffDock models.</div>
-            </div>
-          </div>
+      <div class="space-y-2 text-gray-300 leading-relaxed">
+        <p>
+          Cancer and antiviral therapeutics are far too important to compromise on stability. In early internal tests, asking scientists to configure complex Python and CUDA terminal environments led to frustration. We refuse to deliver anything less than an effortless, single-click native desktop experience that works reliably on day one.
+        </p>
+        <p>
+          Our team is actively engineering a <strong>dedicated native workstation application</strong> with built-in GPU acceleration and automated setup. It is under deep, passionate development.
+        </p>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-[#121822] border border-surface-border space-y-2">
+        <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+          <span>✓</span>
+          <span>100% Free & Active in Your Browser Today</span>
+        </div>
+        <div class="text-gray-400 leading-relaxed text-[11px]">
+          Everything in this Web Studio — 3D molecular visualization, multi-objective Pareto ranking, retrosynthesis steps, and Opentrons robot protocols — is fully active and completely free with no download required.
         </div>
       </div>
 
       <!-- Footer CTA -->
       <div class="pt-2 flex justify-between items-center">
         <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition-colors">
-          <span>⭐ Star on GitHub for Release Updates</span>
+          <span>⭐ Follow on GitHub for Desktop Release</span>
         </a>
-        <button onclick="closeInstallModal()" class="px-5 py-2 rounded-lg bg-surface-elevated text-white text-xs font-semibold hover:bg-white/10 transition-colors">
-          Close
+        <button aria-label="Close dialog" onclick="closeInstallModal()" class="px-5 py-2 rounded-lg bg-surface-elevated text-white text-xs font-semibold hover:bg-white/10 transition-colors">
+          Back to Cockpit
         </button>
       </div>
     </div>
@@ -567,10 +584,10 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="toggle3DSpin()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🔄 Spin</button>
-        <button onclick="toggle3DSurface()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🎨 Pocket Surface</button>
-        <button onclick="reset3DView()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🔍 Recenter</button>
-        <button onclick="close3DModalDirect()" class="text-gray-400 hover:text-white p-1 text-lg font-bold ml-2">&times;</button>
+        <button aria-label="Toggle 3D molecule auto-rotation" onclick="toggle3DSpin()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🔄 Spin</button>
+        <button aria-label="Toggle binding pocket surface rendering" onclick="toggle3DSurface()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🎨 Pocket Surface</button>
+        <button aria-label="Reset 3D camera view" onclick="reset3DView()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🔍 Recenter</button>
+        <button aria-label="Close dialog" onclick="close3DModalDirect()" class="text-gray-400 hover:text-white p-1 text-lg font-bold ml-2">&times;</button>
       </div>
     </div>
     <div id="modalMolViewer3D" style="width: 100%; height: 500px; position: relative; background: #0b0f14;"></div>
@@ -603,7 +620,7 @@
           <p class="text-xs text-gray-400">Real-time throughput & latency telemetry measuring AI acceleration</p>
         </div>
       </div>
-      <button onclick="closeBenchmarkModalDirect()" class="text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
+      <button aria-label="Close dialog" onclick="closeBenchmarkModalDirect()" class="text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
     </div>
 
     <!-- Modal Content -->
@@ -633,7 +650,7 @@
           <div class="text-xs font-bold text-gray-200">Live Host CPU Calibration</div>
           <div id="bmHostCpuName" class="text-[11px] text-gray-400 font-mono">Standard x86_64 Laptop CPU</div>
         </div>
-        <button id="btnRunLiveBm" onclick="runLiveBenchmark()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 flex items-center gap-1.5 transition-colors">
+        <button aria-label="Run live host CPU inference benchmark" id="btnRunLiveBm" onclick="runLiveBenchmark()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 flex items-center gap-1.5 transition-colors">
           <span>⚡ Calibrate My Laptop CPU</span>
         </button>
       </div>
@@ -742,7 +759,7 @@
           <p class="text-xs text-gray-400">Target Hotspot Entropy (ESM-2) + Counter-Design Evolution (MolMIM)</p>
         </div>
       </div>
-      <button onclick="closeResistanceModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button aria-label="Close dialog" onclick="closeResistanceModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
     </div>
 
     <div class="p-6 space-y-5 overflow-y-auto max-h-[80vh]">
@@ -806,7 +823,7 @@
       <div class="p-3.5 rounded-xl bg-[#0b0f14] border border-[#30363d] space-y-2">
         <div class="flex justify-between items-center text-xs">
           <span class="text-gray-400 font-semibold">MolMIM Evolved Escape SMILES:</span>
-          <button onclick="copyEvolvedSmiles()" class="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition-colors">📋 Copy SMILES</button>
+          <button aria-label="Copy evolved SMILES string" onclick="copyEvolvedSmiles()" class="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition-colors">📋 Copy SMILES</button>
         </div>
         <div id="resEvolvedSmiles" class="text-[11px] font-mono text-emerald-400 p-2 rounded bg-black/40 border border-emerald-500/20 break-all select-all">
           O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5.c1nn(CC(F)(F)F)cc1
@@ -815,10 +832,10 @@
 
       <!-- Actions -->
       <div class="flex gap-2 pt-2">
-        <button onclick="adoptEvolvedScaffold()" class="flex-1 py-2.5 rounded-lg btn-cta text-white font-bold text-xs flex items-center justify-center gap-2">
+        <button aria-label="Adopt evolved scaffold" onclick="adoptEvolvedScaffold()" class="flex-1 py-2.5 rounded-lg btn-cta text-white font-bold text-xs flex items-center justify-center gap-2">
           <span>🧪 Adopt Evolved Candidate into Workbench</span>
         </button>
-        <button onclick="closeResistanceModal()" class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
+        <button aria-label="Close dialog" onclick="closeResistanceModal()" class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
           Close
         </button>
       </div>
@@ -840,7 +857,7 @@
           <p class="text-xs text-gray-400">Target Candidate: <span id="robotModalLeadId" class="text-amber-300 font-mono">LEAD-001</span> | Opentrons API Level 2.15</p>
         </div>
       </div>
-      <button onclick="closeRobotModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button aria-label="Close dialog" onclick="closeRobotModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
     </div>
 
     <div class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
@@ -860,8 +877,8 @@
         <div class="flex justify-between items-center text-xs">
           <span class="text-gray-400 font-semibold font-mono">Executable Python Script (ot2_synthesis.py):</span>
           <div class="flex gap-2">
-            <button onclick="copyOT2Code()" class="px-2.5 py-1 text-xs rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">📋 Copy Code</button>
-            <button onclick="downloadCurrentOT2Py()" class="px-2.5 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-colors">⬇ Download .py</button>
+            <button aria-label="Copy Opentrons OT-2 Python protocol" onclick="copyOT2Code()" class="px-2.5 py-1 text-xs rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">📋 Copy Code</button>
+            <button aria-label="Download Opentrons Python script" onclick="downloadCurrentOT2Py()" class="px-2.5 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-colors">⬇ Download .py</button>
           </div>
         </div>
         <pre id="ot2CodeContent" class="p-4 rounded-xl bg-[#010409] border border-[#21262d] text-amber-300/90 text-xs font-mono overflow-x-auto max-h-72 select-all leading-relaxed"></pre>
@@ -869,10 +886,10 @@
 
       <!-- Modal Footer -->
       <div class="flex justify-between items-center pt-2">
-        <button onclick="generateLabCard()" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5">
+        <button aria-label="Download wet-lab SOP protocol card" onclick="generateLabCard()" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5">
           <span>📋 Download Wet-Lab SOP Card (.md)</span>
         </button>
-        <button onclick="closeRobotModal()" class="px-4 py-2 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">
+        <button aria-label="Close dialog" onclick="closeRobotModal()" class="px-4 py-2 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">
           Close
         </button>
       </div>
@@ -880,6 +897,6 @@
   </div>
 </div>
 
-<script src="cockpit.js"></script>
+<script src="cockpit.js?v=2.2.1"></script>
 </body>
 </html>
