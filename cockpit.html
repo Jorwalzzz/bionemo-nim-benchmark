@@ -156,7 +156,7 @@
 </header>
 
 <!-- Interactive 10-Step Guided Tour Card -->
-<div id="tourCardModal" class="hidden fixed bottom-6 right-6 z-[2500] max-w-xl w-[94%] md:w-[560px] p-5 rounded-2xl border border-purple-500/40 bg-[#0d1117]/95  shadow-2xl animate-fade-up">
+<div id="tourCardModal" style="display: none;" class="hidden fixed bottom-6 right-6 z-[2500] max-w-xl w-[94%] md:w-[560px] p-5 rounded-2xl border border-purple-500/40 bg-[#0d1117]/95  shadow-2xl animate-fade-up">
   <!-- Tour Header -->
   <div class="flex items-center justify-between pb-3 border-b border-surface-border mb-3">
     <div class="flex items-center gap-2.5">
@@ -474,7 +474,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ INSTALL MODAL ════════ -->
-<div id="installModal" class="modal-backdrop hidden" onclick="closeModalOnBackdrop(event)">
+<div id="installModal" class="modal-backdrop hidden" style="display: none;" onclick="closeModalOnBackdrop(event)">
   <div class="modal-card p-0 animate-fade-up" onclick="event.stopPropagation()">
     <!-- Modal Header -->
     <div class="p-6 border-b border-surface-border">
@@ -663,7 +663,7 @@
 
 
 <!-- ═══════════════════════════════════════════════ 3D INSPECTOR MODAL ════════ -->
-<div id="viewer3DModal" class="modal-backdrop hidden" onclick="close3DModal(event)">
+<div id="viewer3DModal" class="modal-backdrop hidden" style="display: none;" onclick="close3DModal(event)">
   <div class="modal-card max-w-4xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid #30363d; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);">
     <div class="p-4 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
       <div class="flex items-center gap-3">
@@ -694,7 +694,7 @@
 
 
 <!-- ═══════════════════════════════════════════════ HARDWARE BENCHMARK MODAL ════════ -->
-<div id="benchmarkModal" class="modal-backdrop hidden" onclick="closeBenchmarkModal(event)">
+<div id="benchmarkModal" class="modal-backdrop hidden" style="display: none;" onclick="closeBenchmarkModal(event)">
   <div class="modal-card max-w-2xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid #30363d; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);">
     <!-- Modal Header -->
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
@@ -836,7 +836,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ RESISTANCE ESCAPE MODAL ════ -->
-<div id="resistanceModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeResistanceModal()">
+<div id="resistanceModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeResistanceModal()">
   <div class="modal-card max-w-3xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(239, 68, 68, 0.15);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
       <div class="flex items-center gap-3">
@@ -934,7 +934,7 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ ROBOT PROTOCOL MODAL ══════ -->
-<div id="robotProtocolModal" class="modal-backdrop hidden" onclick="if(event.target===this)closeRobotModal()">
+<div id="robotProtocolModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeRobotModal()">
   <div class="modal-card max-w-4xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
       <div class="flex items-center gap-3">

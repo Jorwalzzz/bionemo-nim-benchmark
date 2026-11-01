@@ -359,6 +359,7 @@ function open3DModal() {
   const modal = document.getElementById('viewer3DModal');
   if (!modal) return;
   modal.classList.remove('hidden');
+  modal.style.display = 'flex';
   
   const targetName = document.getElementById('targetName').textContent || 'Target Complex';
   document.getElementById('modal3DTitle').textContent = `${targetName} · ${currentSelectedLead ? currentSelectedLead.id : 'Pocket View'}`;
@@ -412,11 +413,15 @@ function close3DModal(e) {
 
 function close3DModalDirect() {
   const modal = document.getElementById('viewer3DModal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
   if (modalViewer) {
     modalViewer.spin(false);
     modalViewer = null;
   }
+  document.body.classList.remove('modal-open');
 }
 
 async function updateLead3DView(lead) {
@@ -1841,10 +1846,15 @@ function openInstallModal(isTrialExpired=false) {
     if (s) s.textContent = 'Fully automated setup — zero config headache. Works on any machine.';
   }
   modal.classList.remove('hidden');
+  modal.style.display = 'flex';
   document.body.classList.add('modal-open');
 }
 function closeInstallModal() {
-  document.getElementById('installModal').classList.add('hidden');
+  const modal = document.getElementById('installModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
   document.body.classList.remove('modal-open');
 }
 function closeModalOnBackdrop(e) {
@@ -1988,7 +1998,11 @@ updateTargetInfo();
 // ─── NVIDIA HARDWARE ACCELERATION BENCHMARK WIDGET ──────────────────────────
 async function openBenchmarkModal() {
   const modal = document.getElementById('benchmarkModal');
-  if (modal) modal.classList.remove('hidden');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+  }
   await runLiveBenchmark();
 }
 
@@ -2000,7 +2014,11 @@ function closeBenchmarkModal(e) {
 
 function closeBenchmarkModalDirect() {
   const modal = document.getElementById('benchmarkModal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+  document.body.classList.remove('modal-open');
 }
 
 async function runLiveBenchmark() {
@@ -2163,6 +2181,7 @@ async function generateRobotProtocol() {
 
   showToast('🤖 Generating Opentrons OT-2 Python protocol...');
   try {
+    if (isStaticHost) throw new Error('Static host: use client-side protocol');
     const res = await fetch('/api/robot/protocol', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2202,6 +2221,7 @@ async function generateLabCard() {
   };
 
   try {
+    if (isStaticHost) throw new Error('Static host: use client-side protocol');
     const res = await fetch('/api/robot/protocol', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2236,10 +2256,20 @@ async function generateLabCard() {
 }
 
 function openRobotModal() {
-  document.getElementById('robotProtocolModal').classList.remove('hidden');
+  const modal = document.getElementById('robotProtocolModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+  }
 }
 function closeRobotModal() {
-  document.getElementById('robotProtocolModal').classList.add('hidden');
+  const modal = document.getElementById('robotProtocolModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+  document.body.classList.remove('modal-open');
 }
 function downloadCurrentOT2Py() {
   if (!currentOt2Code) return;
@@ -2340,10 +2370,20 @@ async function runResistanceStressTest() {
 }
 
 function openResistanceModal() {
-  document.getElementById('resistanceModal').classList.remove('hidden');
+  const modal = document.getElementById('resistanceModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+  }
 }
 function closeResistanceModal() {
-  document.getElementById('resistanceModal').classList.add('hidden');
+  const modal = document.getElementById('resistanceModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+  document.body.classList.remove('modal-open');
 }
 function adoptEvolvedScaffold() {
   if (!latestResistanceData || !latestResistanceData.evolved_smiles) {
@@ -2502,14 +2542,20 @@ const TOUR_STEPS = [
 function startInteractiveTour() {
   currentTourStep = 0;
   const modal = document.getElementById('tourCardModal');
-  if (modal) modal.classList.remove('hidden');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'block';
+  }
   renderTourStep(0);
 }
 
 function closeInteractiveTour() {
   try { localStorage.setItem('bionemo_guide_seen', 'true'); } catch (e) {}
   const modal = document.getElementById('tourCardModal');
-  if (modal) modal.classList.add('hidden');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
   showToast('Guided tour closed. Click "🧭 Guide" anytime to resume.');
 }
 
@@ -2569,3 +2615,25 @@ function executeTourAction() {
     step.action();
   }
 }
+
+// ─── UNIVERSAL MODAL ESCAPE SENTINEL & CLOSE-ALL CONTROLLER ───────────────────
+function closeAllModals() {
+  ['robotProtocolModal', 'resistanceModal', 'installModal', 'viewer3DModal', 'benchmarkModal', 'tourCardModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('hidden');
+      el.style.display = 'none';
+    }
+  });
+  if (typeof modalViewer !== 'undefined' && modalViewer) {
+    try { modalViewer.spin(false); } catch (e) {}
+    modalViewer = null;
+  }
+  document.body.classList.remove('modal-open');
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    closeAllModals();
+  }
+});
