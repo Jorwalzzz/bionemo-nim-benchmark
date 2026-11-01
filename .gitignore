@@ -48,3 +48,9 @@ dist_npm/
 docs/guides/*.pdf
 docs/guides/*.html
 *.pdf
+
+# AI scaffolding and local dev files — not for public repo
+.agents/
+GEMINI.md
+ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md
+scratch/

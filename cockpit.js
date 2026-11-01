@@ -600,7 +600,9 @@ function evaluateClientRedock(smiles, targetName) {
   let sascore = 1.8 + (numRings * 0.35) + (numChiral * 0.45) + ((numC + numN + numO) * 0.035) + (numRings >= 4 ? 1.2 : 0);
   sascore = Number(Math.min(8.5, Math.max(1.5, sascore)).toFixed(2));
 
-  // Target Pocket Interaction Energy (kcal/mol) calibrated against NVIDIA NIM DiffDock crystallographic benchmarks
+  // Target Pocket Interaction Energy (kcal/mol) — empirical heuristic scoring function.
+  // NOT DiffDock output. Approximated from per-target base constants + pharmacophore bonuses.
+  // Do not interpret as measured binding free energy.
   let baseAffinity = -8.80;
   if (/mpro/i.test(targetName)) baseAffinity = -9.60;
   else if (/her2/i.test(targetName)) baseAffinity = -9.30;
@@ -2292,7 +2294,7 @@ async function generateRobotProtocol() {
     showToast('✅ Opentrons OT-2 Protocol generated!');
   } catch (err) {
     // Elegant client-side fallback for static GitHub Pages hosting
-    const sampleScript = `"""\nOpentrons OT-2 Automated Dilution Protocol\nTarget Candidate: ${lead.id}\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "KRAS G12D inhibitor serial dilution (illustrative)",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25   # µL/s, throttled for DMSO viscosity\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]  # Row A: A1 to A12\n    # Dispense diluent (50 µL) into columns 2-12\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    # 2-fold serial dilution down Row A with mixing\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 KRAS G12D serial dilution protocol complete.")\n`;
+    const sampleScript = `"""\nOT-2 AUTOMATED DILUTION PROTOCOL (UNVALIDATED)\nWARNING: Auto-generated for illustrative purposes only.\nNOT reviewed by a qualified chemist. DO NOT use in wet lab without expert review.\nTarget Candidate: ${lead.id}\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "KRAS G12D inhibitor serial dilution (illustrative)",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25   # µL/s, throttled for DMSO viscosity\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]  # Row A: A1 to A12\n    # Dispense diluent (50 µL) into columns 2-12\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    # 2-fold serial dilution down Row A with mixing\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 KRAS G12D serial dilution protocol complete.")\n`;
     currentOt2Code = sampleScript;
     currentLabCardMd = `# 🧪 Wet-Lab Protocol Card — ${lead.id}\n> **Generated for BioNeMo NIM Benchmark Suite**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Assay & Dilution Overview\n- Format: Corning 96-well flat-bottom plate (360 µL/well)\n- Gradient: 2-fold serial dilution down Row A (columns 1 to 12)\n- Fluidics: Throttled aspiration (25 µL/s) for DMSO compatibility\n`;
     document.getElementById('ot2CodeContent').textContent = currentOt2Code;
@@ -2444,14 +2446,14 @@ async function runResistanceStressTest() {
   } catch (err) {
     // High-fidelity fallback for static deployment
     latestResistanceData = {
-      mutation_simulated: 'G12D -> G12C (Switch-II Covalent Escape)',
-      hotspot_residues: ['Gly12', 'Asp12', 'Tyr96', 'Gln61'],
+      mutation_simulated: 'G12D → G12V (Steric Resistance — Illustrative Scripted Scenario)',
+      hotspot_residues: ['Asp12', 'Tyr96', 'Gln61', 'Lys16'],  // Gly12 removed — same position as Asp12 in G12D mutant
       original_affinity: lead.affinity || -9.2,
       mutant_affinity: -5.8,
       evolved_affinity: -9.9,
       delta_recovery: 4.1,
-      structural_mechanism: 'Simulated mutation removes switch-II electrostatic latch. NVIDIA MolMIM latent transformation remodeled terminal heterocycle to evade steric clash.',
-      evolved_smiles: 'O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5.c1nn(CC(F)(F)F)cc1',
+      structural_mechanism: '[Illustrative scripted scenario — not real resistance data] Simulated G12D→G12V substitution reduces switch-II electrostatic complementarity. MolMIM counter-design remodels terminal heterocycle to restore pocket fit.',
+      evolved_smiles: 'O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5',  // Single-component molecule (fragment removed)
       verdict: 'RESISTANCE BYPASSED'
     };
     document.getElementById('resMutationTitle').textContent = latestResistanceData.mutation_simulated;
@@ -2607,7 +2609,7 @@ const TOUR_STEPS = [
     step: 8,
     title: '8/10: Adaptive Resistance Engine',
     techBadge: 'ESM-2 Counter-Design',
-    whatIs: '• Predicts tumor escape mutations (e.g. G12D → G12C)\n• MolMIM generates counter-measure scaffolds that retain potency',
+    whatIs: '• Predicts tumor escape mutations (e.g. G12D→G12V (steric resistance — illustrative))\n• MolMIM generates counter-measure scaffolds that retain potency',
     whatToDo: 'Click "⚡ Try This Step" to open the Resistance Engine and evolve an escape-resistant scaffold.',
     action: () => {
       openResistanceModal();

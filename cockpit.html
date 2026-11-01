@@ -166,7 +166,7 @@
     <div class="flex items-center gap-3">
       <div id="runtimeModeStatus" class="hidden md:flex items-center gap-1.5 text-xs text-gray-400">
         <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-        <span id="runtimeModeLabel">Mock Mode Active</span>
+        <span id="runtimeModeLabel">Simulation Mode (No API Key)</span>
       </div>
       <a href="./index.html" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
         <span>← Home</span>
@@ -629,7 +629,7 @@
       <div class="grid grid-cols-3 gap-3">
         <div class="p-3.5 rounded-xl bg-[#121822] border border-surface-border">
           <div class="text-[11px] text-gray-400 mb-1">Overall Speedup</div>
-          <div id="bmOverallSpeedup" class="text-2xl font-mono font-extrabold text-glow-green" style="color: var(--nvidia-green);">54.2×</div>
+          <div id="bmOverallSpeedup" class="text-2xl font-mono font-extrabold text-glow-green" style="color: var(--nvidia-green);">54.8×</div>
           <div class="text-[10px] text-gray-500 mt-0.5">Tensor Core Acceleration</div>
         </div>
         <div class="p-3.5 rounded-xl bg-[#121822] border border-surface-border">
@@ -663,7 +663,7 @@
         <div class="p-3 rounded-xl bg-[#121822] border border-surface-border space-y-2">
           <div class="flex justify-between items-center text-xs">
             <span class="font-bold text-white">🧬 ESM-2 (650M) Protein Language Model</span>
-            <span id="bmEsm2Speedup" class="font-mono font-bold text-emerald-400">71.9× Faster</span>
+            <span id="bmEsm2Speedup" class="font-mono font-bold text-emerald-400">40.0× Faster</span>
           </div>
           <div class="space-y-1 text-[11px]">
             <div class="flex items-center gap-2">
@@ -678,7 +678,7 @@
               <div class="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
                 <div class="bg-emerald-400 h-full rounded-full" style="width: 1.5%;"></div>
               </div>
-              <span id="bmEsm2Gpu" class="w-16 text-right font-mono text-emerald-400 font-bold">44.5 ms</span>
+              <span id="bmEsm2Gpu" class="w-16 text-right font-mono text-emerald-400 font-bold">80.0 ms</span>
             </div>
           </div>
         </div>
@@ -738,7 +738,7 @@
           <span>🚀 High-Throughput Screening Impact (10,000 Molecules)</span>
         </div>
         <div class="text-xs text-gray-300 leading-relaxed">
-          Running a virtual library screen of 10,000 drug leads takes <strong class="text-red-400 font-mono">~65.1 hours (~2.7 days)</strong> on standard laptop CPU. With <strong class="text-emerald-400">NVIDIA NIM H100 Tensor Cores</strong>, the same campaign completes in <strong class="text-cyan-400 font-mono">~44.8 minutes</strong>, saving <strong class="text-white font-mono" id="bmTimeSaved">~64.3 hours</strong> of compute time.
+          Running a virtual library screen of 10,000 drug leads takes <strong class="text-red-400 font-mono">~90.0 hours (~3.75 days)</strong> on standard laptop CPU. With <strong class="text-emerald-400">NVIDIA NIM H100 Tensor Cores</strong>, the same campaign completes in <strong class="text-cyan-400 font-mono">~73.3 minutes</strong>, saving <strong class="text-white font-mono" id="bmTimeSaved">~88.5 hours</strong> vs. AMD EPYC 7763 CPU baseline.
         </div>
       </div>
     </div>

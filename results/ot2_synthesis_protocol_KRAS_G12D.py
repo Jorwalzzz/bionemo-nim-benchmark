@@ -1,3 +1,11 @@
+# =============================================================================
+# UNVALIDATED PROTOCOL WARNING
+# This script was auto-generated for illustrative purposes only.
+# It has NOT been reviewed or validated by a qualified chemist.
+# DO NOT use in a wet laboratory without independent expert review,
+# risk assessment, and compliance with all applicable safety regulations.
+# Expected yields and volumes are illustrative and may be incorrect.
+# =============================================================================
 """
 Opentrons OT-2 Automated Dilution Protocol
 Target Candidate: KRAS G12D Inhibitor Assay Series

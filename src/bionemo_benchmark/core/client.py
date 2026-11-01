@@ -23,6 +23,11 @@ from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
+# If NIM_BENCHMARK_STRICT=1, refuse to return simulated data when live API fails.
+# Set this in CI or benchmark contexts to prevent silent fallback masking real errors.
+_STRICT_MODE: bool = os.environ.get("NIM_BENCHMARK_STRICT", "0").strip() == "1"
+
+
 # Standard 20 canonical amino acids
 CANONICAL_AMINO_ACIDS = set("ACDEFGHIKLMNPQRSTVWY")
 
@@ -375,9 +380,14 @@ class NimBioClient:
 
         except Exception as e:
             logger.warning(
-                "NIM ESM-2 network error (%s). Falling back to GPU simulation profile.",
+                "[SIMULATION FALLBACK] NIM ESM-2 network error (%s). Results will be SIMULATED.",
                 str(e),
             )
+            if _STRICT_MODE:
+                raise RuntimeError(
+                    f"NIM ESM-2 network error: {e}. "
+                    "Refusing to return simulated data in STRICT mode (NIM_BENCHMARK_STRICT=1)."
+                ) from e
             return self._simulate_esm2_response(clean_seq, seq_len)
 
     def _simulate_diffdock_response(
@@ -525,19 +535,34 @@ class NimBioClient:
                     )
                 else:
                     logger.warning(
-                        "DiffDock API returned status '%s'. Using fallback profile.",
+                        "[SIMULATION FALLBACK] DiffDock API returned status '%s'. Results will be SIMULATED.",
                         data.get("status"),
                     )
+                    if _STRICT_MODE:
+                        raise RuntimeError(
+                            f"DiffDock returned unexpected status '{data.get('status')}'. "
+                            "Refusing to return simulated data in STRICT mode (NIM_BENCHMARK_STRICT=1)."
+                        )
                     return self._simulate_diffdock_response(ligand_smiles, num_poses)
             else:
                 logger.warning(
-                    "DiffDock API returned HTTP [%d]. Using fallback profile.",
+                    "[SIMULATION FALLBACK] DiffDock API returned HTTP %d. Results will be SIMULATED.",
                     resp.status_code,
                 )
+                if _STRICT_MODE:
+                    raise RuntimeError(
+                        f"DiffDock API returned HTTP {resp.status_code}. "
+                        "Refusing to return simulated data in STRICT mode (NIM_BENCHMARK_STRICT=1)."
+                    )
                 return self._simulate_diffdock_response(ligand_smiles, num_poses)
 
         except Exception as e:
             logger.warning(
-                "Live DiffDock request failed: %s. Using fallback profile.", str(e)
+                "[SIMULATION FALLBACK] Live DiffDock request failed: %s. Results will be SIMULATED.", str(e)
             )
+            if _STRICT_MODE:
+                raise RuntimeError(
+                    f"DiffDock request failed: {e}. "
+                    "Refusing to return simulated data in STRICT mode (NIM_BENCHMARK_STRICT=1)."
+                ) from e
             return self._simulate_diffdock_response(ligand_smiles, num_poses)
