@@ -767,8 +767,8 @@
       <div class="p-3.5 rounded-xl bg-red-950/20 border border-red-500/30 flex items-center justify-between">
         <div>
           <div class="text-[10px] text-red-400 uppercase tracking-wider font-semibold">Simulated Clinical Escape Mutation</div>
-          <div id="resMutationTitle" class="text-sm font-bold text-gray-100 font-mono mt-0.5">G12D -> G12C (Switch-II Covalent Escape)</div>
-          <div class="text-[11px] text-gray-400 mt-1">High-Entropy Hotspot Residues: <span id="resHotspots" class="font-mono text-cyan-300">Gly12, Asp12, Tyr96, Gln61</span></div>
+          <div id="resMutationTitle" class="text-sm font-bold text-gray-100 font-mono mt-0.5">G12D → G12V (Steric Resistance — Illustrative Scripted Scenario)</div>
+          <div class="text-[11px] text-gray-400 mt-1">High-Entropy Hotspot Residues: <span id="resHotspots" class="font-mono text-cyan-300">Asp12, Tyr96, Gln61, Lys16</span></div>
         </div>
         <div class="text-right">
           <span class="text-[10px] font-mono px-2 py-1 rounded bg-red-500/20 text-red-300 border border-red-500/30 font-bold">ESM-2 Entropy Flag</span>
@@ -815,7 +815,7 @@
           <span>Biophysical Mechanism & Bioisosteric Rationale</span>
         </div>
         <p id="resMechanismText" class="text-xs text-gray-300 leading-relaxed">
-          The simulated point mutation removes essential electrostatic interactions in the switch-II pocket. NVIDIA MolMIM executed latent space CMA-ES steering to remodel the terminal heterocycle, avoiding steric clash while maintaining optimal subpocket desolvation.
+          [Illustrative scripted scenario — not real resistance data] Simulated G12D→G12V substitution reduces switch-II electrostatic complementarity. MolMIM counter-design remodels terminal heterocycle to restore pocket fit.
         </p>
       </div>
 
@@ -826,7 +826,7 @@
           <button aria-label="Copy evolved SMILES string" onclick="copyEvolvedSmiles()" class="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition-colors">📋 Copy SMILES</button>
         </div>
         <div id="resEvolvedSmiles" class="text-[11px] font-mono text-emerald-400 p-2 rounded bg-black/40 border border-emerald-500/20 break-all select-all">
-          O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5.c1nn(CC(F)(F)F)cc1
+          O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5
         </div>
       </div>
 
