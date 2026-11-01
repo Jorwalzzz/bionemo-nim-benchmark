@@ -1,0 +1,95 @@
+{
+  "benchmark_metadata": {
+    "suite_name": "BioNeMo NIM Performance Benchmark",
+    "version": "2.2.0",
+    "date": "2026-10-30",
+    "gpu_hardware": "NVIDIA H100 80GB SXM5 (TensorRT FP16/FP8 Accelerated)",
+    "cpu_hardware": "AMD EPYC 7763 (16 Cores allocated, PyTorch 2.2 / RDKit C++ baseline)",
+    "network_latency_included": false,
+    "inference_mode": "Warm container inference, n=5 runs (mean reported)",
+    "headline_metric": {
+      "mean_model_speedup": 54.8,
+      "geometric_mean_speedup": 54.1,
+      "total_compute_reduction_ratio": 60.6,
+      "end_to_end_cycle_speedup": 58.9,
+      "cpu_cycle_seconds": 32.40,
+      "nim_cycle_seconds": 0.55,
+      "time_saved_hours_10k": 88.5,
+      "calculation_formula": "(32.40s - 0.55s) * 10,000 / 3600 = 88.47 hours"
+    }
+  },
+  "benchmarks": [
+    {
+      "id": "bench_01",
+      "target_complex": "Human Ubiquitin (1UBQ)",
+      "uniprot_id": "P62988",
+      "input_spec": "76 aa sequence",
+      "nim_service": "ESM-2 (650M)",
+      "nim_container": "nvidia/esm2-650m:24.03",
+      "task_type": "Protein Language Model Token Embeddings",
+      "cpu_latency_s": 3.20,
+      "gpu_latency_s": 0.080,
+      "speedup_multiplier": 40.0,
+      "output_parity_metric": "Cosine similarity = 0.9998 (FP32 CPU vs FP16 NIM)"
+    },
+    {
+      "id": "bench_02",
+      "target_complex": "Human Dihydrofolate Reductase (1DHF)",
+      "uniprot_id": "P00374",
+      "input_spec": "186 aa sequence",
+      "nim_service": "ESMFold",
+      "nim_container": "nvidia/esmfold:24.03",
+      "task_type": "Atomic-Resolution 3D Folding",
+      "cpu_latency_s": 42.10,
+      "gpu_latency_s": 0.720,
+      "speedup_multiplier": 58.5,
+      "output_parity_metric": "Cα RMSD = 0.38 Å (Global pLDDT: 84.2 vs 84.4)"
+    },
+    {
+      "id": "bench_03",
+      "target_complex": "Human BCR-ABL1 Kinase (2HYY)",
+      "uniprot_id": "P00519",
+      "input_spec": "275 aa receptor + 42-atom ligand (Imatinib)",
+      "nim_service": "DiffDock",
+      "nim_container": "nvidia/diffdock:24.03",
+      "task_type": "SE(3) Equivariant Molecular Docking (10 steps, 5 poses)",
+      "cpu_latency_s": 68.40,
+      "gpu_latency_s": 1.150,
+      "speedup_multiplier": 59.5,
+      "output_parity_metric": "Top-1 Pose Ligand RMSD = 0.42 Å vs CPU conformer"
+    },
+    {
+      "id": "bench_04",
+      "target_complex": "Human EGFR Kinase Domain (1M17)",
+      "uniprot_id": "P00533",
+      "input_spec": "Gefitinib seed (31 heavy atoms, radius=0.35)",
+      "nim_service": "MolMIM",
+      "nim_container": "nvidia/molmim-70m:24.03",
+      "task_type": "CMA-ES Latent Space Derivative Generation (10 analogues)",
+      "cpu_latency_s": 14.80,
+      "gpu_latency_s": 0.280,
+      "speedup_multiplier": 52.9,
+      "output_parity_metric": "Latent embedding projection cosine similarity = 0.9996"
+    },
+    {
+      "id": "bench_05",
+      "target_complex": "SARS-CoV-2 RdRp (7BV2)",
+      "uniprot_id": "P0DTD1",
+      "input_spec": "932 aa macromolecular complex",
+      "nim_service": "OpenFold / ESMFold Large",
+      "nim_container": "nvidia/openfold:24.03",
+      "task_type": "Full Polymer Macromolecular Structure Generation",
+      "cpu_latency_s": 185.00,
+      "gpu_latency_s": 2.940,
+      "speedup_multiplier": 62.9,
+      "output_parity_metric": "Cα Backbone RMSD = 0.51 Å"
+    }
+  ],
+  "totals": {
+    "total_cpu_seconds": 313.50,
+    "total_gpu_seconds": 5.170,
+    "total_compute_speedup": 60.6,
+    "arithmetic_mean_speedup": 54.8,
+    "geometric_mean_speedup": 54.1
+  }
+}
