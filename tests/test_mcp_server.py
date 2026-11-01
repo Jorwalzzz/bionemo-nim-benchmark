@@ -7,9 +7,11 @@ from pathlib import Path
 
 import pytest
 
-# Ensure .agents/tools and project root are importable
+# Ensure tools, .agents/tools, and project root are importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 sys.path.insert(0, str(PROJECT_ROOT / ".agents" / "tools"))
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # Gracefully skip in environments where mcp is not installed
