@@ -904,7 +904,7 @@ function updateTrialUI(status) {
   if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
   if (text) text.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Interactive Discovery Studio</span> <span class="text-gray-400 text-[11px] font-mono">• Full Pipeline Active</span>`;
   if (runBtn && !isRunning) {
-    runBtn.onclick = () => runCampaign();
+    runBtn.onclick = () => runDiscovery();
     runBtn.style.background = '';
     runBtn.style.border = '';
   }
@@ -1465,8 +1465,8 @@ function updateTargetInfo() {
 function setAgent(id, state, msg) {
   const ring = document.getElementById('ring-' + id);
   const status = document.getElementById('status-' + id);
-  ring.className = 'agent-ring ' + state;
-  status.textContent = msg;
+  if (ring) ring.className = 'agent-ring ' + state;
+  if (status) status.textContent = msg;
 }
 
 function resetAgents() {
@@ -1509,9 +1509,14 @@ async function runDiscovery() {
   trialState.runs_remaining = 9999;
 
   isRunning = true;
-  const target = document.getElementById('targetSelect').value;
-  const candidates = parseInt(document.getElementById('candidateSlider').value);
-  const info = TARGETS[target];
+  const targetSelect = document.getElementById('targetSelect');
+  let target = targetSelect ? targetSelect.value : 'KRAS G12D';
+  if (currentTargetTab === 'esmfold') target = 'KRAS G12D';
+  else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'KRAS G12D';
+
+  const candidateSlider = document.getElementById('candidateSlider');
+  const candidates = candidateSlider ? parseInt(candidateSlider.value, 10) : 12;
+  const info = TARGETS[target] || TARGETS['KRAS G12D'] || { pdb: '8AZV', indication: 'Colorectal/NSCLC', pocket: 'Switch II', mutant: 'G12D', color: '#76b900' };
 
   // Reset UI
   document.getElementById('agentLog').innerHTML = '';
@@ -1522,6 +1527,7 @@ async function runDiscovery() {
   document.getElementById('runBtn').disabled = true;
   document.getElementById('runLabel').textContent = 'Authorizing & Running...';
 
+  try {
   // ─ Anti-Bypass Backend Enforcement ─
   let backendData = null;
   try {
@@ -1677,17 +1683,32 @@ async function runDiscovery() {
 
   // Render leads
   renderLeads();
-  renderPareto();
+  try {
+    renderPareto();
+  } catch (chartErr) {
+    console.warn('Pareto chart render warning:', chartErr);
+  }
+  } catch (err) {
+    console.error('Autonomous Discovery Execution Error:', err);
+    showToast('⚠️ Discovery error: ' + (err.message || 'Execution failed'));
+  } finally {
+    const dot = document.getElementById('streamDot');
+    if (dot) dot.style.background = '#76b900';
+    isRunning = false;
 
-  document.getElementById('streamDot').style.background = '#76b900';
-  isRunning = false;
-
-  document.getElementById('runBtn').disabled = false;
-  document.getElementById('runBtn').onclick = () => runCampaign();
-  document.getElementById('runBtn').style.background = '';
-  document.getElementById('runBtn').style.border = '';
-  document.getElementById('runLabel').textContent = '🚀 Run Autonomous Discovery';
+    const btn = document.getElementById('runBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.onclick = () => runDiscovery();
+      btn.style.background = '';
+      btn.style.border = '';
+    }
+    const lbl = document.getElementById('runLabel');
+    if (lbl) lbl.textContent = '🚀 Run Autonomous Discovery';
+  }
 }
+window.runDiscovery = runDiscovery;
+window.runCampaign = runDiscovery;
 
 // ─── Render Leads ─────────────────────────────────────────────────────────
 function renderLeads() {
@@ -1880,8 +1901,13 @@ function selectLead(i) {
 
 // ─── Pareto Chart ─────────────────────────────────────────────────────────
 function renderPareto() {
-  const ctx = document.getElementById('paretoChart').getContext('2d');
-  if (paretoChart) paretoChart.destroy();
+  const canvas = document.getElementById('paretoChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  if (paretoChart) {
+    try { paretoChart.destroy(); } catch (e) { console.warn('Chart destroy warning:', e); }
+  }
 
   const pareto = currentLeads.filter(l => l.pareto);
   const dominated = currentLeads.filter(l => !l.pareto);
