@@ -81,3 +81,54 @@ h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
 
 /* Telemetry number */
 .tele-num { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; }
+
+/* Anti-Lag & Hardware GPU Compositing */
+.lead-card, .modal-card, #molViewer3D, #modalMolViewer3D, #paretoChart, #workbenchCard {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Workbench & In Silico Badges */
+.badge-valence-valid {
+  background: rgba(118,185,0,0.15);
+  border: 1px solid rgba(118,185,0,0.4);
+  color: #76b900;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-valence-warning {
+  background: rgba(245,158,11,0.15);
+  border: 1px solid rgba(245,158,11,0.4);
+  color: #fbbf24;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.wb-preset-pill {
+  background: rgba(22, 27, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.wb-preset-pill:hover {
+  border-color: #00f1fd;
+  color: #ffffff;
+  background: rgba(0, 241, 253, 0.12);
+}

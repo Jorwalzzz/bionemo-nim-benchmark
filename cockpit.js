@@ -662,21 +662,67 @@ async function redockModifiedLead(smiles, targetName) {
   showToast('✅ Re-dock complete: ' + data.binding_affinity_kcal_mol + ' kcal/mol!');
 }
 
+const PRESET_INHIBITORS = {
+  kras: { name: 'MRTX1133 (KRAS)', smiles: 'CN1CCN(CC1)C(=O)c2cc(c3c(c2)ncn3C4CC4)c5c(F)cccc5' },
+  egfr: { name: 'Osimertinib (EGFR)', smiles: 'CN(C)CC=CC(=O)Nc1cc(c(cc1Oc2c3ccccc3ncn2)Nc4ncc(c(n4)c5cn(c6ccccc6)c5)Cl)OC' },
+  mpro: { name: 'Nirmatrelvir (Mpro)', smiles: 'CC1(C2C1C(N(C2)C(=O)C(C(C)(C)C)NC(=O)C(F)(F)F)C(=O)NC(CC3CCNC3=O)C#N)C' },
+  her2: { name: 'Tucatinib (HER2)', smiles: 'CC1(CC(=O)N(C1)c2ccc(cc2)c3cnc4n3cc(c4)Nc5ccc(c(c5)F)Cl)C' }
+};
+
+let wbDebounceTimer = null;
+function onWorkbenchInput(val) {
+  clearTimeout(wbDebounceTimer);
+  wbDebounceTimer = setTimeout(() => {
+    let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
+    const res = evaluateClientRedock(val, target);
+    const vBadge = document.getElementById('workbenchValenceBadge');
+    if (!res.valid) {
+      if (vBadge) {
+        vBadge.innerHTML = `<span class="badge-valence-warning">⚠️ ${res.error || 'Syntax Alert'}</span>`;
+      }
+      return;
+    }
+    if (vBadge) {
+      vBadge.innerHTML = `<span class="badge-valence-valid">✓ Valid (${res.heavyAtoms || 28} heavy atoms)</span>`;
+    }
+    const dGEl = document.getElementById('wbLiveAffinity');
+    if (dGEl) dGEl.textContent = res.binding_affinity_kcal_mol.toFixed(2);
+    const qedEl = document.getElementById('wbLiveQed');
+    if (qedEl) qedEl.textContent = res.qed.toFixed(3);
+    const sasEl = document.getElementById('wbLiveSas');
+    if (sasEl) sasEl.textContent = res.sascore.toFixed(2);
+    const mwEl = document.getElementById('wbLiveMw');
+    if (mwEl) mwEl.textContent = res.mw.toFixed(0);
+  }, 100);
+}
+
+function loadWorkbenchPreset(key) {
+  const p = PRESET_INHIBITORS[key];
+  if (!p) return;
+  const input = document.getElementById('workbenchSmilesInput');
+  if (input) {
+    input.value = p.smiles;
+    onWorkbenchInput(p.smiles);
+    showToast(`🧪 Loaded ${p.name}`);
+  }
+}
+
 function tweakSmiles(type) {
   const input = document.getElementById('workbenchSmilesInput');
   if (!input) return;
   let s = input.value;
   if (type === 'fluorine') {
-    s = s.replace(/c1ccccc1/i, 'c1ccc(F)cc1');
+    s = s.includes('cccc') ? s.replace('cccc', 'c(F)ccc') : s.replace(/c1ccccc1/i, 'c1ccc(F)cc1');
     showToast('Added magic fluorine substituent (-F)');
   } else if (type === 'methyl') {
-    s = s + 'C';
+    s = s.includes('c1') ? s.replace('c1', 'c(C)1') : s + 'C';
     showToast('Added magic methyl substituent (-CH3)');
   } else if (type === 'pyridine') {
     s = s.replace(/c1ccccc1/i, 'c1ccccn1');
     showToast('Swapped phenyl core to pyridine for solubility');
   }
   input.value = s;
+  onWorkbenchInput(s);
 }
 
 // --- Block 8 ---
@@ -1674,12 +1720,31 @@ function selectLead(i) {
 
       <!-- Interactive Chemical Workbench (Human-in-the-Loop) -->
       <div id="workbenchCard" class="p-2.5 rounded-xl bg-surface-elevated border border-surface-border">
-        <div class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+        <div class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
           <span>🧪 Chemical Workbench</span>
-          <span class="text-[10px] text-gray-500 font-mono">Live Re-Dock</span>
+          <div id="workbenchValenceBadge">
+            <span class="badge-valence-valid">✓ Valid Chemical Graph</span>
+          </div>
         </div>
-        <input type="text" id="workbenchSmilesInput" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
+
+        <!-- 1-Click Reference Presets -->
+        <div class="flex items-center gap-1 mb-2 overflow-x-auto py-0.5">
+          <button type="button" onclick="loadWorkbenchPreset('kras')" class="wb-preset-pill">MRTX1133 (KRAS)</button>
+          <button type="button" onclick="loadWorkbenchPreset('egfr')" class="wb-preset-pill">Osimertinib (EGFR)</button>
+          <button type="button" onclick="loadWorkbenchPreset('mpro')" class="wb-preset-pill">Nirmatrelvir (Mpro)</button>
+          <button type="button" onclick="loadWorkbenchPreset('her2')" class="wb-preset-pill">Tucatinib (HER2)</button>
+        </div>
+
+        <input type="text" id="workbenchSmilesInput" oninput="onWorkbenchInput(this.value)" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
         
+        <!-- Live Biophysical Metric Tile Readout -->
+        <div id="workbenchLiveMetrics" class="grid grid-cols-4 gap-1 text-[10px] font-mono text-center p-1.5 rounded bg-black/40 border border-white/5 mb-2">
+          <div><span class="text-gray-500 block text-[9px]">ΔG (kcal/mol)</span><span id="wbLiveAffinity" class="text-emerald-400 font-bold">${lead.affinity.toFixed(2)}</span></div>
+          <div><span class="text-gray-500 block text-[9px]">QED Score</span><span id="wbLiveQed" class="text-cyan-400 font-bold">${lead.qed.toFixed(3)}</span></div>
+          <div><span class="text-gray-500 block text-[9px]">SAScore</span><span id="wbLiveSas" class="text-amber-400 font-bold">${lead.sascore.toFixed(2)}</span></div>
+          <div><span class="text-gray-500 block text-[9px]">MW (g/mol)</span><span id="wbLiveMw" class="text-gray-300 font-bold">${(lead.mw || 500).toFixed(0)}</span></div>
+        </div>
+
         <div class="grid grid-cols-3 gap-1 mb-2">
           <button type="button" onclick="tweakSmiles('fluorine')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+F Fluorine</button>
           <button type="button" onclick="tweakSmiles('methyl')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+Me Methyl</button>
