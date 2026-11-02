@@ -38,7 +38,7 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 
 from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
-from bionemo_benchmark.infra.auth_manager import AuthManager
+from bionemo_benchmark.infra.auth_manager import AuthManager, validate_email_address
 from bionemo_benchmark.infra.trial_limiter import TrialLimiter
 
 app = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
@@ -510,6 +510,23 @@ def reset_trial(request: Request):
 # -------------------------------------------------------------------------
 # Synchronized Daily Quota (5 Runs/24h at 3:00 PM IST) & Auth Endpoints
 # -------------------------------------------------------------------------
+
+
+@app.post("/api/auth/validate-email")
+async def api_validate_email(request: Request):
+    """Validates email format, domain existence checks, typo suggestions, and disposable address detection."""
+    try:
+        body = await request.json()
+        raw_email = str(body.get("email", "")).strip()
+    except Exception:
+        raw_email = ""
+    is_valid, msg, typo, classification = validate_email_address(raw_email)
+    return {
+        "valid": is_valid,
+        "message": msg,
+        "suggestion": typo,
+        "classification": classification,
+    }
 
 
 @app.post("/api/auth/register")

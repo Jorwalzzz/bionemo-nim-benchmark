@@ -882,6 +882,154 @@ function computeISTCycleInfo(epochSec) {
   };
 }
 
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  'mailinator.com',
+  'tempmail.com',
+  '10minutemail.com',
+  'guerrillamail.com',
+  'yopmail.com',
+  'throwawaymail.com',
+  'trashmail.com',
+  'sharklasers.com',
+  'getnada.com',
+  'temp-mail.org',
+  'dispostable.com',
+  'fakeinbox.com',
+  'mailnesia.com',
+  'maildrop.cc',
+  'mohmal.com',
+  'generator.email',
+  'inboxkitten.com',
+  'burnermail.io'
+]);
+
+const COMMON_DOMAIN_TYPOS = {
+  'gamil.com': 'gmail.com',
+  'gmai.com': 'gmail.com',
+  'gmial.com': 'gmail.com',
+  'gmaill.com': 'gmail.com',
+  'yaho.com': 'yahoo.com',
+  'yahooo.com': 'yahoo.com',
+  'hotmial.com': 'hotmail.com',
+  'hotmaill.com': 'hotmail.com',
+  'outlok.com': 'outlook.com',
+  'outloo.com': 'outlook.com',
+  'protonmai.com': 'protonmail.com',
+  'protonmial.com': 'protonmail.com'
+};
+
+const EMAIL_STRICT_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+function validateEmailDetailed(email) {
+  if (!email || typeof email !== 'string') {
+    return { valid: false, message: 'Email address cannot be empty.', type: 'invalid' };
+  }
+  const clean = email.trim();
+  if (clean.length > 254) {
+    return { valid: false, message: 'Email address exceeds maximum length of 254 characters.', type: 'invalid' };
+  }
+  if (!clean.includes('@')) {
+    return { valid: false, message: "Missing '@' symbol in email address.", type: 'invalid' };
+  }
+  const parts = clean.split('@');
+  if (parts.length !== 2) {
+    return { valid: false, message: "Email contains multiple '@' symbols.", type: 'invalid' };
+  }
+  const [localPart, domainPart] = parts;
+  if (!localPart) {
+    return { valid: false, message: "Missing recipient username before '@'.", type: 'invalid' };
+  }
+  if (!domainPart) {
+    return { valid: false, message: "Missing domain host after '@'.", type: 'invalid' };
+  }
+  if (!domainPart.includes('.')) {
+    return { valid: false, message: `Domain '@${domainPart}' missing extension (e.g. .edu, .com).`, type: 'invalid' };
+  }
+  const tld = domainPart.split('.').pop().toLowerCase();
+  if (tld.length < 2 || !/^[a-z]+$/i.test(tld)) {
+    return { valid: false, message: `Invalid domain extension '.${tld}'. Must be at least 2 letters.`, type: 'invalid' };
+  }
+  if (!EMAIL_STRICT_REGEX.test(clean)) {
+    return { valid: false, message: 'Invalid email address format.', type: 'invalid' };
+  }
+  const domainLower = domainPart.toLowerCase();
+  if (DISPOSABLE_EMAIL_DOMAINS.has(domainLower)) {
+    return {
+      valid: false,
+      message: `Disposable temporary domain '@${domainLower}' is not permitted. Please use an institutional or primary email.`,
+      type: 'disposable'
+    };
+  }
+  if (COMMON_DOMAIN_TYPOS[domainLower]) {
+    const suggested = COMMON_DOMAIN_TYPOS[domainLower];
+    return {
+      valid: false,
+      message: `Possible typo in '@${domainLower}'. Did you mean '@${suggested}'?`,
+      suggestion: `${localPart}@${suggested}`,
+      type: 'typo'
+    };
+  }
+
+  const isAcademic = ['.edu', '.ac.uk', '.edu.cn', '.ac.in', '.res.in', '.org'].some(suf => domainLower.endsWith(suf));
+  return {
+    valid: true,
+    message: isAcademic ? '✓ Verified academic/institutional domain' : '✓ Valid email address format',
+    type: isAcademic ? 'academic' : 'standard'
+  };
+}
+
+function handleEmailInputValidation(inputEl, feedbackId) {
+  const feedbackEl = document.getElementById(feedbackId);
+  if (!feedbackEl || !inputEl) return;
+
+  const value = inputEl.value.trim();
+  if (!value) {
+    feedbackEl.innerHTML = '';
+    feedbackEl.classList.add('hidden');
+    inputEl.style.borderColor = '';
+    return;
+  }
+
+  const result = validateEmailDetailed(value);
+  feedbackEl.classList.remove('hidden');
+
+  if (result.type === 'typo' && result.suggestion) {
+    inputEl.style.borderColor = '#f59e0b';
+    feedbackEl.innerHTML = `
+      <div class="p-2 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 flex items-center justify-between">
+        <span>⚠️ ${result.message}</span>
+        <button type="button" onclick="fixEmailTypo('${inputEl.id}', '${result.suggestion}', '${feedbackId}')" class="ml-2 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-white font-bold border border-amber-500/40 text-[10px]">
+          Click to Fix
+        </button>
+      </div>
+    `;
+  } else if (!result.valid) {
+    inputEl.style.borderColor = '#ef4444';
+    feedbackEl.innerHTML = `
+      <div class="p-1.5 rounded bg-red-950/40 border border-red-500/40 text-red-300 flex items-center gap-1.5">
+        <span>❌</span>
+        <span>${result.message}</span>
+      </div>
+    `;
+  } else {
+    inputEl.style.borderColor = '#10b981';
+    const pillClass = result.type === 'academic' ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300' : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300';
+    feedbackEl.innerHTML = `
+      <div class="p-1.5 rounded border ${pillClass} flex items-center gap-1.5">
+        <span>${result.message}</span>
+      </div>
+    `;
+  }
+}
+
+function fixEmailTypo(inputId, correctedEmail, feedbackId) {
+  const inputEl = document.getElementById(inputId);
+  if (inputEl) {
+    inputEl.value = correctedEmail;
+    handleEmailInputValidation(inputEl, feedbackId);
+  }
+}
+
 class ClientAuthManager {
   constructor() {
     this.user = null;
@@ -1271,6 +1419,37 @@ class ClientAuthManager {
       `;
     }
 
+    // Update Run Controls based on Sign-In state
+    const banner = document.getElementById('authRequiredBanner');
+    if (banner) {
+      if (!this.user) {
+        banner.style.display = 'block';
+        banner.classList.remove('hidden');
+      } else {
+        banner.style.display = 'none';
+        banner.classList.add('hidden');
+      }
+    }
+
+    const runBtn = document.getElementById('runBtn');
+    const runLabel = document.getElementById('runLabel');
+    if (runBtn && !isRunning) {
+      if (!this.user) {
+        runBtn.onclick = () => openAuthModal('🔒 Sign-In Required: Please sign in or register to launch autonomous discovery (5 free runs/day).');
+        runBtn.className = 'w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4 bg-gradient-to-r from-amber-600 to-emerald-700 hover:from-amber-500 hover:to-emerald-600 shadow-lg border border-amber-400/40 cursor-pointer transition-all';
+        if (runLabel) runLabel.innerHTML = '🔒 Sign In to Run Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-white/20">5 Runs/Day Free</span>';
+      } else {
+        runBtn.className = 'btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4';
+        if (quota.runs_remaining <= 0) {
+          runBtn.onclick = () => openQuotaModal();
+          if (runLabel) runLabel.innerHTML = `⏳ Daily Quota Exhausted <span class="text-[10px] font-mono">(${quota.countdown})</span>`;
+        } else {
+          runBtn.onclick = () => runDiscovery();
+          if (runLabel) runLabel.innerHTML = '🚀 Run Autonomous Discovery';
+        }
+      }
+    }
+
     const trialText = document.getElementById('trialText');
     if (trialText) {
       if (!this.user) {
@@ -1338,6 +1517,16 @@ async function handleAuthLogin(event) {
   const email = emailEl ? emailEl.value : '';
   const password = pwdEl ? pwdEl.value : '';
 
+  const emailCheck = validateEmailDetailed(email);
+  if (!emailCheck.valid && emailCheck.type === 'invalid') {
+    if (errEl) {
+      errEl.textContent = emailCheck.message;
+      errEl.classList.remove('hidden');
+    }
+    if (emailEl) emailEl.focus();
+    return;
+  }
+
   if (btn) { btn.disabled = true; btn.textContent = 'Verifying credentials...'; }
   if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
 
@@ -1395,6 +1584,19 @@ async function handleAuthRegister(event) {
   const org = orgEl ? orgEl.value : '';
   const email = emailEl ? emailEl.value : '';
   const password = pwdEl ? pwdEl.value : '';
+
+  const emailCheck = validateEmailDetailed(email);
+  if (!emailCheck.valid) {
+    if (errEl) {
+      errEl.textContent = emailCheck.message;
+      errEl.classList.remove('hidden');
+    }
+    if (emailEl) {
+      emailEl.focus();
+      handleEmailInputValidation(emailEl, 'authRegEmailFeedback');
+    }
+    return;
+  }
 
   if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
   if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
@@ -1562,6 +1764,9 @@ window.openFeedbackModal = openFeedbackModal;
 window.closeFeedbackModal = closeFeedbackModal;
 window.handleFeedbackSubmit = handleFeedbackSubmit;
 window.clientAuth = clientAuth;
+window.validateEmailDetailed = validateEmailDetailed;
+window.handleEmailInputValidation = handleEmailInputValidation;
+window.fixEmailTypo = fixEmailTypo;
 
 
 async function resetTrialQuota() {

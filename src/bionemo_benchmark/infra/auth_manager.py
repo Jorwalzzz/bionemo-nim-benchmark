@@ -40,7 +40,104 @@ FREE_TRIAL_DAILY_RUNS = int(os.environ.get("FREE_TRIAL_DAILY_RUNS", "5"))
 RESET_OFFSET_SECONDS = 9 * 3600 + 30 * 60  # 34,200 seconds (09:30 UTC = 15:00 IST)
 PASSWORD_SALT_BYTES = 32
 DEFAULT_PBKDF2_ITERATIONS = int(os.environ.get("PBKDF2_ITERATIONS", "100_000"))
-EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+DISPOSABLE_EMAIL_DOMAINS = {
+    "mailinator.com",
+    "tempmail.com",
+    "10minutemail.com",
+    "guerrillamail.com",
+    "yopmail.com",
+    "throwawaymail.com",
+    "trashmail.com",
+    "sharklasers.com",
+    "getnada.com",
+    "temp-mail.org",
+    "dispostable.com",
+    "fakeinbox.com",
+    "mailnesia.com",
+    "maildrop.cc",
+    "mohmal.com",
+    "generator.email",
+    "inboxkitten.com",
+    "burnermail.io",
+}
+
+COMMON_DOMAIN_TYPOS = {
+    "gamil.com": "gmail.com",
+    "gmai.com": "gmail.com",
+    "gmial.com": "gmail.com",
+    "gmaill.com": "gmail.com",
+    "yaho.com": "yahoo.com",
+    "yahooo.com": "yahoo.com",
+    "hotmial.com": "hotmail.com",
+    "hotmaill.com": "hotmail.com",
+    "outlok.com": "outlook.com",
+    "outloo.com": "outlook.com",
+    "protonmai.com": "protonmail.com",
+    "protonmial.com": "protonmail.com",
+}
+
+EMAIL_STRICT_REGEX = re.compile(
+    r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$"
+)
+
+
+def validate_email_address(email: str) -> Tuple[bool, str, Optional[str], str]:
+    """
+    Validates email format, domain existence checks, typo suggestions, and disposable address detection.
+    Returns (is_valid, error_or_success_message, typo_suggestion, classification).
+    """
+    if not email or not isinstance(email, str):
+        return False, "Invalid email address format: Email cannot be empty.", None, "invalid"
+
+    clean = email.strip()
+    if len(clean) > 254:
+        return False, "Invalid email address format: Exceeds 254 character maximum.", None, "invalid"
+
+    if "@" not in clean:
+        return False, "Invalid email address format: Missing '@' symbol.", None, "invalid"
+
+    parts = clean.split("@")
+    if len(parts) != 2:
+        return False, "Invalid email address format: Contains multiple '@' symbols.", None, "invalid"
+
+    local_part, domain_part = parts
+    if not local_part:
+        return False, "Invalid email address format: Missing recipient name before '@'.", None, "invalid"
+
+    if not domain_part:
+        return False, "Invalid email address format: Missing domain after '@'.", None, "invalid"
+
+    if "." not in domain_part:
+        return False, f"Invalid email address format: Domain '@{domain_part}' missing extension (.com, .edu, .org).", None, "invalid"
+
+    tld = domain_part.split(".")[-1].lower()
+    if len(tld) < 2 or not tld.isalpha():
+        return False, f"Invalid email address format: Extension '.{tld}' must be at least 2 letters.", None, "invalid"
+
+    if not EMAIL_STRICT_REGEX.match(clean):
+        return False, "Invalid email address format.", None, "invalid"
+
+    domain_lower = domain_part.lower()
+    if domain_lower in DISPOSABLE_EMAIL_DOMAINS:
+        return (
+            False,
+            f"Disposable temporary email domain '@{domain_lower}' is not permitted. Please use an institutional, academic, or primary email address.",
+            None,
+            "disposable",
+        )
+
+    if domain_lower in COMMON_DOMAIN_TYPOS:
+        suggested = COMMON_DOMAIN_TYPOS[domain_lower]
+        return (
+            False,
+            f"Possible typo in '@{domain_lower}'. Did you mean '@{suggested}'?",
+            f"{local_part}@{suggested}",
+            "typo",
+        )
+
+    is_academic = any(domain_lower.endswith(suf) for suf in (".edu", ".ac.uk", ".edu.cn", ".ac.in", ".res.in", ".org"))
+    classification = "academic" if is_academic else "standard"
+    return True, "Valid email address.", None, classification
 
 
 def _get_or_create_auth_secret() -> bytes:
@@ -242,9 +339,10 @@ class AuthManager:
         organization: str = "Independent Academic",
     ) -> Tuple[bool, Optional[Dict[str, Any]], str]:
         """Register a new researcher account."""
-        email_clean = email.strip()
-        if not EMAIL_REGEX.match(email_clean):
-            return False, None, "Invalid email address format."
+        email_clean = email.strip() if email else ""
+        is_valid, msg, typo, _ = validate_email_address(email_clean)
+        if not is_valid:
+            return False, None, msg
         if not password or len(password) < 6:
             return False, None, "Password must be at least 6 characters."
 

@@ -184,3 +184,89 @@ def test_api_auth_and_feedback_flow():
     # 7. Logout clears session
     logout_resp = client.post("/api/auth/logout")
     assert logout_resp.status_code == 200
+
+
+def test_email_validation_rules():
+    """Verify detailed email validation, domain checks, typo suggestions, and disposable rejection."""
+    from bionemo_benchmark.infra.auth_manager import validate_email_address
+
+    # 1. Valid academic & institutional
+    ok, msg, typo, kind = validate_email_address("dr.alex@stanford.edu")
+    assert ok is True
+    assert kind == "academic"
+
+    ok, msg, typo, kind = validate_email_address("prof@cam.ac.uk")
+    assert ok is True
+    assert kind == "academic"
+
+    # 2. Valid standard
+    ok, msg, typo, kind = validate_email_address("researcher@company.com")
+    assert ok is True
+    assert kind == "standard"
+
+    # 3. Disposable throwaway domains rejected
+    ok, msg, typo, kind = validate_email_address("bot@mailinator.com")
+    assert ok is False
+    assert kind == "disposable"
+    assert "disposable" in msg.lower() or "temporary" in msg.lower()
+
+    ok, msg, typo, kind = validate_email_address("tester@10minutemail.com")
+    assert ok is False
+    assert kind == "disposable"
+
+    # 4. Common typos detected with suggestions
+    ok, msg, typo, kind = validate_email_address("researcher@gamil.com")
+    assert ok is False
+    assert kind == "typo"
+    assert typo == "researcher@gmail.com"
+    assert "gmail.com" in msg
+
+    ok, msg, typo, kind = validate_email_address("user@yaho.com")
+    assert ok is False
+    assert kind == "typo"
+    assert typo == "user@yahoo.com"
+
+    # 5. Malformed formats rejected
+    for bad in ["not-an-email", "@nodomain.com", "user@", "user@domain", "user@domain.c", "user@@domain.com"]:
+        ok, msg, _, kind = validate_email_address(bad)
+        assert ok is False
+        assert kind == "invalid"
+
+
+def test_api_validate_email_endpoint():
+    """Verify POST /api/auth/validate-email returns real-time feedback."""
+    from starlette.testclient import TestClient
+    from serve_cockpit import app
+
+    client = TestClient(app)
+
+    # Valid academic
+    r1 = client.post("/api/auth/validate-email", json={"email": "dr.smith@harvard.edu"})
+    assert r1.status_code == 200
+    assert r1.json()["valid"] is True
+    assert r1.json()["classification"] == "academic"
+
+    # Typo suggestion
+    r2 = client.post("/api/auth/validate-email", json={"email": "test@gmai.com"})
+    assert r2.status_code == 200
+    assert r2.json()["valid"] is False
+    assert r2.json()["suggestion"] == "test@gmail.com"
+
+    # Disposable rejected
+    r3 = client.post("/api/auth/validate-email", json={"email": "throwaway@tempmail.com"})
+    assert r3.status_code == 200
+    assert r3.json()["valid"] is False
+    assert r3.json()["classification"] == "disposable"
+
+
+def test_registration_rejects_disposable_and_typo_emails(auth_mgr):
+    """Registration fails closed on disposable or typo domain addresses."""
+    # Disposable
+    ok, _, msg = auth_mgr.register_user("bot@mailinator.com", "Password123!")
+    assert ok is False
+    assert "disposable" in msg.lower() or "temporary" in msg.lower()
+
+    # Typo
+    ok, _, msg = auth_mgr.register_user("user@hotmial.com", "Password123!")
+    assert ok is False
+    assert "typo" in msg.lower() or "hotmail.com" in msg.lower()
