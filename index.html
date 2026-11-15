@@ -457,6 +457,109 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #76b900;
     }
+
+    /* High-Impact Top-Nav Cockpit Action Button */
+    .btn-nav-cockpit {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1.15rem;
+      border-radius: 0.85rem;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #03060a !important;
+      background: linear-gradient(135deg, #a3e635 0%, #10b981 50%, #00f1fd 100%);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+    }
+    .btn-nav-cockpit:hover {
+      transform: translateY(-1px) scale(1.04);
+      background: linear-gradient(135deg, #bef264 0%, #34d399 50%, #38bdf8 100%);
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.65), 0 4px 15px rgba(0, 0, 0, 0.4);
+      color: #000000 !important;
+    }
+    .btn-nav-cockpit:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    /* 3D WebGL Canvas Ambient Bio-Grid Background */
+    #hero3DStage {
+      background-color: #030712;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 65%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 32px 32px, 32px 32px;
+    }
+
+    /* Speedup Column Radiant Fill */
+    .speedup-bar-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, #10b981 0%, #00f1fd 100%);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    /* The Four BioNeMo Pillars Custom Lighting */
+    .pillar-card-esm2 {
+      border: 1px solid rgba(16, 185, 129, 0.35) !important;
+      box-shadow: 0 8px 30px -8px rgba(16, 185, 129, 0.15);
+    }
+    .pillar-card-esm2:hover {
+      border-color: rgba(52, 211, 153, 0.7) !important;
+      box-shadow: 0 16px 40px -10px rgba(16, 185, 129, 0.4), 0 0 25px rgba(16, 185, 129, 0.25);
+    }
+    .pillar-icon-esm2 {
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.05) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+    }
+
+    .pillar-card-esmfold {
+      border: 1px solid rgba(6, 182, 212, 0.35) !important;
+      box-shadow: 0 8px 30px -8px rgba(6, 182, 212, 0.15);
+    }
+    .pillar-card-esmfold:hover {
+      border-color: rgba(34, 211, 238, 0.7) !important;
+      box-shadow: 0 16px 40px -10px rgba(6, 182, 212, 0.4), 0 0 25px rgba(6, 182, 212, 0.25);
+    }
+    .pillar-icon-esmfold {
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.25) 0%, rgba(6, 182, 212, 0.05) 100%);
+      border: 1px solid rgba(6, 182, 212, 0.45);
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+    }
+
+    .pillar-card-molmim {
+      border: 1px solid rgba(168, 85, 247, 0.35) !important;
+      box-shadow: 0 8px 30px -8px rgba(168, 85, 247, 0.15);
+    }
+    .pillar-card-molmim:hover {
+      border-color: rgba(192, 132, 252, 0.7) !important;
+      box-shadow: 0 16px 40px -10px rgba(168, 85, 247, 0.4), 0 0 25px rgba(168, 85, 247, 0.25);
+    }
+    .pillar-icon-molmim {
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(168, 85, 247, 0.05) 100%);
+      border: 1px solid rgba(168, 85, 247, 0.45);
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+    }
+
+    .pillar-card-diffdock {
+      border: 1px solid rgba(245, 158, 11, 0.35) !important;
+      box-shadow: 0 8px 30px -8px rgba(245, 158, 11, 0.15);
+    }
+    .pillar-card-diffdock:hover {
+      border-color: rgba(251, 191, 36, 0.7) !important;
+      box-shadow: 0 16px 40px -10px rgba(245, 158, 11, 0.4), 0 0 25px rgba(245, 158, 11, 0.25);
+    }
+    .pillar-icon-diffdock {
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.05) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+    }
   </style>
 </head>
 <body class="bg-dark text-slate-100 antialiased selection:bg-emerald-500 selection:text-black overflow-x-hidden font-sans">
@@ -545,7 +648,8 @@
           <span class="font-mono text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">v2.5</span>
         </a>
         
-        <a href="./cockpit.html" class="btn-nvidia-glow px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2">
+        <a href="./cockpit.html" class="btn-nav-cockpit">
+          <span class="w-2 h-2 rounded-full bg-black animate-pulse"></span>
           <span>Launch Cockpit</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
         </a>
@@ -572,56 +676,56 @@
         <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">H100 SXM5</span>
       </div>
 
-      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08] font-heading">
-        NVIDIA BioNeMo & NIM Benchmark <br/>
-        <span class="gradient-headline">
-          High-Performance Computational Biology
+      <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-heading">
+        NVIDIA BioNeMo & NIM Benchmark
+        <span class="block mt-1 text-2xl sm:text-4xl lg:text-5xl font-extrabold gradient-headline">
+          Accelerated Computational Biology
         </span>
       </h1>
 
-      <p class="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto leading-relaxed">
-        Empirical benchmark suite and interactive 3D discovery studio evaluating NVIDIA NIM microservices—<strong>ESM-2</strong> embeddings, <strong>ESMFold</strong> structure prediction, <strong>MolMIM</strong> generative chemistry, and <strong>DiffDock</strong> molecular docking—against standard CPU baselines with verified telemetry and robotics workflows.
+      <p class="text-gray-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+        Empirical benchmark suite and interactive 3D discovery studio evaluating NVIDIA NIM microservices—<strong>ESM-2</strong>, <strong>ESMFold</strong>, <strong>MolMIM</strong>, and <strong>DiffDock</strong>—against standard CPU baselines.
       </p>
 
-      <!-- High-Impact Live Hero Stat Matrix -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto pt-3 pb-2 text-left">
-        <div class="hero-stat-card">
-          <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">54.8×</div>
-          <div class="text-[11px] text-gray-300 font-mono font-semibold">Mean GPU Speedup</div>
-          <div class="text-[9px] text-gray-500 font-mono">TensorRT vs 16-Core CPU</div>
-        </div>
-        <div class="hero-stat-card">
-          <div class="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono">0.08s</div>
-          <div class="text-[11px] text-gray-300 font-mono font-semibold">ESM-2 Latency</div>
-          <div class="text-[9px] text-gray-500 font-mono">650M Token Embedding</div>
-        </div>
-        <div class="hero-stat-card">
-          <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 font-mono">88.5h</div>
-          <div class="text-[11px] text-gray-300 font-mono font-semibold">Compute Saved</div>
-          <div class="text-[9px] text-gray-500 font-mono">Per 10,000 Campaign</div>
-        </div>
-        <div class="hero-stat-card">
-          <div class="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono">101/101</div>
-          <div class="text-[11px] text-gray-300 font-mono font-semibold">Hermetic Tests</div>
-          <div class="text-[9px] text-gray-500 font-mono">Zero-Defect Quality</div>
-        </div>
-      </div>
-
-      <!-- Primary Action Row -->
-      <div class="flex flex-wrap items-center justify-center gap-4 pt-3">
-        <a href="./cockpit.html" class="btn-nvidia-glow px-7 py-3 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2">
+      <!-- Primary Action Row (Front and Center) -->
+      <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
+        <a href="./cockpit.html" class="btn-nvidia-glow px-6 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg">
           <span>⚡ Launch Interactive Cockpit</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"/></svg>
         </a>
-        <a href="#benchmarks" class="btn-glass px-6 py-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+        <a href="#benchmarks" class="btn-glass px-5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2">
           <span>📊 Explore Benchmark Matrix</span>
         </a>
-        <div class="w-full sm:w-auto flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 font-mono text-xs text-gray-300">
-          <span class="text-emerald-400">$</span>
+        <div class="w-full sm:w-auto flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/50 border border-white/10 font-mono text-xs text-gray-300 shadow-inner">
+          <span class="text-emerald-400 font-bold">$</span>
           <span>git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git</span>
           <button onclick="copyCloneCmd(this)" title="Copy Command" class="ml-2 text-gray-400 hover:text-white transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
           </button>
+        </div>
+      </div>
+
+      <!-- High-Impact Live Hero Stat Matrix (Balanced & Compact) -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-3xl mx-auto pt-2 text-left">
+        <div class="hero-stat-card">
+          <div class="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono">54.8×</div>
+          <div class="text-[10px] text-gray-300 font-mono font-semibold">Mean GPU Speedup</div>
+          <div class="text-[9px] text-gray-500 font-mono">TensorRT vs 16-Core EPYC</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="text-xl sm:text-2xl font-extrabold text-cyan-400 font-mono">0.08s</div>
+          <div class="text-[10px] text-gray-300 font-mono font-semibold">ESM-2 Latency</div>
+          <div class="text-[9px] text-gray-500 font-mono">650M Token Embedding</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="text-xl sm:text-2xl font-extrabold text-purple-400 font-mono">88.5h</div>
+          <div class="text-[10px] text-gray-300 font-mono font-semibold">Compute Saved</div>
+          <div class="text-[9px] text-gray-500 font-mono">Per 10,000 Campaign</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="text-xl sm:text-2xl font-extrabold text-amber-400 font-mono">101/101</div>
+          <div class="text-[10px] text-gray-300 font-mono font-semibold">Hermetic Tests</div>
+          <div class="text-[9px] text-gray-500 font-mono">Zero-Defect Quality</div>
         </div>
       </div>
     </div>
@@ -971,8 +1075,8 @@
               <td class="py-4 px-4 text-emerald-400 font-bold">0.08s</td>
               <td class="py-4 px-6 text-right font-bold text-emerald-300">
                 <div class="flex items-center justify-end gap-3">
-                  <div class="w-20 bg-white/10 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                    <div class="bg-emerald-400 h-full rounded-full" style="width: 64%"></div>
+                  <div class="w-20 bg-white/10 rounded-full h-2 overflow-hidden hidden sm:block p-[1px]">
+                    <div class="speedup-bar-fill" style="width: 64%"></div>
                   </div>
                   <span>40.0×</span>
                 </div>
@@ -992,8 +1096,8 @@
               <td class="py-4 px-4 text-emerald-400 font-bold">0.72s</td>
               <td class="py-4 px-6 text-right font-bold text-emerald-300">
                 <div class="flex items-center justify-end gap-3">
-                  <div class="w-20 bg-white/10 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                    <div class="bg-emerald-400 h-full rounded-full" style="width: 88%"></div>
+                  <div class="w-20 bg-white/10 rounded-full h-2 overflow-hidden hidden sm:block p-[1px]">
+                    <div class="speedup-bar-fill" style="width: 88%"></div>
                   </div>
                   <span>58.5×</span>
                 </div>
@@ -1013,8 +1117,8 @@
               <td class="py-4 px-4 text-emerald-400 font-bold">1.15s</td>
               <td class="py-4 px-6 text-right font-bold text-emerald-300">
                 <div class="flex items-center justify-end gap-3">
-                  <div class="w-20 bg-white/10 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                    <div class="bg-emerald-400 h-full rounded-full" style="width: 90%"></div>
+                  <div class="w-20 bg-white/10 rounded-full h-2 overflow-hidden hidden sm:block p-[1px]">
+                    <div class="speedup-bar-fill" style="width: 90%"></div>
                   </div>
                   <span>59.5×</span>
                 </div>
@@ -1034,8 +1138,8 @@
               <td class="py-4 px-4 text-emerald-400 font-bold">0.28s</td>
               <td class="py-4 px-6 text-right font-bold text-emerald-300">
                 <div class="flex items-center justify-end gap-3">
-                  <div class="w-20 bg-white/10 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                    <div class="bg-emerald-400 h-full rounded-full" style="width: 82%"></div>
+                  <div class="w-20 bg-white/10 rounded-full h-2 overflow-hidden hidden sm:block p-[1px]">
+                    <div class="speedup-bar-fill" style="width: 82%"></div>
                   </div>
                   <span>52.9×</span>
                 </div>
@@ -1055,8 +1159,8 @@
               <td class="py-4 px-4 text-emerald-400 font-bold">2.94s</td>
               <td class="py-4 px-6 text-right font-bold text-emerald-300">
                 <div class="flex items-center justify-end gap-3">
-                  <div class="w-20 bg-white/10 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                    <div class="bg-emerald-400 h-full rounded-full" style="width: 95%"></div>
+                  <div class="w-20 bg-white/10 rounded-full h-2 overflow-hidden hidden sm:block p-[1px]">
+                    <div class="speedup-bar-fill" style="width: 95%"></div>
                   </div>
                   <span>62.9×</span>
                 </div>
@@ -1117,9 +1221,9 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       
       <!-- Pillar 1: ESM-2 -->
-      <div class="pillar-card p-6 flex flex-col justify-between group">
+      <div class="pillar-card pillar-card-esm2 p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-emerald-400/50 group-hover:shadow-lg group-hover:shadow-emerald-500/20 transition-all">
+          <div class="pillar-icon-esm2 w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-all">
             🧬
           </div>
           <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-emerald-300 transition-colors">ESM-2</h3>
@@ -1135,9 +1239,9 @@
       </div>
 
       <!-- Pillar 2: ESMFold -->
-      <div class="pillar-card p-6 flex flex-col justify-between group">
+      <div class="pillar-card pillar-card-esmfold p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-cyan-400/50 group-hover:shadow-lg group-hover:shadow-cyan-500/20 transition-all">
+          <div class="pillar-icon-esmfold w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-all">
             📐
           </div>
           <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-cyan-300 transition-colors">ESMFold</h3>
@@ -1153,9 +1257,9 @@
       </div>
 
       <!-- Pillar 3: MolMIM -->
-      <div class="pillar-card p-6 flex flex-col justify-between group">
+      <div class="pillar-card pillar-card-molmim p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-purple-400/50 group-hover:shadow-lg group-hover:shadow-purple-500/20 transition-all">
+          <div class="pillar-icon-molmim w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-all">
             ⚗️
           </div>
           <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-purple-300 transition-colors">MolMIM</h3>
@@ -1171,9 +1275,9 @@
       </div>
 
       <!-- Pillar 4: DiffDock -->
-      <div class="pillar-card p-6 flex flex-col justify-between group">
+      <div class="pillar-card pillar-card-diffdock p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-amber-400/50 group-hover:shadow-lg group-hover:shadow-amber-500/20 transition-all">
+          <div class="pillar-icon-diffdock w-12 h-12 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-all">
             🎯
           </div>
           <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-amber-300 transition-colors">DiffDock</h3>
@@ -1799,18 +1903,20 @@ metadata = {
       heroViewer.clear();
       heroViewer.addModel(pdbText, "pdb");
 
-      // 1. Protein Ribbon
-      heroViewer.setStyle({}, { cartoon: { color: '#334155', opacity: 0.88 } });
+      // 1. Protein Ribbon - Secondary structure hierarchy (Helices: Cyan, Sheets: Emerald)
+      heroViewer.setStyle({}, { cartoon: { color: '#1e293b', opacity: 0.70 } });
+      heroViewer.setStyle({ ss: 'h' }, { cartoon: { color: '#06b6d4', opacity: 0.95 } });
+      heroViewer.setStyle({ ss: 's' }, { cartoon: { color: '#10b981', opacity: 0.95 } });
 
       // 2. Active Pocket Residues
       heroViewer.setStyle({ resi: cfg.pocketRes }, {
-        cartoon: { color: '#00f1fd', opacity: 0.95 },
-        stick: { colorscheme: 'cyanCarbon', radius: 0.20 }
+        cartoon: { color: '#00f1fd', opacity: 1.0 },
+        stick: { colorscheme: 'cyanCarbon', radius: 0.22 }
       });
 
-      // 3. Highlight Bound Inhibitor Ligand
+      // 3. Highlight Bound Inhibitor Ligand in Radiant Neon
       heroViewer.setStyle({ resn: cfg.ligandResn }, {
-        stick: { colorscheme: 'greenCarbon', radius: 0.30 }
+        stick: { colorscheme: 'greenCarbon', radius: 0.38 }
       });
 
       // 4. Contact Vector
@@ -1818,7 +1924,7 @@ metadata = {
         heroViewer.addCylinder({
           start: cfg.vectorStart,
           end: cfg.vectorEnd,
-          radius: 0.12,
+          radius: 0.14,
           color: '#facc15',
           dashed: true
         });
@@ -1832,7 +1938,9 @@ metadata = {
         });
       }
 
-      heroViewer.zoomTo({ resn: cfg.ligandResn });
+      // Elegant Full-Frame Camera Setup (Zero Clipping)
+      heroViewer.zoomTo();
+      heroViewer.zoom(0.88);
       heroViewer.render();
       if (isSpinning) {
         heroViewer.spin("y", 0.30);
@@ -1964,7 +2072,8 @@ metadata = {
       if (!heroViewer) return;
       const cfg = TARGETS[currentTarget];
       if (cfg) {
-        heroViewer.zoomTo({ resn: cfg.ligandResn });
+        heroViewer.zoomTo({ resi: cfg.pocketRes, resn: cfg.ligandResn });
+        heroViewer.zoom(0.85);
         heroViewer.render();
       }
     }
@@ -1993,6 +2102,7 @@ metadata = {
     function resetCam() {
       if (!heroViewer) return;
       heroViewer.zoomTo();
+      heroViewer.zoom(0.88);
       heroViewer.render();
     }
 
