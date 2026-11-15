@@ -332,7 +332,7 @@
               <strong style="color:var(--color-ink-primary);">CPU Baseline:</strong> AMD EPYC 7763 64-core server processor. Strict hardware isolation enforced by pinning 16 physical cores using <code style="font-family:var(--font-mono);font-size:0.75rem;">numactl -C 0-15</code> to eliminate hyper-threading noise.
             </div>
             <div>
-              <strong style="color:var(--color-ink-primary);">Statistical Rigor:</strong> Warm container execution (cold start omitted) over n=5 consecutive runs; reported latency is the arithmetic mean. Inter-run coefficient of variation (CV) &lt; 2.4%.
+              <strong style="color:var(--color-ink-primary);">Statistical Rigor:</strong> Warm container execution (cold start omitted) over n=5 consecutive runs; reported latency is the arithmetic mean. Inter-run coefficient of variation (CV) &lt; 2.4%. Per-model speedup arithmetic mean is 54.8x (54.7x unrounded float ratio; geometric mean 54.1x).
             </div>
             <div>
               <strong style="color:var(--color-ink-primary);">Biological Validation:</strong> Output embeddings validated via Cosine Similarity (&ge; 0.9996). 3D coordinates aligned with TM-align and PyMOL validating C&alpha; RMSD (&le; 0.51 &Aring;).
