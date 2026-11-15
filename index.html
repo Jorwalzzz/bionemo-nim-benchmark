@@ -29,11 +29,17 @@
   <!-- Design System Stylesheets -->
   <link rel="stylesheet" href="./css/tokens.css"/>
   <link rel="stylesheet" href="./css/base.css"/>
+  <link rel="stylesheet" href="./css/stage-b.css"/>
 
   <!-- Theme Engine (Executes immediately for zero FOUC) -->
   <script src="./js/theme.js"></script>
   <!-- Hero WebGL Canvas Ribbon -->
   <script src="./js/hero-webgl.js" defer></script>
+  <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
+  <script src="./js/data-hydrator.js" defer></script>
+  <script src="./js/race-scroll.js" defer></script>
+  <script src="./js/charts.js" defer></script>
+  <script src="./js/calculator.js" defer></script>
 </head>
 
 <body>
@@ -63,6 +69,7 @@
       <ul class="nav-links">
         <li><a href="#race" class="nav-link">Race</a></li>
         <li><a href="#benchmarks" class="nav-link">Benchmarks</a></li>
+        <li><a href="#calculator" class="nav-link">Scale</a></li>
         <li><a href="#pose-lab" class="nav-link">Pose Lab</a></li>
         <li><a href="#lead-eval" class="nav-link">Lead Eval</a></li>
         <li><a href="#pipeline" class="nav-link">Pipeline</a></li>
@@ -191,25 +198,323 @@
 
   <!-- STAGE-ANNOTATED SCAFFOLD FOR STAGES B–D (Awaiting Owner Review to unlock) -->
   <main>
-    <!-- Stage B Anchor: The Great Race (32.4s -> 0.55s) -->
-    <section id="race" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-illustrative">STAGE B QUEUED</span>
-        <h2 class="font-display text-xl font-bold">Interactive "Time Collapsing" Scrub Simulator</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          Direct visual race comparing AMD EPYC 7763 CPU crawl (32.4s) against NVIDIA H100 SXM5 NIM instantaneous flash (0.55s) with scrubbable timeline.
-        </p>
+    <!-- SECTION 01: PINNED SCROLL-SCRUBBED "TIME COLLAPSING" RACE -->
+    <section id="race" class="stage-section">
+      <div class="section-grid-12">
+        <!-- Editorial Left Column -->
+        <div class="section-editorial-col">
+          <span class="section-numeral">01</span>
+          <h2 class="section-title">The Physical Race // Time Collapsing</h2>
+          <p class="section-narrative">
+            Observe the empirical reality of structural biology acceleration. Standard multi-core CPU compute crawls through iterative numerical sampling, while TensorRT-optimized NVIDIA NIMs flash instantaneously through the inference space.
+          </p>
+
+          <!-- Workload Selector Pills -->
+          <div style="font-family:var(--font-mono);font-size:0.75rem;font-weight:700;color:var(--color-ink-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.5rem;">
+            Select Target Workload
+          </div>
+          <div id="race-pills" class="workload-pills-wrap">
+            <button class="workload-pill-btn active" data-workload="diffdock" title="DiffDock on BCR-ABL1 Kinase (2HYY)">DiffDock (2HYY)</button>
+            <button class="workload-pill-btn" data-workload="esmfold" title="ESMFold on DHFR (1DHF)">ESMFold (1DHF)</button>
+            <button class="workload-pill-btn" data-workload="esm2" title="ESM-2 650M on Ubiquitin (1UBQ)">ESM-2 (1UBQ)</button>
+            <button class="workload-pill-btn" data-workload="molmim" title="MolMIM 70M on EGFR (1M17)">MolMIM (1M17)</button>
+            <button class="workload-pill-btn" data-workload="openfold" title="OpenFold on SARS-CoV-2 RdRp (7BV2)">OpenFold (7BV2)</button>
+          </div>
+
+          <div style="font-size:0.8rem;color:var(--color-ink-secondary);line-height:1.5;margin-top:1rem;">
+            <span class="badge-measured" style="margin-bottom:0.4rem;display:inline-block;">STANDARDIZED BENCHMARK</span><br/>
+            Both pipelines evaluated on identical canonical sequences and SMILES structures. Output structures verified for atomic C&alpha; RMSD parity (&le; 0.51 &Aring;).
+          </div>
+        </div>
+
+        <!-- Right Content Column: Race Arena -->
+        <div class="section-content-col">
+          <div class="race-stage-card">
+            <!-- Dual Telemetry Tracks -->
+            <div class="race-track-container">
+              <!-- Track A: CPU Baseline -->
+              <div class="race-track">
+                <div class="track-header">
+                  <div class="track-label">
+                    <span class="track-indicator-dot dot-cpu"></span>
+                    <span>AMD EPYC 7763 (16 Cores Pinned)</span>
+                  </div>
+                  <span id="timer-cpu" class="track-timer">68.40s / 68.40s</span>
+                </div>
+                <div class="track-lane">
+                  <div id="bar-cpu" class="track-bar bar-cpu" style="width: 100%;"></div>
+                  <span id="tag-cpu" class="track-finish-tag tag-cpu active">FINISHED 68.40s</span>
+                </div>
+              </div>
+
+              <!-- Track B: NVIDIA NIM -->
+              <div class="race-track">
+                <div class="track-header">
+                  <div class="track-label">
+                    <span class="track-indicator-dot dot-gpu"></span>
+                    <span>NVIDIA H100 80GB SXM5 NIM (TensorRT)</span>
+                  </div>
+                  <span id="timer-gpu" class="track-timer" style="color:var(--color-signal-green);">1.15s / 1.15s</span>
+                </div>
+                <div class="track-lane">
+                  <div id="bar-gpu" class="track-bar bar-gpu" style="width: 100%;"></div>
+                  <span id="tag-gpu" class="track-finish-tag tag-gpu active">FLASH 1.15s (59.5x)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timeline Scrub Controls -->
+            <div class="race-timeline-controls">
+              <div class="scrub-track-wrap">
+                <div style="display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:0.75rem;color:var(--color-ink-muted);">
+                  <span>TIMELINE SCRUBBER</span>
+                  <span style="color:var(--color-signal-green);font-weight:700;">H100 FLASH AT 1.68%</span>
+                </div>
+                <input id="race-scrub-input" type="range" min="0" max="100" value="100" class="scrub-range-input" aria-label="Race timeline scrub control"/>
+                <div class="scrub-markers">
+                  <span>0.0s (Launch)</span>
+                  <span>25%</span>
+                  <span>50%</span>
+                  <span>75%</span>
+                  <span id="race-marker-end">68.4s (100%)</span>
+                </div>
+              </div>
+
+              <!-- Action Bar -->
+              <div class="race-actions-bar">
+                <button id="btn-replay-flash" class="btn-race-action" title="Replay real-time race simulation">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  <span>Replay Flash</span>
+                </button>
+                <div class="race-speedup-badge-large">
+                  <span id="race-speedup-multiplier">59.5x FASTER</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Stage C.1 Anchor: Interactive Benchmark Explorer -->
-    <section id="benchmarks" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-measured">STAGE C.1 QUEUED</span>
-        <h2 class="font-display text-xl font-bold">NIM vs. CPU Benchmark Matrix & Multi-Axis Explorer</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          Empirical latency, throughput, speedup multiplier, and percentiles (p50/p95/p99) across 1UBQ, 1DHF, 2HYY, 1M17, and 7BV2.
+    <!-- SECTION 02: BENCHMARK MATRIX & LOG-SCALE DUMBBELL CHART -->
+    <section id="benchmarks" class="stage-section">
+      <div style="margin-bottom: 2.5rem;">
+        <span class="section-numeral">02</span>
+        <h2 class="section-title">Benchmark Matrix // Empirical Latency &amp; Throughput</h2>
+        <p class="section-narrative" style="max-width:760px;">
+          Logarithmic latency comparison spanning from sub-100ms token PLM embeddings to 3-minute multi-domain macromolecular polymer folding. Every metric represents the mean of n=5 warm container executions with strict output parity.
         </p>
+
+        <!-- Collapsible Methodology Strip -->
+        <details class="methodology-collapse">
+          <summary class="methodology-summary">
+            <span>METHODOLOGY &amp; HARDWARE CALIBRATION SPECIFICATION</span>
+            <span style="font-size:0.75rem;color:var(--color-signal-green);">[ Click to expand / collapse ]</span>
+          </summary>
+          <div class="methodology-body">
+            <div>
+              <strong style="color:var(--color-ink-primary);">GPU Environment:</strong> NVIDIA H100 80GB SXM5 GPU (SXM5 socket, 700W peak active draw) running official NVIDIA container images (<code style="font-family:var(--font-mono);font-size:0.75rem;">nvcr.io/nim/*</code>) compiled with TensorRT-LLM and TensorRT FP16/FP8 execution engines.
+            </div>
+            <div>
+              <strong style="color:var(--color-ink-primary);">CPU Baseline:</strong> AMD EPYC 7763 64-core server processor. Strict hardware isolation enforced by pinning 16 physical cores using <code style="font-family:var(--font-mono);font-size:0.75rem;">numactl -C 0-15</code> to eliminate hyper-threading noise.
+            </div>
+            <div>
+              <strong style="color:var(--color-ink-primary);">Statistical Rigor:</strong> Warm container execution (cold start omitted) over n=5 consecutive runs; reported latency is the arithmetic mean. Inter-run coefficient of variation (CV) &lt; 2.4%.
+            </div>
+            <div>
+              <strong style="color:var(--color-ink-primary);">Biological Validation:</strong> Output embeddings validated via Cosine Similarity (&ge; 0.9996). 3D coordinates aligned with TM-align and PyMOL validating C&alpha; RMSD (&le; 0.51 &Aring;).
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- Log-scale Dumbbell Chart Card -->
+      <div class="dumbbell-card">
+        <div class="dumbbell-chart-header">
+          <div>
+            <h3 class="font-display text-lg font-bold" style="color:var(--color-ink-primary);margin-bottom:0.25rem;">
+              Execution Latency on Logarithmic Scale (0.05s to 200s)
+            </h3>
+            <span class="text-xs" style="color:var(--color-ink-muted);font-family:var(--font-mono);">
+              Connecting gradient line illustrates the physical compression ratio per modality
+            </span>
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-item">
+              <span class="track-indicator-dot dot-gpu"></span>
+              <span>NVIDIA H100 NIM (FP16/FP8)</span>
+            </div>
+            <div class="chart-legend-item">
+              <span class="track-indicator-dot dot-cpu"></span>
+              <span>AMD EPYC 7763 (16-Core CPU)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SVG Container dynamically rendered by ./js/charts.js -->
+        <div id="dumbbell-chart-container" class="svg-chart-container">
+          <!-- Rendered by charts.js -->
+        </div>
+      </div>
+
+      <!-- Expandable Full Telemetry Matrix Drawer -->
+      <div class="telemetry-drawer-container">
+        <div id="drawer-header" class="drawer-header-bar" role="button" tabindex="0" aria-expanded="false">
+          <div class="drawer-toggle-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>Inspect Full Telemetry Matrix (5 Microservice Records)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="badge-measured">100% HERMETIC DATA</span>
+            <svg id="drawer-chevron" class="drawer-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </div>
+
+        <div id="drawer-content" class="drawer-content">
+          <!-- Filter & Search Controls Bar -->
+          <div class="drawer-filter-bar">
+            <!-- Filter Pills -->
+            <div class="workload-pills-wrap" style="margin-bottom:0;">
+              <button class="workload-pill-btn matrix-filter-pill active" data-filter="all">All Modalities</button>
+              <button class="workload-pill-btn matrix-filter-pill" data-filter="ESM-2">ESM-2 (650M)</button>
+              <button class="workload-pill-btn matrix-filter-pill" data-filter="ESMFold">ESMFold</button>
+              <button class="workload-pill-btn matrix-filter-pill" data-filter="DiffDock">DiffDock</button>
+              <button class="workload-pill-btn matrix-filter-pill" data-filter="MolMIM">MolMIM</button>
+              <button class="workload-pill-btn matrix-filter-pill" data-filter="OpenFold">OpenFold</button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+              <!-- Search Box (Strict 2.5rem padding prevents icon collision) -->
+              <div class="table-search-wrap">
+                <svg class="table-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input id="table-search-input" type="text" placeholder="Filter by target, PDB, UniProt..." class="table-search-input" aria-label="Search benchmark matrix table"/>
+              </div>
+
+              <!-- Export Buttons -->
+              <div class="table-export-actions">
+                <button id="btn-export-csv" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download CSV dataset">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  <span>CSV</span>
+                </button>
+                <button id="btn-export-json" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download JSON dataset">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  <span>JSON</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabular Table -->
+          <div class="matrix-table-wrap">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th class="sortable-th" data-sort="nim_service" style="cursor:pointer;" title="Sort by NIM Model">BioNeMo Service &#8597;</th>
+                  <th class="sortable-th" data-sort="target_complex" style="cursor:pointer;" title="Sort by Target Complex">Target Complex &#8597;</th>
+                  <th>Task Modality</th>
+                  <th class="sortable-th" data-sort="cpu_latency_s" style="cursor:pointer;" title="Sort by CPU Latency">CPU Latency (s) &#8597;</th>
+                  <th class="sortable-th" data-sort="gpu_latency_s" style="cursor:pointer;" title="Sort by H100 NIM Latency">H100 NIM (s) &#8597;</th>
+                  <th class="sortable-th" data-sort="speedup_multiplier" style="cursor:pointer;" title="Sort by Acceleration Factor">Speedup &#8597;</th>
+                  <th>Output Parity</th>
+                </tr>
+              </thead>
+              <tbody id="matrix-table-body">
+                <!-- Rendered by charts.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 03: CAMPAIGN SCALE CALCULATOR -->
+    <section id="calculator" class="stage-section">
+      <div style="margin-bottom: 2.5rem;">
+        <span class="section-numeral">03</span>
+        <h2 class="section-title">Campaign Scale Calculator // Screening Projection</h2>
+        <p class="section-narrative" style="max-width:760px;">
+          Model the cumulative impact of time collapse when scaling from pilot screens to multi-thousand complex chemical campaigns. Direct acceleration transforms weeks of queue stall into coffee-break turnaround.
+        </p>
+      </div>
+
+      <div class="calc-card">
+        <!-- Controls Grid -->
+        <div class="calc-controls-grid">
+          <!-- Slider Control Group -->
+          <div class="calc-control-group">
+            <div class="calc-control-label">
+              <span>SCREENING LIBRARY SIZE:</span>
+              <span id="calc-count-display" style="color:var(--color-signal-green);font-weight:700;">10,000 Complexes</span>
+            </div>
+            <div class="calc-slider-wrap">
+              <input id="calc-slider" type="range" min="0" max="100" value="50" class="calc-slider" aria-label="Library size logarithmic slider"/>
+              <div class="calc-chips-wrap">
+                <button class="calc-chip-btn" data-count="1000">1k (Pilot)</button>
+                <button class="calc-chip-btn active" data-count="10000">10k (Standard)</button>
+                <button class="calc-chip-btn" data-count="100000">100k (Focused)</button>
+                <button class="calc-chip-btn" data-count="1000000">1M (Mega-Screen)</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Workload Selector -->
+          <div class="calc-control-group">
+            <div class="calc-control-label">
+              <span>ACTIVE DISCOVERY WORKLOAD:</span>
+            </div>
+            <select id="calc-workload-select" class="calc-control-select" aria-label="Select active discovery workload">
+              <option value="cycle" selected>End-to-End Discovery Cycle (32.40s vs 0.55s, 58.9x)</option>
+              <option value="diffdock">DiffDock SE(3) Docking Alone (68.40s vs 1.15s, 59.5x)</option>
+              <option value="esmfold">ESMFold 3D Folding Alone (42.10s vs 0.72s, 58.5x)</option>
+              <option value="all">All 5 Workloads Combined (313.50s vs 5.17s, 60.6x)</option>
+            </select>
+            <span style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">
+              Includes token generation, structure prediction, and ensemble docking
+            </span>
+          </div>
+        </div>
+
+        <!-- Dynamic KPI Grid -->
+        <div class="calc-kpi-grid">
+          <div class="calc-kpi-card">
+            <div class="calc-kpi-label">Wall-Clock Time Saved</div>
+            <div id="calc-hours-saved" class="calc-kpi-value highlight-green">88.5h</div>
+            <div id="calc-hours-sub" class="calc-kpi-sub">3.7 Days of Compute Time Saved</div>
+          </div>
+          <div class="calc-kpi-card">
+            <div class="calc-kpi-label">Acceleration Factor</div>
+            <div id="calc-speedup" class="calc-kpi-value">58.9x</div>
+            <div class="calc-kpi-sub">Empirically Verified Speedup Ratio</div>
+          </div>
+          <div class="calc-kpi-card">
+            <div class="calc-kpi-label">Estimated Energy Saved</div>
+            <div id="calc-kwh-saved" class="calc-kpi-value highlight-green">24.1 kWh</div>
+            <div id="calc-kwh-sub" class="calc-kpi-sub">95.8% Estimated Power Reduction</div>
+          </div>
+        </div>
+
+        <!-- Proportional Mass Block Visualizer -->
+        <div class="calc-mass-visualizer">
+          <div class="mass-bar-container">
+            <div class="mass-bar-label">
+              <span id="mass-cpu-label">AMD EPYC 7763 (16 Cores): 90.00h (~25.2 kWh)</span>
+              <span>100% Baseline Volume</span>
+            </div>
+            <div class="mass-bar-track">
+              <div id="mass-bar-cpu-fill" class="mass-bar-fill mass-bar-cpu" style="width: 100%;"></div>
+            </div>
+          </div>
+
+          <div class="mass-bar-container">
+            <div class="mass-bar-label">
+              <span id="mass-gpu-label" style="color:var(--color-signal-green);">NVIDIA H100 SXM5: 1.53h (~1.1 kWh)</span>
+              <span style="color:var(--color-signal-green);font-weight:700;">1.7% Compute Footprint</span>
+            </div>
+            <div class="mass-bar-track">
+              <div id="mass-bar-gpu-fill" class="mass-bar-fill mass-bar-gpu" style="width: 1.7%;"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
