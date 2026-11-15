@@ -1,10 +1,10 @@
 :root {
-  --nvidia-green: #76b900;
-  --cyber-cyan: #00f1fd;
-  --surface-base: #080c12;
-  --surface-card: #0d1117;
-  --surface-elevated: #161b22;
-  --surface-border: #21262d;
+  --nvidia-green: var(--color-signal-green-bright, #76b900);
+  --cyber-cyan: var(--color-cold-cyan, #00f1fd);
+  --surface-base: var(--color-canvas, #05070a);
+  --surface-card: var(--color-surface, #0b0f14);
+  --surface-elevated: var(--color-surface-elevated, #11171e);
+  --surface-border: var(--border-hairline, #21262d);
 }
 
 /* Screen reader utility */

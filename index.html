@@ -24,13 +24,14 @@
   <meta name="twitter:title" content="NVIDIA BioNeMo & NIM Inference Benchmark"/>
   <meta name="twitter:description" content="Empirical computational biology benchmark comparing NVIDIA BioNeMo microservices against CPU baselines."/>
   <link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Crect width='120' height='120' rx='28' fill='%2305070a'/%3E%3Cpath d='M60 24 C78 24 94 38 94 56 C94 72 82 86 68 88' stroke='%2376f5a2' stroke-width='8' fill='none'/%3E%3Cpath d='M60 24 C44 24 26 38 26 56 C26 70 36 84 52 88' stroke='%235ce1ff' stroke-width='6' fill='none'/%3E%3Ccircle cx='60' cy='24' r='6' fill='%2376f5a2'/%3E%3Ccircle cx='60' cy='88' r='6' fill='%235ce1ff'/%3E%3C/svg%3E"/>
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg"/>
 
   <!-- Design System Stylesheets -->
   <link rel="stylesheet" href="./css/tokens.css"/>
   <link rel="stylesheet" href="./css/base.css"/>
   <link rel="stylesheet" href="./css/stage-b.css"/>
   <link rel="stylesheet" href="./css/pose-lab.css"/>
+  <link rel="stylesheet" href="./css/pipeline-cli.css"/>
 
   <!-- Theme Engine (Executes immediately for zero FOUC) -->
   <script src="./js/theme.js"></script>
@@ -49,6 +50,9 @@
   <script src="./js/molviewer.js" defer></script>
   <script src="./js/studio.js" defer></script>
   <script src="./js/lead-evaluator.js" defer></script>
+  <!-- Stage D: Pipeline Flow Diagram & Two-Pane CLI Builder -->
+  <script src="./js/pipeline.js" defer></script>
+  <script src="./js/cli-builder.js" defer></script>
 </head>
 
 <body>
@@ -791,109 +795,497 @@
       </div>
     </section>
 
-    <!-- Stage D.1 Anchor: Pipeline Architecture -->
-    <section id="pipeline" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-measured">STAGE D.1 QUEUED</span>
-        <h2 class="font-display text-xl font-bold">5-Stage Multi-Agent Discovery Pipeline</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          Interactive node diagram with click-to-inspect I/O schemas, container specs, and failover resilience policies.
+    <!-- SECTION 06: ANIMATED 5-STAGE PIPELINE FLOW & SCHEMA INSPECTOR -->
+    <section id="pipeline" class="stage-section">
+      <div style="margin-bottom: 2rem;">
+        <span class="section-numeral">06</span>
+        <h2 class="section-title">Agentic Discovery Pipeline // End-to-End Orchestration</h2>
+        <p class="section-narrative" style="max-width:780px;">
+          Autonomous closed-loop orchestration connecting canonical sequence validation, BioNeMo NIM inference, score-based diffusion docking, ADMET filtering, and robotics protocol export. Click any stage to inspect its data contract schema and resilience policies.
         </p>
+      </div>
+
+      <!-- Horizontal Telemetry Conduits & Node Grid -->
+      <div class="pipeline-flow-container">
+        <!-- Connecting SVG Conduits with Bioluminescent Pulse -->
+        <svg class="pipeline-conduit-svg" viewBox="0 0 1000 24" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="50" y1="12" x2="950" y2="12" class="conduit-line" />
+          <circle cx="50" cy="12" r="4.5" class="pulse-ball" />
+        </svg>
+
+        <!-- 5 Interactive Stage Nodes -->
+        <div id="pipeline-nodes-container" class="pipeline-nodes-grid">
+          <!-- Rendered dynamically by js/pipeline.js -->
+        </div>
+
+        <!-- Slide-Over / Expandable Schema Inspector Drawer -->
+        <div id="schema-drawer-panel" class="schema-drawer" role="region" aria-label="Pipeline Schema Inspector">
+          <div class="schema-drawer-header">
+            <div>
+              <div id="schema-drawer-title" style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">
+                Stage 01: Target &amp; Ligand Ingestion
+              </div>
+              <div id="schema-drawer-service" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-signal-green);margin-top:0.2rem;">
+                RDKit C++ / PDB REST Gateway
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span class="badge-measured">JSON-SCHEMA v7</span>
+              <button id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                <span>Copy Payload</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="schema-drawer-body">
+            <!-- Left: Input & Output Schemas -->
+            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div>
+                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                  Input Contract Schema
+                </div>
+                <pre id="schema-input-code" class="schema-code-block"></pre>
+              </div>
+              <div>
+                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                  Output Contract Schema
+                </div>
+                <pre id="schema-output-code" class="schema-code-block"></pre>
+              </div>
+            </div>
+
+            <!-- Right: Resilience & Example Payload -->
+            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+              <div>
+                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                  Failover &amp; Resilience Policy
+                </div>
+                <div id="schema-resilience-text" style="font-size:0.82rem;color:var(--color-ink-muted);line-height:1.5;background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:8px;padding:1rem;"></div>
+              </div>
+              <div>
+                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                  Verified Sample JSON Payload
+                </div>
+                <pre id="schema-payload-code" class="schema-code-block"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Stage D.2 Anchor: CLI Reproducibility Builder -->
-    <section id="cli" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-measured">STAGE D.2 QUEUED</span>
-        <h2 class="font-display text-xl font-bold">CLI Flag Configurator & Terminal Builder</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          Dynamic command synthesis for --mode, --target, --poses, and --mock with one-click terminal copy.
+    <!-- SECTION 07: FOUR NIM PILLARS & TWO-PANE CLI BUILDER -->
+    <section id="cli" class="stage-section">
+      <div style="margin-bottom: 2.5rem;">
+        <span class="section-numeral">07</span>
+        <h2 class="section-title">Four NIM Pillars &amp; CLI Flag Builder</h2>
+        <p class="section-narrative" style="max-width:780px;">
+          Engineered for rapid laboratory reproducibility. Explore the performance characteristics of core BioNeMo models, then configure synthesis flags in the two-pane CLI generator to reproduce benchmark runs locally or against hosted cloud endpoints.
         </p>
+      </div>
+
+      <!-- Four NIM Pillars Bento Grid -->
+      <div class="nim-pillars-grid">
+        <div class="pillar-card">
+          <div class="pillar-tag">Protein Language Model</div>
+          <div class="pillar-title">ESM-2 (650M)</div>
+          <div class="pillar-stat">12,500 aa/s</div>
+          <p class="pillar-desc">
+            High-throughput contextual token embedding generation with 33 transformer layers. Optimized for batch inference on TensorRT FP16 engines.
+          </p>
+        </div>
+
+        <div class="pillar-card">
+          <div class="pillar-tag">Atomic 3D Folding</div>
+          <div class="pillar-title">ESMFold</div>
+          <div class="pillar-stat">&lt; 1.0s / 300 aa</div>
+          <p class="pillar-desc">
+            Direct single-sequence macromolecular structure prediction without MSA search overhead. Produces verified CASP14-grade coordinates (pLDDT &gt; 84).
+          </p>
+        </div>
+
+        <div class="pillar-card">
+          <div class="pillar-tag">Generative Chemistry</div>
+          <div class="pillar-title">MolMIM 70M</div>
+          <div class="pillar-stat">50 leads / sec</div>
+          <p class="pillar-desc">
+            CMA-ES latent space optimization producing bioisosteric derivatives with 100% RDKit chemical validity and scaffold retention.
+          </p>
+        </div>
+
+        <div class="pillar-card">
+          <div class="pillar-tag">SE(3) Equivariant Docking</div>
+          <div class="pillar-title">DiffDock</div>
+          <div class="pillar-stat">1.15s / complex</div>
+          <p class="pillar-desc">
+            Score-based generative reverse diffusion over 10 rotational/translational steps. Achieves 38% top-1 RMSD &lt; 2 &Aring; on PDBbind benchmarks.
+          </p>
+        </div>
+      </div>
+
+      <!-- Two-Pane CLI Builder -->
+      <div class="cli-builder-grid">
+        <!-- Left Pane: Controls -->
+        <div class="cli-controls-pane">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+            <div class="font-display font-bold text-base" style="color:var(--color-ink-primary);">CLI Configuration Flags</div>
+            <div style="display:flex;gap:0.35rem;">
+              <button class="calc-chip-btn cli-preset-btn active" data-preset="mock">Mock Dry-Run</button>
+              <button class="calc-chip-btn cli-preset-btn" data-preset="kras">KRAS Screen</button>
+              <button class="calc-chip-btn cli-preset-btn" data-preset="full">Full Suite</button>
+            </div>
+          </div>
+
+          <!-- Endpoint Select -->
+          <div class="calc-control-group">
+            <label for="cli-endpoint" class="calc-control-label">NIM HOST ENDPOINT:</label>
+            <select id="cli-endpoint" class="calc-control-select">
+              <option value="health.api.nvidia.com" selected>health.api.nvidia.com (NVIDIA Cloud Production)</option>
+              <option value="integrate.api.nvidia.com">integrate.api.nvidia.com (NVIDIA Developer Portal)</option>
+              <option value="localhost:8000">localhost:8000 (Local Self-Hosted Docker NIM)</option>
+            </select>
+          </div>
+
+          <!-- Target Select -->
+          <div class="calc-control-group">
+            <label for="cli-target" class="calc-control-label">TARGET PDB COMPLEX:</label>
+            <select id="cli-target" class="calc-control-select">
+              <option value="8AZV" selected>KRAS G12D (PDB: 8AZV, Switch-II Pocket)</option>
+              <option value="4MNE">BRAF V600E (PDB: 4MNE, Kinase Domain)</option>
+              <option value="7BQY">SARS-CoV-2 Mpro (PDB: 7BQY, Catalytic Dyad)</option>
+              <option value="ALL_TARGETS">All Benchmark Complexes (1UBQ, 1DHF, 2HYY, 1M17, 7BV2)</option>
+            </select>
+          </div>
+
+          <!-- Poses Slider -->
+          <div class="calc-control-group">
+            <div class="calc-control-label">
+              <span>DIFFDOCK POSES:</span>
+              <span id="cli-poses-display" style="color:var(--color-signal-green);font-weight:700;">5 Poses</span>
+            </div>
+            <input id="cli-poses" type="range" min="1" max="20" value="5" class="calc-slider" aria-label="Number of poses slider"/>
+          </div>
+
+          <!-- Batch Size & Format -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="calc-control-group">
+              <label for="cli-batch" class="calc-control-label">BATCH SIZE:</label>
+              <select id="cli-batch" class="calc-control-select">
+                <option value="16">16 (Latency Focus)</option>
+                <option value="32" selected>32 (Balanced)</option>
+                <option value="64">64 (Max Throughput)</option>
+              </select>
+            </div>
+            <div class="calc-control-group">
+              <label for="cli-format" class="calc-control-label">OUTPUT FORMAT:</label>
+              <select id="cli-format" class="calc-control-select">
+                <option value="json" selected>JSON Summary</option>
+                <option value="csv">CSV Matrix</option>
+                <option value="pdf">PDF Dossier</option>
+                <option value="ot2">OT-2 Python Protocol</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div style="display:flex;gap:1.5rem;align-items:center;padding-top:0.25rem;">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-ink-primary);">
+              <input id="cli-admet" type="checkbox" checked style="accent-color:var(--color-signal-green);"/>
+              <span>--admet-filter</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-signal-green);">
+              <input id="cli-mock" type="checkbox" checked style="accent-color:var(--color-signal-green);"/>
+              <span>--mock (Zero-Credit Testing)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Right Pane: Terminal Output -->
+        <div class="cli-terminal-pane">
+          <div>
+            <div class="terminal-header">
+              <div class="mac-traffic-dots">
+                <span class="mac-dot dot-red"></span>
+                <span class="mac-dot dot-yellow"></span>
+                <span class="mac-dot dot-green"></span>
+              </div>
+              <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);">
+                bash — bionemo-cli // v2.5
+              </span>
+            </div>
+            <div style="margin-top:1.25rem;">
+              <pre id="cli-terminal-code" class="cli-command-code"></pre>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(148,163,184,0.12);padding-top:1rem;">
+            <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);">
+              Zero external dependencies required. Verified in Python 3.12 virtualenv.
+            </span>
+            <button id="btn-copy-cli-command" class="btn-race-action" title="Copy command to clipboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span>Copy Command</span>
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Stage D.3 Anchor: Opentrons OT-2 Robotics Synthesis -->
-    <section id="ot2" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-measured">STAGE D.3 QUEUED</span>
-        <h2 class="font-display text-xl font-bold">Opentrons OT-2 Liquid Handler Protocol (API v2.15)</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          Autonomous synthesis protocol generation for nominated KRAS G12D candidate microplates.
+    <!-- SECTION 08: DELIVERABLES, OPENTRONS OT-2 & ROADMAP -->
+    <section id="ot2" class="stage-section">
+      <div style="margin-bottom: 2.5rem;">
+        <span class="section-numeral">08</span>
+        <h2 class="section-title">Robotics Synthesis Protocol // Opentrons OT-2</h2>
+        <p class="section-narrative" style="max-width:780px;">
+          Autonomous wet-lab bridge. The benchmark suite converts in-silico nominated drug candidates directly into executable Python protocols adhering to Opentrons API v2.15 for liquid handling and serial dilution assays.
         </p>
+      </div>
+
+      <!-- Deliverables Strip -->
+      <div class="deliverables-grid">
+        <a href="./blueprint.yaml" target="_blank" class="deliverable-card" title="View DGX Cloud and Docker Compose Deployment Spec">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="badge-measured">DGX SPEC</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          </div>
+          <div class="deliverable-title">blueprint.yaml Specification</div>
+          <div class="deliverable-desc">
+            Complete declarative container deployment spec for multi-GPU DGX Cloud clusters, NVIDIA NIM microservice endpoints, and resource allocations.
+          </div>
+        </a>
+
+        <a href="./results/screened_candidates_summary.csv" download class="deliverable-card" title="Download Screened Candidates CSV">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="badge-measured">CSV DATASET</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          </div>
+          <div class="deliverable-title">Candidate Selection Dossier</div>
+          <div class="deliverable-desc">
+            Full tabular matrix of screened KRAS G12D series with canonical SMILES, DiffDock scores, MM-GBSA rescores, QED, and ADMET flags.
+          </div>
+        </a>
+
+        <a href="./results/benchmark_summary.json" download class="deliverable-card" title="Download Benchmark Summary JSON">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="badge-measured">TELEMETRY JSON</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          </div>
+          <div class="deliverable-title">Empirical Benchmark Summary</div>
+          <div class="deliverable-desc">
+            Raw telemetry JSON capturing per-model latency, p50/p95/p99 percentiles, and hardware speedup ratios across all 5 benchmark workloads.
+          </div>
+        </a>
+      </div>
+
+      <!-- OT-2 Code Viewer Card -->
+      <div class="ot2-card">
+        <div class="ot2-header-bar">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-signal-green);"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+            <span style="font-family:var(--font-mono);font-size:0.82rem;font-weight:700;color:var(--color-ink-primary);">results/ot2_synthesis_protocol_KRAS_G12D.py</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="badge-illustrative">Illustrative Synthesis Protocol</span>
+            <button id="btn-copy-ot2-code" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy Python protocol">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span>Copy Protocol</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ot2-body-grid">
+          <!-- Fluidics Specs Pane -->
+          <div class="ot2-specs-pane">
+            <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--color-ink-primary);">
+              Automated Assay Parameters
+            </div>
+            <ul style="font-size:0.8rem;color:var(--color-ink-muted);line-height:1.7;list-style:none;padding:0;">
+              <li style="display:flex;gap:0.5rem;align-items:flex-start;">
+                <span style="color:var(--color-signal-green);font-weight:700;">&#10003;</span>
+                <span><strong>API Level:</strong> Opentrons Protocol API v2.15</span>
+              </li>
+              <li style="display:flex;gap:0.5rem;align-items:flex-start;">
+                <span style="color:var(--color-signal-green);font-weight:700;">&#10003;</span>
+                <span><strong>Labware:</strong> Corning 96-well flat-bottom plate (360 &micro;L) in Slot 1</span>
+              </li>
+              <li style="display:flex;gap:0.5rem;align-items:flex-start;">
+                <span style="color:var(--color-signal-green);font-weight:700;">&#10003;</span>
+                <span><strong>Reservoir:</strong> NEST 12-channel 15 mL reservoir in Slot 3</span>
+              </li>
+              <li style="display:flex;gap:0.5rem;align-items:flex-start;">
+                <span style="color:var(--color-signal-green);font-weight:700;">&#10003;</span>
+                <span><strong>Pipette:</strong> P300 Single-Channel GEN2 on Right Mount</span>
+              </li>
+              <li style="display:flex;gap:0.5rem;align-items:flex-start;">
+                <span style="color:var(--color-signal-green);font-weight:700;">&#10003;</span>
+                <span><strong>Fluidics Tuning:</strong> Aspiration throttled to 25 &micro;L/s for viscous DMSO solutions</span>
+              </li>
+              <li style="display:flex;gap:0.5rem;align-items:flex-start;">
+                <span style="color:var(--color-signal-green);font-weight:700;">&#10003;</span>
+                <span><strong>Assay Geometry:</strong> 2-fold serial dilution along Row A (cols 1&ndash;12) with 3&times; 40 &micro;L mixing cycles</span>
+              </li>
+            </ul>
+
+            <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border-hairline);">
+              <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/results/ot2_synthesis_protocol_KRAS_G12D.py" target="_blank" rel="noopener noreferrer" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-signal-green);text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">
+                <span>View Raw on GitHub</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Code View Pane -->
+          <div class="ot2-code-pane">
+            <pre id="ot2-protocol-code" class="ot2-code-pre"># =============================================================================
+# UNVALIDATED PROTOCOL WARNING
+# This script was auto-generated for illustrative purposes only.
+# It has NOT been reviewed or validated by a qualified chemist.
+# DO NOT use in a wet laboratory without independent expert review,
+# risk assessment, and compliance with all applicable safety regulations.
+# Expected yields and volumes are illustrative and may be incorrect.
+# =============================================================================
+"""
+Opentrons OT-2 Automated Dilution Protocol
+Target Candidate: KRAS G12D Inhibitor Assay Series
+Generated for: BioNeMo NIM Benchmark Suite
+Author: Aarav Jorwal (@Jorwalzzz)
+"""
+
+from opentrons import protocol_api
+
+metadata = {
+    'protocolName': 'KRAS G12D inhibitor serial dilution (illustrative)',
+    'author': 'Aarav Jorwal (@Jorwalzzz)',
+    'description': '2-fold serial dilution assay protocol for KRAS G12D inhibitor candidates',
+    'apiLevel': '2.15'
+}
+
+def run(protocol: protocol_api.ProtocolContext):
+    # 1. Deck labware configuration
+    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)
+    res = protocol.load_labware('nest_12_reservoir_15ml', 3)
+    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)
+    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])
+    p300.flow_rate.aspirate = 25   # µL/s, throttled for DMSO viscosity
+    p300.flow_rate.dispense = 25
+
+    row = plate.rows()[0]  # Row A: A1 to A12
+    # 2. Dispense diluent (50 µL) into columns 2-12
+    p300.transfer(50, res['A1'], row[1:], new_tip='once')
+    # 3. 2-fold serial dilution down Row A with mixing
+    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')
+    protocol.comment("OT-2 KRAS G12D serial dilution protocol complete.")</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deployment Roadmap Strip -->
+      <div id="roadmap" style="margin-top:2.5rem;">
+        <h3 class="font-display font-bold text-lg" style="color:var(--color-ink-primary);margin-bottom:0.5rem;">
+          Production Deployment Roadmap
+        </h3>
+        <p class="text-sm" style="color:var(--color-ink-muted);max-width:640px;">
+          From interactive browser simulation to local native workstation clients and high-availability enterprise cluster deployments.
+        </p>
+
+        <div class="roadmap-track">
+          <div class="roadmap-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge-measured">PHASE 1</span>
+              <span class="badge-measured" style="background:rgba(16,185,129,0.2);color:var(--color-signal-green);border-color:var(--color-signal-green);">Active &amp; Live</span>
+            </div>
+            <div class="font-display font-bold text-base" style="color:var(--color-ink-primary);">Web Cockpit &amp; Studio</div>
+            <p class="text-xs" style="color:var(--color-ink-muted);line-height:1.5;">
+              Static-first, zero-FOUC scientific mission control with interactive 3D WebGL pose inspection and real-time client-side ADMET auditing.
+            </p>
+          </div>
+
+          <div class="roadmap-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge-measured">PHASE 2</span>
+              <span class="badge-measured" style="background:rgba(92,225,255,0.15);color:#5CE1FF;border-color:rgba(92,225,255,0.3);">Target Q2 2027</span>
+            </div>
+            <div class="font-display font-bold text-base" style="color:var(--color-ink-primary);">Desktop Workstation Client</div>
+            <p class="text-xs" style="color:var(--color-ink-muted);line-height:1.5;">
+              Standalone native cross-platform application with direct PyTorch C++ bindings, local Vulkan / CUDA acceleration, and offline RDKit synthesis.
+            </p>
+          </div>
+
+          <div class="roadmap-item">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="badge-measured">PHASE 3</span>
+              <span class="badge-measured" style="background:rgba(16,185,129,0.2);color:var(--color-signal-green);border-color:var(--color-signal-green);">Production Ready</span>
+            </div>
+            <div class="font-display font-bold text-base" style="color:var(--color-ink-primary);">Containerized NIM Helm Stack</div>
+            <p class="text-xs" style="color:var(--color-ink-muted);line-height:1.5;">
+              Enterprise Kubernetes / Helm charts configured for multi-node DGX Cloud execution with automated health probes and horizontal autoscaling.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <!-- STAGE A.2: DESIGNED FOOTER SHELL -->
-  <footer class="footer-shell">
-    <div class="footer-inner">
-      <div class="footer-top">
-        <!-- Brand & Mission Column -->
-        <div class="footer-brand">
-          <div class="footer-wordmark">BioNeMo // NIM Benchmark Suite</div>
-          <p class="footer-desc">
-            An open scientific mission-control platform comparing NVIDIA BioNeMo microservices against standardized multi-core CPU baselines for high-throughput computational biology.
+  <!-- DESIGNED FOOTER FINALE -->
+  <footer class="footer-finale">
+    <div class="footer-inner-max">
+      <!-- Top Brand Strip -->
+      <div class="footer-top-brand">
+        <div>
+          <div class="footer-display-title">BioNeMo // NIM Benchmark</div>
+          <p style="color:var(--color-ink-muted);font-size:0.9rem;max-width:540px;line-height:1.6;margin-top:0.5rem;">
+            An independent, open computational biology benchmark evaluating NVIDIA BioNeMo inference microservices against pinned multi-core CPU baselines.
           </p>
         </div>
 
-        <!-- Microservices Column -->
-        <div>
-          <div class="footer-col-title">BioNeMo NIMs</div>
-          <ul class="footer-links">
-            <li><a href="#benchmarks">ESM-2 (650M) Token PLM</a></li>
-            <li><a href="#benchmarks">ESMFold 3D Structure</a></li>
-            <li><a href="#benchmarks">DiffDock SE(3) Docking</a></li>
-            <li><a href="#benchmarks">MolMIM 70M Generative</a></li>
-            <li><a href="#benchmarks">OpenFold Macromolecular</a></li>
-          </ul>
-        </div>
-
-        <!-- Deliverables Column -->
-        <div>
-          <div class="footer-col-title">Artifacts & Data</div>
-          <ul class="footer-links">
-            <li><a href="./results/benchmark_summary.json" download>benchmark_summary.json</a></li>
-            <li><a href="./results/benchmark_summary.csv" download>benchmark_summary.csv</a></li>
-            <li><a href="./results/screened_candidates_summary.csv" download>screened_candidates.csv</a></li>
-            <li><a href="./results/ot2_synthesis_protocol_KRAS_G12D.py" download>ot2_protocol.py</a></li>
-            <li><a href="./cockpit.html">Agentic Cockpit</a></li>
-          </ul>
-        </div>
-
-        <!-- Governance & Repos Column -->
-        <div>
-          <div class="footer-col-title">Governance & Code</div>
-          <ul class="footer-links">
-            <li><a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
-            <li><a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">AGPL-3.0 License</a></li>
-            <li><a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/actions" target="_blank" rel="noopener noreferrer">101/101 Tests Passing</a></li>
-            <li><a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/blueprint.yaml" target="_blank" rel="noopener noreferrer">blueprint.yaml Spec</a></li>
-          </ul>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;align-items:flex-start;">
+          <div class="footer-clone-box">
+            <span style="color:var(--color-ink-muted);">$</span>
+            <span>git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git</span>
+          </div>
+          <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+            <span class="badge-measured">GNU AGPLv3 LICENSE</span>
+            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">101/101 HERMETIC TESTS PASSING</span>
+            <span class="badge-measured">RELEASE v2.5</span>
+          </div>
         </div>
       </div>
 
-      <!-- Legal & Epistemic Disclaimer Box -->
-      <div class="footer-disclaimer-box">
-        <div>
-          <strong>NVIDIA Trademark & Non-Affiliation Notice:</strong> This benchmark suite is an independent scientific research and software engineering evaluation project. NVIDIA, BioNeMo, and NIM are trademarks and/or registered trademarks of NVIDIA Corporation in the United States and other jurisdictions. This repository, project, and web interface are not sponsored, endorsed, certified, or affiliated with NVIDIA Corporation.
+      <!-- Peer-Reviewed Citations Grid -->
+      <div class="footer-citations-grid">
+        <div class="citation-item">
+          <strong>1. ESM-2 &amp; ESMFold:</strong> Lin, Z., Akin, H., Rao, R., et al. <em>"Evolutionary-scale prediction of atomic-level protein structure with a language model."</em> Science 379, eabn8550 (2023). <a href="https://doi.org/10.1126/science.abn8550" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);">doi:10.1126/science.abn8550</a>
         </div>
-        <div>
-          <strong>Hardware Baseline & Isolation:</strong> Benchmark measurements were obtained on an NVIDIA H100 80GB SXM5 GPU (TensorRT FP16/FP8 precision) versus an AMD EPYC 7763 64-core processor with 16 physical cores pinned for strict process isolation (PyTorch 2.2 / RDKit C++ baseline).
+        <div class="citation-item">
+          <strong>2. DiffDock Molecular Docking:</strong> Corso, G., Stärk, H., Jing, B., Barzilay, R., &amp; Jaakkola, T. <em>"DiffDock: Diffusion Steps, Twists, and Turns for Molecular Docking."</em> International Conference on Learning Representations (ICLR 2023). <a href="https://arxiv.org/abs/2210.01776" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);">arXiv:2210.01776</a>
         </div>
-        <div>
-          <strong>Chemical Scaffold Reconciliation:</strong> Nominated candidate MRTX1133 core fragment MW (378.5 Da) reflects the primary pyrido-pyrimidine scaffold evaluated in the initial screening pass; the complete clinical candidate molecule (C35H41F2N7O2) has a verified mass of 600.64 Da.
+        <div class="citation-item">
+          <strong>3. NVIDIA BioNeMo &amp; MolMIM:</strong> NVIDIA Corporation. <em>"BioNeMo Framework &amp; NIM Microservices Documentation."</em> (2024). Accelerated with TensorRT-LLM on NVIDIA Hopper SXM5 architecture.
+        </div>
+        <div class="citation-item">
+          <strong>4. RDKit Cheminformatics:</strong> Landrum, G., et al. <em>"RDKit: Open-source cheminformatics toolkit."</em> Release 2023.09 C++ core engine.
         </div>
       </div>
 
-      <!-- Footer Bottom Bar -->
-      <div class="footer-bottom">
+      <!-- Scope & Scientific Limitations Box -->
+      <div style="background:#040609;border:1px solid var(--border-hairline);border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem;font-size:0.78rem;color:var(--color-ink-muted);line-height:1.6;">
         <div>
-          © 2026 Aarav Jorwal (<a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);text-decoration:none;">@Jorwalzzz</a>). Licensed under <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-primary);">GNU AGPLv3</a>. All worldwide trademark rights reserved.
+          <strong style="color:var(--color-ink-primary);">Benchmark Scope &amp; Scientific Limitations:</strong> This benchmark suite evaluates warm-container inference latency and structural output parity on standardized target complexes. Reported accelerations represent empirical hardware runtimes comparing an NVIDIA H100 80GB SXM5 GPU against an AMD EPYC 7763 64-core processor with 16 physical cores pinned for process isolation. Cold-start container initializations and wide-area network latency are omitted. In-silico docking scores and ADMET predictions represent computational hypotheses that require independent biophysical assay confirmation (SPR/MST) before clinical progression.
         </div>
-        <div style="display:flex;gap:16px;">
+        <div>
+          <strong style="color:var(--color-ink-primary);">NVIDIA Trademark &amp; Non-Affiliation Notice:</strong> NVIDIA, BioNeMo, NIM, TensorRT, and Hopper are trademarks and/or registered trademarks of NVIDIA Corporation in the United States and other jurisdictions. This open-source benchmark suite, web interface, and research evaluation are independently developed by Aarav Jorwal and are not sponsored, endorsed, certified, or affiliated with NVIDIA Corporation.
+        </div>
+      </div>
+
+      <!-- Bottom Bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;font-size:0.8rem;color:var(--color-ink-muted);">
+        <div>
+          &copy; 2026 Aarav Jorwal (<a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);text-decoration:none;">@Jorwalzzz</a>). Licensed under <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-primary);">GNU AGPLv3</a>. All worldwide trademark rights reserved.
+        </div>
+        <div style="display:flex;gap:1.5rem;">
           <a href="./index.html" style="color:var(--color-ink-secondary);text-decoration:none;">Studio Home</a>
-          <a href="./cockpit.html" style="color:var(--color-ink-secondary);text-decoration:none;">Cockpit</a>
+          <a href="./cockpit.html" style="color:var(--color-ink-secondary);text-decoration:none;">Cockpit Workstation</a>
           <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-secondary);text-decoration:none;">GitHub v2.5</a>
         </div>
       </div>
