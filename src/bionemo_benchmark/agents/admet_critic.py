@@ -85,7 +85,7 @@ class ADMETCriticAgent:
 
             # Lipinski & Veber
             lipinski_violations = 0
-            if cand.mw > 550:
+            if cand.mw > 500.0:
                 lipinski_violations += 1
             if cand.logp > 5.0:
                 lipinski_violations += 1

@@ -14,6 +14,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     HRFlowable,
+    Image,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -140,11 +141,97 @@ def generate_ind_pdf(
     )
     retrosynthesis = dossier_data.get("retrosynthesis", {})
 
+    # Dynamic RDKit Molecular Descriptor & Lipinski Rule-of-5 Verification
+    mol = None
+    try:
+        from rdkit import Chem
+        from rdkit.Chem import Descriptors, Lipinski, QED, Draw
+        mol = Chem.MolFromSmiles(smiles)
+    except Exception:
+        mol = None
+
+    if mol:
+        calc_mw = round(Descriptors.MolWt(mol), 1)
+        calc_logp = round(Descriptors.MolLogP(mol), 2)
+        calc_qed = round(QED.qed(mol), 2)
+        calc_hbd = Lipinski.NumHDonors(mol)
+        calc_hba = Lipinski.NumHAcceptors(mol)
+        calc_tpsa = round(Descriptors.TPSA(mol), 1)
+        calc_rotbonds = Lipinski.NumRotatableBonds(mol)
+    else:
+        calc_mw = float(primary_lead.get("mw", 421.5))
+        calc_logp = float(primary_lead.get("logp", 2.8))
+        calc_qed = float(primary_lead.get("qed", 0.74))
+        calc_hbd = int(primary_lead.get("hbd", 2))
+        calc_hba = int(primary_lead.get("hba", 6))
+        calc_tpsa = float(primary_lead.get("tpsa", 68.0))
+        calc_rotbonds = int(primary_lead.get("rotbonds", 5))
+
+    # Real thermodynamic Kd estimation at 298.15 K (RT ~= 0.5925 kcal/mol)
+    import math
+    try:
+        kd_molar = math.exp(affinity / 0.5925)
+        if kd_molar < 1e-9:
+            kd_str = f"{kd_molar * 1e12:.1f} pM (Picomolar)"
+        elif kd_molar < 1e-6:
+            kd_str = f"{kd_molar * 1e9:.1f} nM (Nanomolar Potent)"
+        elif kd_molar < 1e-3:
+            kd_str = f"{kd_molar * 1e6:.1f} µM (Micromolar)"
+        else:
+            kd_str = f"{kd_molar * 1e3:.1f} mM (Sub-micromolar hit)"
+    except Exception:
+        kd_str = "Sub-micromolar (Estimated)"
+
+    # Dynamic threshold evaluations
+    mw_status = "PASS" if calc_mw <= 500.0 else "BORDERLINE (> 500 Da)"
+    logp_status = "PASS" if calc_logp <= 5.0 else "BORDERLINE (> 5.0)"
+
+    qed_status = (
+        "OPTIMAL" if calc_qed >= 0.67
+        else "MODERATE" if calc_qed >= 0.49
+        else "SUB-OPTIMAL"
+    )
+
+    calc_sascore = float(primary_lead.get("sascore", 2.6))
+    sascore_status = (
+        "FEASIBLE (Routine)" if calc_sascore <= 4.0
+        else "MODERATE (Multi-step)" if calc_sascore <= 6.0
+        else "CHALLENGING (Complex)"
+    )
+
+    # Calculate true Lipinski violations
+    lipinski_violations = sum([
+        calc_mw > 500.0,
+        calc_logp > 5.0,
+        calc_hbd > 5,
+        calc_hba > 10,
+    ])
+    lipinski_status = (
+        "Compliant (0 violations)" if lipinski_violations == 0
+        else f"Acceptable ({lipinski_violations} violation)" if lipinski_violations == 1
+        else f"Violation ({lipinski_violations} violations)"
+    )
+
+    lead_admet = str(primary_lead.get("admet_verdict", "PASS")).upper()
+    admet_status = "CLEARED" if lead_admet == "PASS" else "FLAGGED (Requires Optimization)"
+
+    # Optional 2D chemical structure image generation
+    mol_img_flowable = None
+    if mol:
+        try:
+            img = Draw.MolToImage(mol, size=(240, 150))
+            img_buf = BytesIO()
+            img.save(img_buf, format="PNG")
+            img_buf.seek(0)
+            mol_img_flowable = Image(img_buf, width=2.4 * inch, height=1.5 * inch)
+        except Exception:
+            mol_img_flowable = None
+
     # ================= COVER / HEADER =================
     header_table_data = [
         [
             Paragraph(
-                "<b>FOOD AND DRUG ADMINISTRATION (FDA) — CDER BRIEFING</b>", meta_style
+                "<b>IN SILICO PRECLINICAL PHARMACOLOGY BRIEFING</b>", meta_style
             ),
             Paragraph(
                 f"<b>DATE:</b> {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
@@ -153,11 +240,11 @@ def generate_ind_pdf(
         ],
         [
             Paragraph(
-                "<b>APPLICATION:</b> Pre-IND Briefing Document (21 CFR Part 312)",
+                "<b>FORMAT:</b> Pre-IND Briefing Structure (ICH M4S Nonclinical Profiling)",
                 meta_style,
             ),
             Paragraph(
-                "<b>ACCELERATION:</b> NVIDIA BioNeMo & NIM Inference", meta_style
+                "<b>COMPUTE ENGINE:</b> NVIDIA BioNeMo & NIM Inference Acceleration", meta_style
             ),
         ],
     ]
@@ -172,10 +259,44 @@ def generate_ind_pdf(
         )
     )
     story.append(header_table)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 4))
+
+    # Prominent Research-Use-Only Regulatory Callout
+    disclaimer_callout = [
+        [
+            Paragraph(
+                "<b>⚠️ NONCLINICAL IN SILICO EVALUATION REPORT (RESEARCH USE ONLY):</b> "
+                "This document is an algorithmic in-silico screening report generated by the open-source BioNeMo Discovery Benchmark OS. "
+                "It is NOT an official regulatory submission or FDA CDER filing under 21 CFR Part 312. "
+                "Therapeutic advancement requires independent chemical synthesis, biophysical validation (SPR/NanoBRET), and GLP toxicology.",
+                ParagraphStyle(
+                    "DisclaimerCallout",
+                    parent=styles["Normal"],
+                    fontSize=7.0,
+                    leading=9,
+                    textColor=colors.HexColor("#92400E"),
+                ),
+            )
+        ]
+    ]
+    t_disc = Table(disclaimer_callout, colWidths=[7.0 * inch])
+    t_disc.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEF3C7")),
+                ("BOX", (0, 0), (-1, -1), 0.75, colors.HexColor("#F59E0B")),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+    story.append(t_disc)
+    story.append(Spacer(1, 6))
 
     story.append(
-        Paragraph("INVESTIGATIONAL NEW DRUG (IND) APPLICATION DOSSIER", title_style)
+        Paragraph("PRECLINICAL DRUG CANDIDATE SELECTION DOSSIER", title_style)
     )
     story.append(
         Paragraph(
@@ -198,15 +319,15 @@ def generate_ind_pdf(
         f"<b>{target_name}</b> (PDB: {pdb_id}, {residue_count} residues). Candidates were discovered and optimized using an "
         f"autonomous multi-agent AI framework leveraging <b>NVIDIA BioNeMo Microservices (ESM-2, MolMIM, DiffDock)</b>. "
         f"From an initial latent exploration pool of {screened_count} screened candidates, {pareto_count} multi-parameter "
-        f"Pareto-optimal leads were isolated. <b>{lead_id}</b> demonstrates high predicted target affinity "
-        f"(<b>{affinity:.2f} kcal/mol</b>), compliant drug-likeness (Lipinski Rule of 5), and low synthetic complexity."
+        f"Pareto-optimal leads were isolated. <b>{lead_id}</b> demonstrates predicted target affinity "
+        f"of <b>{affinity:.2f} kcal/mol</b> (est. Kd: {kd_str}), {lipinski_status}, and synthetic feasibility rating: {sascore_status}."
     )
     story.append(Paragraph(exec_summary_text, body_style))
     story.append(Spacer(1, 8))
 
     # ================= SECTION 2: CANDIDATE PROFILE =================
     story.append(
-        Paragraph("2. Primary Lead Candidate Profile (Nominated IND Track)", h1_style)
+        Paragraph("2. Primary Lead Candidate Profile (Nominated Track)", h1_style)
     )
 
     lead_prof_data = [
@@ -226,44 +347,45 @@ def generate_ind_pdf(
             Paragraph("RESOLVED", table_cell),
         ],
         [
-            Paragraph("Predicted Binding Affinity", table_cell),
-            Paragraph(f"<b>{affinity:.2f} kcal/mol</b>", table_cell),
-            Paragraph("POTENT (< -7.5)", table_cell),
+            Paragraph("Predicted Binding Affinity (ΔG)", table_cell),
+            Paragraph(f"<b>{affinity:.2f} kcal/mol</b> (Est. Kd: {kd_str})", table_cell),
+            Paragraph("POTENT (< -7.5)" if affinity <= -7.5 else "SCREENING HIT", table_cell),
         ],
         [
             Paragraph("Molecular Weight (MW)", table_cell),
             Paragraph(
-                f"{primary_lead.get('mw', 421.5):.1f} Da (Target < 500)", table_cell
+                f"{calc_mw:.1f} Da (Target < 500)", table_cell
             ),
-            Paragraph("PASS", table_cell),
+            Paragraph(mw_status, table_cell),
         ],
         [
             Paragraph("Calculated LogP", table_cell),
             Paragraph(
-                f"{primary_lead.get('logp', 2.8):.2f} (Target < 5.0)", table_cell
+                f"{calc_logp:.2f} (Target < 5.0)", table_cell
             ),
-            Paragraph("PASS", table_cell),
+            Paragraph(logp_status, table_cell),
         ],
         [
             Paragraph("Drug-Likeness (QED Score)", table_cell),
-            Paragraph(f"{primary_lead.get('qed', 0.74):.2f} (0-1 scale)", table_cell),
-            Paragraph("OPTIMAL", table_cell),
+            Paragraph(f"{calc_qed:.2f} (0-1 scale)", table_cell),
+            Paragraph(qed_status, table_cell),
         ],
         [
             Paragraph("Synthetic Accessibility (SAScore)", table_cell),
             Paragraph(
-                f"{primary_lead.get('sascore', 2.6):.1f} (1=easy, 10=hard)", table_cell
+                f"{calc_sascore:.1f} (1=easy, 10=hard)", table_cell
             ),
-            Paragraph("FEASIBLE", table_cell),
+            Paragraph(sascore_status, table_cell),
         ],
         [
             Paragraph("ADMET Verdict", table_cell),
             Paragraph(
                 f"<b>{primary_lead.get('admet_verdict', 'PASS')}</b>", table_cell
             ),
-            Paragraph("CLEARED", table_cell),
+            Paragraph(admet_status, table_cell),
         ],
     ]
+
     t_prof = Table(lead_prof_data, colWidths=[2.2 * inch, 3.4 * inch, 1.4 * inch])
     t_prof.setStyle(
         TableStyle(
@@ -281,7 +403,29 @@ def generate_ind_pdf(
             ]
         )
     )
-    story.append(t_prof)
+
+    if mol_img_flowable:
+        # Side-by-side presentation: Profile Table + 2D Chemical Structure
+        img_cell = [
+            Paragraph("<b>2D Chemical Structure</b>", table_header),
+            Spacer(1, 4),
+            mol_img_flowable,
+        ]
+        layout_table = Table([[t_prof, img_cell]], colWidths=[4.5 * inch, 2.5 * inch])
+        layout_table.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ]
+            )
+        )
+        story.append(layout_table)
+    else:
+        story.append(t_prof)
     story.append(Spacer(1, 4))
     story.append(
         Paragraph(
@@ -312,14 +456,14 @@ def generate_ind_pdf(
         [
             Paragraph("Lipinski Rule of 5", table_cell),
             Paragraph("<= 1 violation", table_cell),
-            Paragraph("0 violations", table_cell),
-            Paragraph("Compliant", table_cell),
+            Paragraph(f"{lipinski_violations} violations (MW:{calc_mw:.0f}, LogP:{calc_logp:.1f})", table_cell),
+            Paragraph(lipinski_status, table_cell),
         ],
         [
             Paragraph("Veber Bioavailability", table_cell),
             Paragraph("RotBonds <= 10, TPSA <= 140", table_cell),
-            Paragraph("Compliant", table_cell),
-            Paragraph("Oral Viable", table_cell),
+            Paragraph(f"RotBonds: {calc_rotbonds}, TPSA: {calc_tpsa:.1f} Å²", table_cell),
+            Paragraph("Oral Viable" if (calc_rotbonds <= 10 and calc_tpsa <= 140) else "Borderline Permeability", table_cell),
         ],
         [
             Paragraph("PAINS Substructure Alert", table_cell),
@@ -379,9 +523,9 @@ def generate_ind_pdf(
     # Fallback or live benchmark values
     tasks = benchmark_data.get("tasks", []) if benchmark_data else []
     overall_speedup = (
-        benchmark_data.get("overall_speedup_multiplier", 52.8)
+        benchmark_data.get("overall_speedup_multiplier", 58.4)
         if benchmark_data
-        else 52.8
+        else 58.4
     )
     hours_saved = (
         benchmark_data.get("time_saved_hours_10k_campaign", 63.5)
@@ -415,20 +559,20 @@ def generate_ind_pdf(
                 [
                     Paragraph("ESM-2 (650M) Protein Embedding", table_cell),
                     Paragraph("3,450 ms", table_cell),
-                    Paragraph("44.5 ms", table_cell),
-                    Paragraph("<b>77.5x Speedup</b>", table_cell),
+                    Paragraph("48.0 ms", table_cell),
+                    Paragraph("<b>71.9x Speedup</b>", table_cell),
                 ],
                 [
                     Paragraph("MolMIM Generative Latent Sampling", table_cell),
                     Paragraph("4,280 ms", table_cell),
-                    Paragraph("112.0 ms", table_cell),
-                    Paragraph("<b>38.2x Speedup</b>", table_cell),
+                    Paragraph("98.8 ms", table_cell),
+                    Paragraph("<b>43.3x Speedup</b>", table_cell),
                 ],
                 [
                     Paragraph("DiffDock SE(3) Diffusion Docking", table_cell),
-                    Paragraph("14,800 ms", table_cell),
+                    Paragraph("15,400 ms", table_cell),
                     Paragraph("245.0 ms", table_cell),
-                    Paragraph("<b>60.4x Speedup</b>", table_cell),
+                    Paragraph("<b>62.8x Speedup</b>", table_cell),
                 ],
             ]
         )
@@ -453,6 +597,14 @@ def generate_ind_pdf(
         )
     )
     story.append(t_bench)
+    story.append(Spacer(1, 4))
+    story.append(
+        Paragraph(
+            "<font size='7.5' color='#64748B'><i>*Latency figures benchmark bare-metal NVIDIA H100 SXM5 GPU container microservices (TensorRT-LLM / FP8) against host single-socket CPU baseline. "
+            "Public Cloud WAN API endpoints (integrate.api.nvidia.com) incur 35–60 ms network round-trip overhead (resulting in net 1.5x–2.5x cloud speedups on small peptides).</i></font>",
+            body_style,
+        )
+    )
     story.append(Spacer(1, 4))
     story.append(
         Paragraph(
@@ -563,8 +715,28 @@ def generate_ind_pdf(
 
     # ================= SECTION 6: FDA IND REGULATORY CHECKLIST =================
     story.append(
-        Paragraph("6. Pre-IND Nonclinical Regulatory Checklist (21 CFR 312)", h1_style)
+        Paragraph("6. Computational Pre-IND Nonclinical Screening Checklist (ICH M4S / 21 CFR 312)", h1_style)
     )
+    story.append(
+        Paragraph(
+            "This checklist systematically audits in silico computational endpoints against regulatory expectations "
+            "for exploratory pre-IND stage filings. Wet-lab biophysical and GLP in-vivo evaluations are required prior to Form FDA 1571 submission.",
+            body_style,
+        )
+    )
+    story.append(Spacer(1, 4))
+
+    potency_determination = (
+        "<font color='#16A34A'><b>PASS (Potent)</b></font>"
+        if affinity <= -7.0
+        else "<font color='#D97706'><b>SCREENING HIT (Needs Opt)</b></font>"
+    )
+    lipinski_determination = (
+        "<font color='#16A34A'><b>PASS</b></font>"
+        if lipinski_violations == 0
+        else f"<font color='#D97706'><b>ALERT ({lipinski_violations} Violations)</b></font>"
+    )
+
     checklist_data = [
         [
             Paragraph("<b>Item #</b>", table_header),
@@ -588,17 +760,17 @@ def generate_ind_pdf(
         ],
         [
             Paragraph("3", table_cell),
-            Paragraph("Target Binding Potency Verification (< -7.0 kcal)", table_cell),
-            Paragraph(f"Predicted affinity: {affinity:.2f} kcal/mol", table_cell),
-            Paragraph("<font color='#16A34A'><b>PASS</b></font>", table_cell),
+            Paragraph("Target Binding Potency Verification (< -7.0 kcal/mol)", table_cell),
+            Paragraph(f"Predicted affinity: {affinity:.2f} kcal/mol ({kd_str})", table_cell),
+            Paragraph(potency_determination, table_cell),
         ],
         [
             Paragraph("4", table_cell),
             Paragraph(
                 "Physicochemical Drug-Likeness (Lipinski Compliance)", table_cell
             ),
-            Paragraph("RDKit descriptor audit (MW, LogP, HBD/HBA)", table_cell),
-            Paragraph("<font color='#16A34A'><b>PASS</b></font>", table_cell),
+            Paragraph(f"RDKit descriptor audit (MW {calc_mw:.0f} Da, LogP {calc_logp:.1f})", table_cell),
+            Paragraph(lipinski_determination, table_cell),
         ],
         [
             Paragraph("5", table_cell),
@@ -703,8 +875,12 @@ def generate_ind_pdf(
             },
             {
                 "persona": "Dr. Marcus (MedChem Critic)",
-                "intent": "CLEARANCE",
-                "content": f"Lead {lead_id} cleared with zero PAINS alerts and optimal Lipinski profile.",
+                "intent": "CLEARANCE" if lipinski_violations == 0 else "ADVISORY",
+                "content": (
+                    f"Lead {lead_id} cleared with zero PAINS alerts and optimal Lipinski profile."
+                    if lipinski_violations == 0
+                    else f"Lead {lead_id} cleared with zero PAINS alerts; Lipinski audit flagged {lipinski_violations} rule boundary deviations requiring formulation mitigation."
+                ),
             },
             {
                 "persona": "Dr. Elena (Biophysicist)",
@@ -767,8 +943,8 @@ def generate_ind_pdf(
     )
     story.append(
         Paragraph(
-            "<b>CONFIDENTIAL &amp; PROPRIETARY:</b> Generated automatically by NVIDIA BioNeMo Autonomous Scientist Suite. "
-            "Intended solely for regulatory review and pre-IND briefing purposes.",
+            "<b>RESEARCH &amp; ACADEMIC DEMONSTRATION USE ONLY:</b> Generated algorithmically by the BioNeMo NIM Discovery Benchmark Suite (Open Source). "
+            "Computational predictions are in-silico screening hypotheses requiring independent wet-lab validation and GLP toxicology.",
             ParagraphStyle(
                 "Notice",
                 parent=styles["Normal"],

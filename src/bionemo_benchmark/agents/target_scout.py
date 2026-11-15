@@ -225,8 +225,8 @@ class TargetScoutAgent:
                             if l.startswith("ATOM") and l[12:16].strip() == "CA":
                                 try:
                                     plddts.append(float(l[60:66].strip()))
-                                except Exception:
-                                    pass
+                                except (ValueError, IndexError):
+                                    continue
                         if plddts:
                             mean_plddt = round(sum(plddts) / len(plddts), 1)
             except Exception as e:

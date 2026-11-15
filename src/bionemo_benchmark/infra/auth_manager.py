@@ -20,7 +20,10 @@ import secrets
 import tempfile
 import threading
 import time
+import logging
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger("AuthManager")
 
 BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -151,14 +154,14 @@ def _get_or_create_auth_secret() -> bytes:
                 key = f.read().strip()
                 if len(key) >= 32:
                     return key
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not read auth secret from {secret_file}: {e}")
     key = secrets.token_bytes(32)
     try:
         with open(secret_file, "wb") as f:
             f.write(key)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Could not persist auth secret to {secret_file}: {e}")
     return key
 
 
@@ -179,6 +182,7 @@ class AuthManager:
         self._secret = _get_or_create_auth_secret()
         # Use RLock to prevent self-deadlocks on nested helper calls
         self._lock = threading.RLock()
+        self._failed_logins: Dict[str, Dict[str, Any]] = {}
         self._ledger: Dict[str, Any] = self._load_ledger()
         self._init_default_evaluator()
 
@@ -190,12 +194,14 @@ class AuthManager:
             "emails": {},  # email_lower -> user_id
             "usage": {},  # "user_id:cycle_key" -> count
             "sessions": {},  # token -> {user_id, expires_at}
+            "revoked_tokens": {},  # token_sig -> expires_at
         }
         if os.path.exists(self.ledger_path):
             try:
                 with open(self.ledger_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, dict) and "users" in data:
+                        data.setdefault("revoked_tokens", {})
                         return data
             except Exception as e:
                 print(f"[AuthManager] Warning: could not load auth ledger: {e}")
@@ -265,8 +271,36 @@ class AuthManager:
         ).hexdigest()
         return f"{payload_b64}.{sig}"
 
+    def revoke_token(self, token: Optional[str]) -> bool:
+        """Revoke an active session token by recording its HMAC signature on the blocklist."""
+        if not token or not isinstance(token, str) or "." not in token:
+            return False
+        parts = token.strip().split(".")
+        if len(parts) != 2:
+            return False
+        payload_b64, sig = parts
+        try:
+            payload_raw = base64.urlsafe_b64decode(payload_b64.encode("ascii")).decode("utf-8")
+            _, _, expires_str = payload_raw.split(":")
+            expires = int(expires_str)
+        except Exception:
+            expires = int(time.time()) + 86400 * 30
+
+        with self._lock:
+            if "revoked_tokens" not in self._ledger:
+                self._ledger["revoked_tokens"] = {}
+            now = int(time.time())
+            # Periodically prune expired tokens
+            if len(self._ledger["revoked_tokens"]) > 500:
+                self._ledger["revoked_tokens"] = {
+                    k: exp for k, exp in self._ledger["revoked_tokens"].items() if exp > now
+                }
+            self._ledger["revoked_tokens"][sig] = expires
+            self._save_ledger()
+        return True
+
     def verify_token(self, token: Optional[str]) -> Optional[str]:
-        """Verify token HMAC signature and expiration; returns user_id if valid."""
+        """Verify token HMAC signature, revocation status, and expiration; returns user_id if valid."""
         if not token or not isinstance(token, str) or "." not in token:
             return None
         parts = token.strip().split(".")
@@ -278,6 +312,11 @@ class AuthManager:
         ).hexdigest()
         if not hmac.compare_digest(sig, expected_sig):
             return None
+
+        with self._lock:
+            if sig in self._ledger.get("revoked_tokens", {}):
+                return None
+
         try:
             payload_raw = base64.urlsafe_b64decode(payload_b64.encode("ascii")).decode("utf-8")
             user_id, created_str, expires_str = payload_raw.split(":")
@@ -390,17 +429,41 @@ class AuthManager:
     def authenticate_user(
         self, email: str, password: str
     ) -> Tuple[bool, Optional[Dict[str, Any]], str]:
-        """Authenticate user credentials and return session token + quota info."""
+        """Authenticate user credentials and return session token + quota info with brute-force lockout defense."""
         email_key = email.strip().lower()
+        now = int(time.time())
+
         with self._lock:
+            # Check account lockout state
+            failure_record = self._failed_logins.get(email_key)
+            if failure_record:
+                consecutive = failure_record.get("count", 0)
+                last_failed = failure_record.get("last_attempt", 0)
+                if consecutive >= 5:
+                    if now - last_failed < 300:
+                        retry_after = int(300 - (now - last_failed))
+                        return (
+                            False,
+                            None,
+                            f"Account temporarily locked due to too many failed login attempts. Retry in {retry_after}s.",
+                        )
+                    else:
+                        # Lockout period expired; reset counter
+                        self._failed_logins.pop(email_key, None)
+
             user_id = self._ledger.get("emails", {}).get(email_key)
             if not user_id or user_id not in self._ledger.get("users", {}):
+                self._record_failed_login(email_key, now)
                 return False, None, "Invalid email or password."
 
             user = self._ledger["users"][user_id]
             expected_hash = self._hash_password(password, user["salt"])
             if not hmac.compare_digest(user["password_hash"], expected_hash):
+                self._record_failed_login(email_key, now)
                 return False, None, "Invalid email or password."
+
+            # Successful authentication clears failed attempt history
+            self._failed_logins.pop(email_key, None)
 
             token = self._create_token(user_id)
             quota = self.get_user_quota(user_id)
@@ -417,6 +480,12 @@ class AuthManager:
                 "token": token,
                 "quota": quota,
             }, "Authentication successful."
+
+    def _record_failed_login(self, email_key: str, now: int) -> None:
+        """Record a failed login attempt for account lockout tracking."""
+        rec = self._failed_logins.setdefault(email_key, {"count": 0, "last_attempt": now})
+        rec["count"] += 1
+        rec["last_attempt"] = now
 
     def get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve user profile by user_id."""

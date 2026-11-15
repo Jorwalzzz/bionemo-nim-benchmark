@@ -270,3 +270,42 @@ def test_registration_rejects_disposable_and_typo_emails(auth_mgr):
     ok, _, msg = auth_mgr.register_user("user@hotmial.com", "Password123!")
     assert ok is False
     assert "typo" in msg.lower() or "hotmail.com" in msg.lower()
+
+
+def test_token_revocation(auth_mgr):
+    """Session token can be actively revoked and rejected on subsequent verification."""
+    ok, user, _ = auth_mgr.register_user("revoketest@bionemo.org", "Pass12345!")
+    assert ok is True
+    token = user["token"]
+
+    # Valid before revocation
+    assert auth_mgr.verify_token(token) == user["user_id"]
+
+    # Revoke
+    revoked = auth_mgr.revoke_token(token)
+    assert revoked is True
+
+    # Now invalid
+    assert auth_mgr.verify_token(token) is None
+
+
+def test_brute_force_account_lockout(auth_mgr):
+    """Account is temporarily locked after 5 consecutive failed login attempts."""
+    email = "lockout_target@bionemo.org"
+    auth_mgr.register_user(email, "SecretPassword123!")
+
+    # 4 failed attempts - not yet locked
+    for i in range(4):
+        ok, _, msg = auth_mgr.authenticate_user(email, "WrongPassword!")
+        assert ok is False
+        assert "temporarily locked" not in msg
+
+    # 5th failed attempt triggers lockout
+    ok, _, msg = auth_mgr.authenticate_user(email, "WrongPassword!")
+    assert ok is False
+
+    # 6th attempt (even with correct password) is blocked by lockout
+    ok, _, msg = auth_mgr.authenticate_user(email, "SecretPassword123!")
+    assert ok is False
+    assert "temporarily locked" in msg.lower()
+

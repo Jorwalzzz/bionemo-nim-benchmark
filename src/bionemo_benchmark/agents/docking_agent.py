@@ -52,8 +52,8 @@ class BiophysicsDockingAgent:
                     if embed_status == 0:
                         try:
                             AllChem.MMFFOptimizeMolecule(mol, maxIters=200)
-                        except Exception:
-                            pass
+                        except Exception as mmff_err:
+                            logger.debug(f"MMFF optimization skipped for {cand.id}: {mmff_err}")
                         strain, clashes = self._evaluate_biophysics_conformer(mol)
                         cand.strain_energy = strain
                         cand.steric_clash_count = clashes
@@ -129,8 +129,8 @@ class BiophysicsDockingAgent:
                         ) ** 0.5
                         if dist < 1.75:
                             clash_count += 1
-        except Exception:
-            pass
+        except Exception as eval_err:
+            logger.debug(f"Conformer evaluation note: {eval_err}")
         return strain_energy, clash_count
 
     def _compute_diffdock_pose(

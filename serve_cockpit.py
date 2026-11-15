@@ -11,6 +11,7 @@ import os
 import re
 import secrets
 import sys
+from typing import Any, Dict, List, Optional, Tuple
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -62,14 +63,27 @@ from bionemo_benchmark.infra.security_sentinel import (
 in_flight_limiter = TokenBucketRateLimiter(capacity=40, refill_rate_per_sec=1.0)
 
 
+TRUSTED_PROXIES = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
 def client_ip(request: Request) -> str:
-    """Proxy-aware client IP extraction."""
-    h = request.headers
-    for name in ("cf-connecting-ip", "CF-Connecting-IP", "x-forwarded-for", "X-Forwarded-For", "x-real-ip", "X-Real-IP"):
-        val = h.get(name)
-        if val:
-            return val.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+    """Proxy-aware client IP extraction, validating against trusted reverse proxies."""
+    peer_ip = request.client.host if request.client else "127.0.0.1"
+    # Only honor proxy headers if the peer is a configured trusted local proxy/CDN
+    if peer_ip in TRUSTED_PROXIES or os.environ.get("TRUST_ALL_PROXIES", "").lower() in ("1", "true", "yes"):
+        h = request.headers
+        for name in (
+            "cf-connecting-ip",
+            "CF-Connecting-IP",
+            "x-forwarded-for",
+            "X-Forwarded-For",
+            "x-real-ip",
+            "X-Real-IP",
+        ):
+            val = h.get(name)
+            if val:
+                return val.split(",")[0].strip()
+    return peer_ip
 
 
 # Security Headers & Hardening Middleware
@@ -199,7 +213,12 @@ def verify_request_origin(request: Request) -> bool:
     host = request.headers.get("host")
     check_url = origin or referer or ""
     if not check_url:
-        return True
+        peer = request.client.host if request.client else "127.0.0.1"
+        if peer in TRUSTED_PROXIES or (host and host.split(":")[0].lower() in ("localhost", "127.0.0.1", "testserver")):
+            return True
+        if request.method in ("GET", "HEAD", "OPTIONS"):
+            return True
+        return False
 
     from urllib.parse import urlparse
 
@@ -222,8 +241,7 @@ def verify_request_origin(request: Request) -> bool:
             hostname == "huggingface.co"
             or hostname.endswith(".hf.space")
             or hostname.endswith(".huggingface.co")
-            or hostname == "github.io"
-            or hostname.endswith(".github.io")
+            or hostname == "jorwalzzz.github.io"
         ):
             return True
     except Exception:
@@ -271,14 +289,25 @@ def get_authenticated_user(request: Request):
     return auth_manager.get_user_profile(user_id)
 
 
-def with_auth_cookie(response: Response, token: str) -> Response:
+def with_auth_cookie(
+    response: Response, token: str, request: Optional[Request] = None
+) -> Response:
     """Sets secure HTTP-only authentication session cookie."""
+    is_secure = False
+    if request:
+        is_secure = (
+            request.url.scheme == "https"
+            or request.headers.get("x-forwarded-proto") == "https"
+        )
+    if os.environ.get("SECURE_COOKIES", "").lower() in ("true", "1", "yes"):
+        is_secure = True
     response.set_cookie(
         key=AUTH_COOKIE_NAME,
         value=token,
         max_age=86400 * 30,
         httponly=True,
         samesite="lax",
+        secure=is_secure,
     )
     return response
 
@@ -382,14 +411,26 @@ def gate_run(request: Request, target: str):
     return None, (target, token, info)
 
 
+ALLOWED_ROOT_ASSETS = {
+    "app.min.css",
+    "cockpit.css",
+    "cockpit.js",
+    "input.css",
+    "favicon.ico",
+}
+
+
 @app.get("/app.min.css")
 @app.get("/cockpit.css")
 @app.get("/cockpit.js")
 @app.get("/input.css")
 @app.get("/favicon.ico")
 def get_root_asset(request: Request):
-    """Serves root web assets with correct content-type."""
+    """Serves root web assets with strict filename whitelist and correct content-type."""
     name = request.url.path.lstrip("/")
+    if name not in ALLOWED_ROOT_ASSETS:
+        return JSONResponse(status_code=404, content={"error": f"Asset {name} not found"})
+
     fpath = os.path.join(BASE_DIR, name)
     if os.path.isfile(fpath):
         media_type = "text/css" if name.endswith(".css") else "application/javascript" if name.endswith(".js") else None
@@ -449,12 +490,18 @@ def get_trial_status(request: Request):
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
 
     resp = JSONResponse(usage)
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or os.environ.get("SECURE_COOKIES", "").lower() in ("true", "1", "yes")
+    )
     resp.set_cookie(
         key=COOKIE_NAME,
         value=signed_token,
         max_age=86400 * 365,
         httponly=True,
         samesite="lax",
+        secure=is_secure,
     )
     resp.delete_cookie(key="creator_mode")
     return resp
@@ -496,12 +543,18 @@ def reset_trial(request: Request):
             },
         }
     )
+    is_secure = (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or os.environ.get("SECURE_COOKIES", "").lower() in ("true", "1", "yes")
+    )
     resp.set_cookie(
         key=COOKIE_NAME,
         value=signed_token,
         max_age=86400 * 365,
         httponly=True,
         samesite="lax",
+        secure=is_secure,
     )
     resp.delete_cookie(key="creator_mode")
     return resp
@@ -573,7 +626,7 @@ async def api_register(request: Request):
             "quota": quota,
         }
     )
-    return with_auth_cookie(resp, token)
+    return with_auth_cookie(resp, token, request)
 
 
 @app.post("/api/auth/login")
@@ -610,7 +663,7 @@ async def api_login(request: Request):
             "quota": auth_data["quota"],
         }
     )
-    return with_auth_cookie(resp, auth_data["token"])
+    return with_auth_cookie(resp, auth_data["token"], request)
 
 
 @app.post("/api/auth/demo-login")
@@ -639,12 +692,28 @@ def api_demo_login(request: Request):
             "quota": auth_data["quota"],
         }
     )
-    return with_auth_cookie(resp, auth_data["token"])
+    return with_auth_cookie(resp, auth_data["token"], request)
 
 
 @app.post("/api/auth/logout")
-def api_logout():
-    """Logs out researcher session."""
+def api_logout(request: Request):
+    """Logs out researcher session, invalidates HMAC token on server-side blocklist, and clears auth cookie."""
+    if not verify_request_origin(request):
+        return JSONResponse(
+            status_code=403,
+            content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin request rejected."},
+        )
+
+    token = None
+    auth_header = request.headers.get("Authorization") or ""
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+    if not token:
+        token = request.cookies.get(AUTH_COOKIE_NAME)
+
+    if token:
+        auth_manager.revoke_token(token)
+
     resp = JSONResponse({"success": True, "message": "Logged out successfully."})
     resp.delete_cookie(AUTH_COOKIE_NAME)
     return resp
@@ -1118,8 +1187,8 @@ def get_target_pdb(pdb_id: str):
             if r.status == 200:
                 data = r.read(5 * 1024 * 1024).decode("utf-8", errors="replace")
                 return Response(content=data, media_type="chemical/x-pdb")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(f"RCSB fetch failed for {clean_id}: {exc}")
     return JSONResponse(
         status_code=404, content={"error": f"PDB {clean_id} not found."}
     )
@@ -1136,6 +1205,18 @@ async def api_redock(request: Request):
                 "message": "Cross-origin execution blocked for security.",
             },
         )
+
+    if not os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+        user = get_authenticated_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "AUTHENTICATION_REQUIRED",
+                    "message": "Sign in required to perform interactive molecular redocking.",
+                    "requires_auth": True,
+                },
+            )
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
@@ -1397,6 +1478,18 @@ async def api_resistance_evolve(request: Request):
                 "message": "Cross-origin execution blocked for security.",
             },
         )
+
+    if not os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+        user = get_authenticated_user(request)
+        if not user:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "AUTHENTICATION_REQUIRED",
+                    "message": "Sign in required to simulate adaptive resistance escape mutations.",
+                    "requires_auth": True,
+                },
+            )
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)

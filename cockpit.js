@@ -656,6 +656,11 @@ function evaluateClientRedock(smiles, targetName) {
 }
 
 function triggerRedockFromWorkbench() {
+  if (!clientAuth.isLoggedIn()) {
+    clientAuth.pendingAction = 'redock';
+    openAuthModal('🔒 Sign-In Required: Please sign in or register to test chemical modifications and re-dock leads.');
+    return;
+  }
   const smilesInput = document.getElementById('workbenchSmilesInput');
   const smiles = smilesInput ? smilesInput.value : '';
   let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
@@ -997,8 +1002,8 @@ function handleEmailInputValidation(inputEl, feedbackId) {
     inputEl.style.borderColor = '#f59e0b';
     feedbackEl.innerHTML = `
       <div class="p-2 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 flex items-center justify-between">
-        <span>⚠️ ${result.message}</span>
-        <button type="button" onclick="fixEmailTypo('${inputEl.id}', '${result.suggestion}', '${feedbackId}')" class="ml-2 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-white font-bold border border-amber-500/40 text-[10px]">
+        <span>⚠️ ${escapeHtml(result.message)}</span>
+        <button type="button" onclick="fixEmailTypo('${escapeHtml(inputEl.id)}', '${escapeHtml(result.suggestion)}', '${escapeHtml(feedbackId)}')" class="ml-2 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-white font-bold border border-amber-500/40 text-[10px]">
           Click to Fix
         </button>
       </div>
@@ -1008,7 +1013,7 @@ function handleEmailInputValidation(inputEl, feedbackId) {
     feedbackEl.innerHTML = `
       <div class="p-1.5 rounded bg-red-950/40 border border-red-500/40 text-red-300 flex items-center gap-1.5">
         <span>❌</span>
-        <span>${result.message}</span>
+        <span>${escapeHtml(result.message)}</span>
       </div>
     `;
   } else {
@@ -1016,7 +1021,7 @@ function handleEmailInputValidation(inputEl, feedbackId) {
     const pillClass = result.type === 'academic' ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300' : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300';
     feedbackEl.innerHTML = `
       <div class="p-1.5 rounded border ${pillClass} flex items-center gap-1.5">
-        <span>${result.message}</span>
+        <span>${escapeHtml(result.message)}</span>
       </div>
     `;
   }
@@ -1028,6 +1033,37 @@ function fixEmailTypo(inputId, correctedEmail, feedbackId) {
     inputEl.value = correctedEmail;
     handleEmailInputValidation(inputEl, feedbackId);
   }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
+}
+
+async function hashPasswordSHA256(password) {
+  try {
+    if (window.crypto && window.crypto.subtle) {
+      const data = new TextEncoder().encode(password);
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+  } catch (e) {
+    console.warn('SubtleCrypto unavailable:', e);
+  }
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return `fallback_${Math.abs(hash)}`;
 }
 
 class ClientAuthManager {
@@ -1173,20 +1209,25 @@ class ClientAuthManager {
       }
     }
 
-    if (email === 'evaluator@bionemo.org' && password === 'DemoResearcher2026!') {
-      return this.demoLogin();
-    }
-
     try {
       const usersRaw = localStorage.getItem('bionemo_registered_users');
       const users = usersRaw ? JSON.parse(usersRaw) : {};
-      if (users[email] && users[email].password === password) {
-        const u = users[email];
-        this.user = { id: u.id, email: u.email, full_name: u.full_name, organization: u.organization };
-        this.token = `static_tok_${u.id}_${Date.now()}`;
-        localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
-        this.renderHUD();
-        return { success: true, user: this.user };
+      const u = users[email];
+      if (u) {
+        const pwdHash = await hashPasswordSHA256(password);
+        const matches = u.password_hash ? (u.password_hash === pwdHash) : (u.password === password);
+        if (matches) {
+          if (u.password && !u.password_hash) {
+            u.password_hash = pwdHash;
+            delete u.password;
+            try { localStorage.setItem('bionemo_registered_users', JSON.stringify(users)); } catch (e) {}
+          }
+          this.user = { id: u.id, email: u.email, full_name: u.full_name, organization: u.organization };
+          this.token = `static_tok_${u.id}_${Date.now()}`;
+          localStorage.setItem('bionemo_auth_session', JSON.stringify({ user: this.user, token: this.token }));
+          this.renderHUD();
+          return { success: true, user: this.user };
+        }
       }
     } catch (e) {
       console.warn('Local account verification error:', e);
@@ -1267,12 +1308,13 @@ class ClientAuthManager {
         return { success: false, message: 'An account with this email already exists. Please sign in.' };
       }
       const newId = `usr_${Math.random().toString(36).substring(2, 10)}`;
+      const pwdHash = await hashPasswordSHA256(password);
       users[email] = {
         id: newId,
         email,
         full_name: fullName,
         organization,
-        password,
+        password_hash: pwdHash,
         created_at: Math.floor(Date.now() / 1000)
       };
       localStorage.setItem('bionemo_registered_users', JSON.stringify(users));
@@ -1401,7 +1443,7 @@ class ClientAuthManager {
         <div class="flex items-center gap-2">
           <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-gray-300">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span title="${this.user.email}">${shortEmail}</span>
+            <span title="${escapeHtml(this.user.email)}">${escapeHtml(shortEmail)}</span>
           </div>
 
           <div class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold ${pillColor}" title="Synchronized refresh at 3:00 PM IST">
@@ -1455,7 +1497,7 @@ class ClientAuthManager {
       if (!this.user) {
         trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Discovery Studio</span> <span class="text-amber-300 text-[11px] font-mono">• Sign in for 5 free runs/day</span>`;
       } else {
-        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">${this.user.organization || 'Research Lab'}</span> <span class="text-cyan-300 text-[11px] font-mono">• ${quota.runs_remaining} runs left (resets 3:00 PM IST)</span>`;
+        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">${escapeHtml(this.user.organization || 'Research Lab')}</span> <span class="text-cyan-300 text-[11px] font-mono">• ${quota.runs_remaining} runs left (resets 3:00 PM IST)</span>`;
       }
     }
   }
@@ -1695,11 +1737,11 @@ function renderFeedbackHistory() {
   listEl.innerHTML = history.slice(0, 5).map(item => `
     <div class="p-2 rounded bg-black/40 border border-surface-border text-[11px] space-y-1">
       <div class="flex items-center justify-between">
-        <span class="text-cyan-300 font-bold">${item.category}</span>
+        <span class="text-cyan-300 font-bold">${escapeHtml(item.category)}</span>
         <span class="text-amber-300 font-bold">★ ${item.rating}/5</span>
       </div>
-      <p class="text-gray-300 leading-snug break-words">${item.comments}</p>
-      <div class="text-[9px] text-gray-500">${new Date(item.timestamp * 1000).toLocaleString()} • ${item.target_name}</div>
+      <p class="text-gray-300 leading-snug break-words">${escapeHtml(item.comments)}</p>
+      <div class="text-[9px] text-gray-500">${new Date(item.timestamp * 1000).toLocaleString()} • ${escapeHtml(item.target_name)}</div>
     </div>
   `).join('');
 }
@@ -2364,18 +2406,25 @@ function logEntry(icon, agent, role, text, color) {
   const log = document.getElementById('agentLog');
   const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
   document.getElementById('streamTimestamp').textContent = ts;
+  const safeAgent = escapeHtml(agent);
+  const safeRole = escapeHtml(role);
+  const safeColor = /^[#a-zA-Z0-9]+$/.test(color) ? color : '#76b900';
+  // Strip dangerous script/event handler attributes from text while preserving benign markup
+  const safeText = String(text ?? '')
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/\bon\w+\s*=/gi, 'data-blocked=');
   const el = document.createElement('div');
   el.className = 'animate-fade-up';
   el.innerHTML = `
-    <div class="flex items-start gap-2 p-2.5 rounded-lg" style="background: rgba(22,27,34,0.6); border: 1px solid ${color}20;">
+    <div class="flex items-start gap-2 p-2.5 rounded-lg" style="background: rgba(22,27,34,0.6); border: 1px solid ${safeColor}20;">
       <span class="text-base">${icon}</span>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 mb-1">
-          <span class="font-bold text-[10px] uppercase tracking-wider" style="color: ${color}">${agent}</span>
-          <span class="text-[9px] text-gray-600">${role}</span>
+          <span class="font-bold text-[10px] uppercase tracking-wider" style="color: ${safeColor}">${safeAgent}</span>
+          <span class="text-[9px] text-gray-600">${safeRole}</span>
           <span class="text-[9px] text-gray-700 ml-auto font-mono">${ts}</span>
         </div>
-        <div class="text-gray-300 leading-relaxed text-[11px] break-words">${text}</div>
+        <div class="text-gray-300 leading-relaxed text-[11px] break-words">${safeText}</div>
       </div>
     </div>`;
   log.appendChild(el);
@@ -2414,6 +2463,7 @@ async function runDiscovery() {
   let target = targetSelect ? targetSelect.value : 'KRAS G12D';
   if (currentTargetTab === 'esmfold') target = 'KRAS G12D';
   else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'KRAS G12D';
+  target = escapeHtml(target);
 
   const candidateSlider = document.getElementById('candidateSlider');
   const candidates = candidateSlider ? parseInt(candidateSlider.value, 10) : 12;

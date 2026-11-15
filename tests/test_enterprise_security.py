@@ -244,3 +244,87 @@ def test_benchmark_speedup_includes_green_compute(client):
     data = resp.json()
     assert "green_compute" in data
     assert data["green_compute"]["energy_reduction_pct"] >= 90.0
+
+
+def test_csrf_blocks_random_github_io_subdomains(client):
+    """SEC-05: Verifies that arbitrary third-party github.io domains are blocked."""
+    resp = client.post(
+        "/api/target/fetch",
+        headers={"Origin": "https://evil-attacker.github.io"},
+        json={"target": "KRAS"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["error"] == "CSRF_ORIGIN_REJECTED"
+
+
+def test_csrf_permits_exact_jorwalzzz_github_io(client):
+    """SEC-05: Verifies that only the authorized production GitHub Pages origin is permitted."""
+    resp = client.post(
+        "/api/target/fetch",
+        headers={"Origin": "https://jorwalzzz.github.io"},
+        json={"target": "KRAS"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+
+
+def test_biosecurity_consensus_motif_botulinum_regex():
+    """SEC-13: Verifies that the consensus motif matches actual amino acids rather than literal 'X'."""
+    # Sequence with Botulinum zinc-endopeptidase consensus HELAH (L in [LIVM], A in [A-Z])
+    seq = "MKTIIALSYIFCLVFAHELAHIVLKVT"
+    is_safe, reason = BiosecurityScreener.screen_target(
+        "Botulinum Variant Test", sequence=seq
+    )
+    assert is_safe is False
+    assert "BIOSECURITY_RESTRICTION" in reason
+
+
+def test_client_ip_spoofing_defense():
+    """SEC-03: Verifies that untrusted peer IPs cannot forge X-Forwarded-For."""
+    from unittest.mock import MagicMock
+    from serve_cockpit import client_ip
+
+    mock_req = MagicMock()
+    mock_req.client.host = "198.51.100.99"  # Untrusted external IP
+    mock_req.headers = {"x-forwarded-for": "10.0.0.1"}
+    resolved = client_ip(mock_req)
+    # Must reject forged header and use actual peer IP
+    assert resolved == "198.51.100.99"
+
+
+def test_root_asset_whitelist_blocking(client):
+    """SEC-14: Verifies that arbitrary root paths outside the whitelist are rejected."""
+    # Whitelisted asset
+    r_valid = client.get("/cockpit.js")
+    assert r_valid.status_code in (200, 304)
+
+    # Disallowed non-whitelisted assets
+    r_bad1 = client.get("/pyproject.toml")
+    assert r_bad1.status_code == 404
+
+    r_bad2 = client.get("/.env")
+    assert r_bad2.status_code == 404
+
+
+def test_unauthenticated_redock_and_resistance_blocked(client):
+    """SEC-15: Verifies that redock and resistance simulation require authentication when trial enforcement is active."""
+    import os
+    orig = os.environ.get("DISABLE_TRIAL_LIMIT")
+    try:
+        os.environ["DISABLE_TRIAL_LIMIT"] = "false"
+        # Redock without auth
+        r_redock = client.post("/api/redock", json={"smiles": "CC", "target": "KRAS"})
+        assert r_redock.status_code == 401
+        assert r_redock.json()["error"] == "AUTHENTICATION_REQUIRED"
+
+        # Resistance evolution without auth
+        r_resist = client.post("/api/resistance/evolve", json={"smiles": "CC"})
+        assert r_resist.status_code == 401
+        assert r_resist.json()["error"] == "AUTHENTICATION_REQUIRED"
+    finally:
+        if orig is None:
+            os.environ.pop("DISABLE_TRIAL_LIMIT", None)
+        else:
+            os.environ["DISABLE_TRIAL_LIMIT"] = orig
+
+

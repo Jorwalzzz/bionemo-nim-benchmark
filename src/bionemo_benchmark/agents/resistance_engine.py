@@ -148,28 +148,28 @@ class ResistanceEscapeEngine:
         recovery_bonus = round(random.uniform(0.5, 1.2), 2)
         evolved_affinity = round(orig_aff - recovery_bonus, 2)
 
-        # Generate a valid RDKit evolved chemical structure
+        # Generate a valid, single-entity RDKit evolved chemical structure
         parent_smiles = lead.smiles
         try:
             mol = Chem.MolFromSmiles(parent_smiles)
             if mol:
-                # Add bioisosteric modification
-                if catalog_entry and "evolved_suffix" in catalog_entry:
-                    suffix = catalog_entry["evolved_suffix"]
-                    evolved_smiles = (
-                        f"{parent_smiles}.{suffix}"
-                        if "." not in parent_smiles
-                        else parent_smiles
-                    )
-                    # Validate smiles
-                    test_mol = Chem.MolFromSmiles(evolved_smiles)
-                    if not test_mol:
-                        evolved_smiles = parent_smiles + "C(F)(F)F"
+                # Covalently modify scaffold with bioisosteric anchor (avoiding disconnected '.' fragments)
+                if "Cl" in parent_smiles:
+                    evolved_smiles = parent_smiles.replace("Cl", "C(F)(F)F", 1)
+                elif "c1ccccc1" in parent_smiles:
+                    evolved_smiles = parent_smiles.replace("c1ccccc1", "c1ccc(C(F)(F)F)cc1", 1)
+                elif "F" in parent_smiles:
+                    evolved_smiles = parent_smiles.replace("F", "OC(F)(F)F", 1)
                 else:
-                    evolved_smiles = parent_smiles + "F"
+                    evolved_smiles = parent_smiles + "C(F)(F)F"
+
+                test_mol = Chem.MolFromSmiles(evolved_smiles)
+                if not test_mol or "." in evolved_smiles:
+                    evolved_smiles = parent_smiles
             else:
                 evolved_smiles = parent_smiles
-        except Exception:
-            evolved_smiles = parent_smiles + "F"
+        except Exception as e:
+            logger.debug(f"Counter-design generation fallback: {e}")
+            evolved_smiles = parent_smiles
 
         return evolved_smiles, evolved_affinity

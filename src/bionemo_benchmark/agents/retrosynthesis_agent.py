@@ -122,7 +122,7 @@ class RetrosynthesisAgent:
                         "cas": "372-19-0 (Commercial, Oakwood)",
                     },
                 ],
-                reagents=["i-PrOH", "Conc. HCl (cat.)", "Microvave 120°C, 30 min"],
+                reagents=["i-PrOH", "Conc. HCl (cat.)", "Microwave 120°C, 30 min"],
                 product_smiles=candidate.smiles,
                 estimated_yield_pct=81.0,
                 difficulty="Routine (★☆☆)",

@@ -88,22 +88,29 @@
       position: relative;
     }
 
-    /* Hardware-Accelerated Isolated Background - Zero VRAM Bloat */
+    /* Ultra-Vibrant Cybernetic Background Layer */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       z-index: -1;
-      background-color: #04070d;
+      background-color: #03060c;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.12) 0%, transparent 60%),
-        radial-gradient(circle at 90% 25%, rgba(0, 241, 253, 0.06) 0%, transparent 45%),
-        radial-gradient(circle at 10% 55%, rgba(168, 85, 247, 0.04) 0%, transparent 45%),
-        linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
-      background-size: 100% 100%, 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+        radial-gradient(ellipse 70% 50% at 50% -5%, rgba(118, 185, 0, 0.22) 0%, transparent 60%),
+        radial-gradient(circle at 90% 20%, rgba(0, 241, 253, 0.14) 0%, transparent 48%),
+        radial-gradient(circle at 10% 50%, rgba(168, 85, 247, 0.10) 0%, transparent 45%),
+        radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
       pointer-events: none;
       transform: translateZ(0);
+      animation: ambientMeshGlow 16s ease-in-out infinite alternate;
+    }
+    @keyframes ambientMeshGlow {
+      0% { opacity: 0.85; filter: saturate(100%); }
+      50% { opacity: 1.0; filter: saturate(125%); }
+      100% { opacity: 0.9; filter: saturate(110%); }
     }
 
     h1, h2, h3, .font-heading {
@@ -122,8 +129,8 @@
     }
 
     .glass-panel:hover {
-      border-color: rgba(118, 185, 0, 0.35);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 16px rgba(118, 185, 0, 0.1);
+      border-color: rgba(118, 185, 0, 0.45);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 20px rgba(118, 185, 0, 0.15);
     }
 
     .glass-nav {
@@ -138,11 +145,33 @@
       contain: style;
     }
 
-    /* Gradient Text */
-    .gradient-text-nvidia {
-      background: linear-gradient(135deg, #ffffff 10%, #76b900 60%, #00f1fd 100%);
+    /* Gradient Headline */
+    .gradient-headline {
+      background: linear-gradient(135deg, #ffffff 0%, #a3e635 30%, #76b900 65%, #00f1fd 100%);
+      background-size: 200% auto;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: headlineShimmer 8s linear infinite;
+      filter: drop-shadow(0 0 35px rgba(118, 185, 0, 0.35));
+    }
+    @keyframes headlineShimmer {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .gradient-text-nvidia {
+      background: linear-gradient(135deg, #ffffff 10%, #76b900 60%, #00f1fd 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientShift 6s ease-in-out infinite;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50%       { background-position: 100% 50%; }
     }
 
     .gradient-text-cyan {
@@ -153,24 +182,67 @@
 
     /* Neon Glow Badges */
     .glow-badge {
-      background: linear-gradient(135deg, rgba(118, 185, 0, 0.14) 0%, rgba(0, 241, 253, 0.07) 100%);
-      border: 1px solid rgba(118, 185, 0, 0.4);
-      box-shadow: 0 0 15px rgba(118, 185, 0, 0.18);
+      background: linear-gradient(135deg, rgba(118, 185, 0, 0.16) 0%, rgba(0, 241, 253, 0.08) 100%);
+      border: 1px solid rgba(118, 185, 0, 0.45);
+      box-shadow: 0 0 20px rgba(118, 185, 0, 0.22);
     }
 
-    /* Primary NVIDIA Action Button */
+    /* Hero Stat Cards */
+    .hero-stat-card {
+      background: linear-gradient(135deg, rgba(14, 22, 36, 0.85) 0%, rgba(8, 13, 22, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 16px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .hero-stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(118, 185, 0, 0.45);
+      box-shadow: 0 10px 28px rgba(118, 185, 0, 0.16), inset 0 1px 0 rgba(118, 185, 0, 0.2);
+    }
+
+    /* Futuristic HUD Brackets */
+    .hud-bracket {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      pointer-events: none;
+      z-index: 15;
+    }
+    .hud-tl { top: 8px; left: 8px; border-top: 2px solid #76b900; border-left: 2px solid #76b900; }
+    .hud-tr { top: 8px; right: 8px; border-top: 2px solid #76b900; border-right: 2px solid #76b900; }
+    .hud-bl { bottom: 8px; left: 8px; border-bottom: 2px solid #76b900; border-left: 2px solid #76b900; }
+    .hud-br { bottom: 8px; right: 8px; border-bottom: 2px solid #76b900; border-right: 2px solid #76b900; }
+
+    /* Primary NVIDIA Action Button with Shimmer Sweep */
     .btn-nvidia-glow {
-      background: linear-gradient(135deg, #76b900 0%, #4a7500 100%);
+      position: relative;
+      background: linear-gradient(135deg, #76b900 0%, #446e00 100%);
       color: #03060a;
       font-weight: 800;
       transition: transform 0.25s ease, box-shadow 0.25s ease;
-      box-shadow: 0 6px 20px rgba(118, 185, 0, 0.4);
+      box-shadow: 0 0 25px rgba(118, 185, 0, 0.4), 0 8px 25px rgba(0, 0, 0, 0.4);
       transform: translateZ(0);
+      overflow: hidden;
+    }
+    .btn-nvidia-glow::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+      transform: translateX(-100%);
+      animation: sweepGlow 3.5s infinite;
+    }
+    @keyframes sweepGlow {
+      0%, 40% { transform: translateX(-100%); }
+      60%, 100% { transform: translateX(100%); }
     }
     .btn-nvidia-glow:hover {
       transform: translate3d(0, -2px, 0) scale(1.02);
-      box-shadow: 0 10px 30px rgba(118, 185, 0, 0.6);
-      background: linear-gradient(135deg, #8bee00 0%, #649c00 100%);
+      box-shadow: 0 0 35px rgba(118, 185, 0, 0.65), 0 12px 35px rgba(0, 0, 0, 0.5);
+      background: linear-gradient(135deg, #8bee00 0%, #588e00 100%);
     }
 
     /* Secondary Glass Action Button */
@@ -255,17 +327,19 @@
       background: rgba(0, 241, 253, 0.1);
     }
 
-    /* Biophysical Metric Spec Box */
+    /* Biophysical Metric Spec Box with Neon Accents */
     .metric-spec-box {
       background: linear-gradient(135deg, rgba(16, 24, 38, 0.85) 0%, rgba(10, 15, 26, 0.95) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 12px;
-      padding: 8px 12px;
-      transition: all 0.2s ease;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 10px 14px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
     }
     .metric-spec-box:hover {
-      border-color: rgba(118, 185, 0, 0.35);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 10px rgba(118, 185, 0, 0.08);
+      border-color: rgba(118, 185, 0, 0.45);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), 0 0 16px rgba(118, 185, 0, 0.12);
+      transform: translateY(-2px);
     }
 
     /* Target Selector Buttons */
@@ -277,19 +351,20 @@
       font-weight: 600;
       padding: 8px 16px;
       border-radius: 12px;
-      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
     }
     .target-pill:hover {
       border-color: rgba(118, 185, 0, 0.4);
-      background: rgba(118, 185, 0, 0.08);
+      background: rgba(118, 185, 0, 0.1);
       color: #ffffff;
+      transform: translateY(-1px);
     }
     .target-pill.active {
-      background: linear-gradient(135deg, rgba(118, 185, 0, 0.2) 0%, rgba(0, 241, 253, 0.1) 100%);
+      background: linear-gradient(135deg, rgba(118, 185, 0, 0.25) 0%, rgba(0, 241, 253, 0.15) 100%);
       border-color: #76b900;
       color: #ffffff;
-      box-shadow: 0 0 16px rgba(118, 185, 0, 0.35);
+      box-shadow: 0 0 20px rgba(118, 185, 0, 0.4);
     }
 
     /* Pulsing Beacon */
@@ -306,29 +381,65 @@
     /* Luxury Artifact Cards */
     .shortcut-card-luxury {
       position: relative;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.008) 100%);
-      border: 1px solid rgba(255, 255, 255, 0.07);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.008) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 16px;
-      transition: transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
       transform: translateZ(0);
     }
     .shortcut-card-luxury:hover {
-      transform: translate3d(0, -3px, 0);
+      transform: translate3d(0, -4px, 0);
+      box-shadow: 0 16px 35px -8px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Bento Grid NIM Pillar Cards */
+    .pillar-card {
+      background: linear-gradient(135deg, rgba(14, 22, 36, 0.92) 0%, rgba(8, 13, 22, 0.98) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pillar-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(118, 185, 0, 0.16) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      pointer-events: none;
+    }
+    .pillar-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(118, 185, 0, 0.5);
+      box-shadow: 0 16px 35px -10px rgba(0, 0, 0, 0.7), 0 0 25px rgba(118, 185, 0, 0.2);
+    }
+    .pillar-card:hover::before {
+      opacity: 1;
+    }
+
+    /* Benchmark Table Polish */
+    .benchmark-table tbody tr:nth-child(even) {
+      background-color: rgba(255, 255, 255, 0.015);
+    }
+    .benchmark-table tbody tr:hover {
+      background-color: rgba(118, 185, 0, 0.04) !important;
     }
     .card-emerald:hover {
-      background: linear-gradient(135deg, rgba(118, 185, 0, 0.15) 0%, rgba(118, 185, 0, 0.03) 100%);
+      background: linear-gradient(135deg, rgba(118, 185, 0, 0.18) 0%, rgba(118, 185, 0, 0.04) 100%);
       border-color: rgba(118, 185, 0, 0.6);
-      box-shadow: 0 12px 25px -6px rgba(118, 185, 0, 0.3);
+      box-shadow: 0 14px 30px -6px rgba(118, 185, 0, 0.35);
     }
     .card-blue:hover {
-      background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.03) 100%);
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0.04) 100%);
       border-color: rgba(59, 130, 246, 0.6);
-      box-shadow: 0 12px 25px -6px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 14px 30px -6px rgba(59, 130, 246, 0.35);
     }
     .card-amber:hover {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.03) 100%);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.04) 100%);
       border-color: rgba(245, 158, 11, 0.6);
-      box-shadow: 0 12px 25px -6px rgba(245, 158, 11, 0.3);
+      box-shadow: 0 14px 30px -6px rgba(245, 158, 11, 0.35);
     }
 
     /* Custom Scrollbar */
@@ -450,15 +561,20 @@
       
       <!-- High-Bench Status Pill -->
       <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glow-badge text-xs font-mono font-semibold">
-        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-glow"></span>
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        </span>
         <span class="text-emerald-300 font-bold">NVIDIA BioNeMo & NIM Accelerated</span>
         <span class="text-gray-500">•</span>
-        <span class="text-gray-300">54.8× Mean Model Speedup</span>
+        <span class="text-cyan-300">54.8× Mean Model Speedup</span>
+        <span class="text-gray-500">•</span>
+        <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">H100 SXM5</span>
       </div>
 
       <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.08] font-heading">
         NVIDIA BioNeMo & NIM Benchmark <br/>
-        <span class="gradient-text-nvidia">
+        <span class="gradient-headline">
           High-Performance Computational Biology
         </span>
       </h1>
@@ -466,6 +582,30 @@
       <p class="text-gray-300 text-sm sm:text-lg max-w-3xl mx-auto leading-relaxed">
         Empirical benchmark suite and interactive 3D discovery studio evaluating NVIDIA NIM microservices—<strong>ESM-2</strong> embeddings, <strong>ESMFold</strong> structure prediction, <strong>MolMIM</strong> generative chemistry, and <strong>DiffDock</strong> molecular docking—against standard CPU baselines with verified telemetry and robotics workflows.
       </p>
+
+      <!-- High-Impact Live Hero Stat Matrix -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto pt-3 pb-2 text-left">
+        <div class="hero-stat-card">
+          <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">54.8×</div>
+          <div class="text-[11px] text-gray-300 font-mono font-semibold">Mean GPU Speedup</div>
+          <div class="text-[9px] text-gray-500 font-mono">TensorRT vs 16-Core CPU</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono">0.08s</div>
+          <div class="text-[11px] text-gray-300 font-mono font-semibold">ESM-2 Latency</div>
+          <div class="text-[9px] text-gray-500 font-mono">650M Token Embedding</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 font-mono">88.5h</div>
+          <div class="text-[11px] text-gray-300 font-mono font-semibold">Compute Saved</div>
+          <div class="text-[9px] text-gray-500 font-mono">Per 10,000 Campaign</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono">101/101</div>
+          <div class="text-[11px] text-gray-300 font-mono font-semibold">Hermetic Tests</div>
+          <div class="text-[9px] text-gray-500 font-mono">Zero-Defect Quality</div>
+        </div>
+      </div>
 
       <!-- Primary Action Row -->
       <div class="flex flex-wrap items-center justify-center gap-4 pt-3">
@@ -517,7 +657,20 @@
         </div>
 
         <!-- WebGL 3D Container -->
-        <div id="hero3DStage" class="w-full h-[440px] rounded-2xl relative overflow-hidden bg-[#040810] border border-white/10 shadow-inner">
+        <div id="hero3DStage" class="w-full h-[440px] rounded-2xl relative overflow-hidden bg-[#040810] border border-emerald-500/30 shadow-2xl">
+          <!-- Cyber HUD Brackets -->
+          <div class="hud-bracket hud-tl"></div>
+          <div class="hud-bracket hud-tr"></div>
+          <div class="hud-bracket hud-bl"></div>
+          <div class="hud-bracket hud-br"></div>
+          
+          <!-- Top Hologram Status Pill -->
+          <div class="absolute top-4 left-4 z-10 font-mono text-[11px] px-3 py-1 rounded-xl bg-[#040812]/90 text-gray-300 border border-white/10 flex items-center gap-2 shadow-lg backdrop-blur-md">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="font-bold text-white">WebGL 3D Studio</span>
+            <span class="text-gray-500">•</span>
+            <span class="text-emerald-400">PDB Atomic Conformation</span>
+          </div>
           
           <!-- Floating Legend HUD -->
           <div id="targetHUD" class="absolute bottom-4 left-4 z-10 glass-panel px-4 py-3 rounded-2xl text-[11px] font-mono space-y-1.5 bg-[#060a14]/90 border border-white/10 shadow-2xl">
@@ -660,16 +813,17 @@
       <div class="lg:col-span-4 space-y-6 flex flex-col justify-between">
         
         <!-- Hardware Speedup & Green Compute Card -->
-        <div class="glass-panel rounded-3xl p-6 border border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 to-transparent shadow-xl">
-          <div class="flex items-center justify-between mb-3">
+        <div class="glass-panel rounded-3xl p-6 border border-emerald-500/50 bg-gradient-to-br from-emerald-500/20 via-emerald-950/20 to-black/80 shadow-2xl shadow-emerald-500/15 relative overflow-hidden">
+          <div class="absolute -right-12 -top-12 w-40 h-40 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="flex items-center justify-between mb-3 relative z-10">
             <span class="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1.5">
               <span>🚀</span> NVIDIA H100 vs Host CPU
             </span>
-            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 font-bold">Empirical</span>
+            <span class="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-bold shadow-sm">Empirical</span>
           </div>
           
-          <div class="text-4xl sm:text-5xl font-extrabold text-white font-mono flex items-baseline gap-2">
-            <span>58.9×</span>
+          <div class="text-4xl sm:text-5xl font-extrabold font-mono flex items-baseline gap-2 relative z-10">
+            <span class="bg-gradient-to-r from-white via-emerald-300 to-cyan-400 bg-clip-text text-transparent">58.9×</span>
             <span class="text-xs font-sans text-gray-300 font-normal">Pipeline Acceleration</span>
           </div>
 
@@ -792,7 +946,7 @@
     <!-- Benchmark Comparison Table / Visual Grid -->
     <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs font-mono">
+        <table class="w-full text-left text-xs font-mono benchmark-table">
           <thead class="bg-white/5 text-gray-300 uppercase tracking-wider text-[11px] border-b border-white/10">
             <tr>
               <th class="py-4 px-6">Target Complex</th>
@@ -963,12 +1117,12 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       
       <!-- Pillar 1: ESM-2 -->
-      <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between group hover:border-emerald-500/50 transition-all">
+      <div class="pillar-card p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-emerald-400/50 group-hover:shadow-lg group-hover:shadow-emerald-500/20 transition-all">
             🧬
           </div>
-          <h3 class="text-lg font-bold text-white font-heading mb-1">ESM-2</h3>
+          <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-emerald-300 transition-colors">ESM-2</h3>
           <div class="text-xs font-mono text-emerald-400 font-semibold mb-3">Protein Language Model</div>
           <p class="text-xs text-gray-400 leading-relaxed">
             Extracts high-dimensional token embeddings (up to 15B parameters) capturing structural topology, evolutionary constraints, and zero-shot variant effect mutations.
@@ -981,12 +1135,12 @@
       </div>
 
       <!-- Pillar 2: ESMFold -->
-      <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between group hover:border-cyan-500/50 transition-all">
+      <div class="pillar-card p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-cyan-400/50 group-hover:shadow-lg group-hover:shadow-cyan-500/20 transition-all">
             📐
           </div>
-          <h3 class="text-lg font-bold text-white font-heading mb-1">ESMFold</h3>
+          <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-cyan-300 transition-colors">ESMFold</h3>
           <div class="text-xs font-mono text-cyan-400 font-semibold mb-3">Atomic 3D Structure</div>
           <p class="text-xs text-gray-400 leading-relaxed">
             Sub-second atomic resolution macromolecular structure prediction directly from raw primary amino acid sequences, with residue-level pLDDT confidence scoring.
@@ -999,12 +1153,12 @@
       </div>
 
       <!-- Pillar 3: MolMIM -->
-      <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between group hover:border-purple-500/50 transition-all">
+      <div class="pillar-card p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-purple-400/50 group-hover:shadow-lg group-hover:shadow-purple-500/20 transition-all">
             ⚗️
           </div>
-          <h3 class="text-lg font-bold text-white font-heading mb-1">MolMIM</h3>
+          <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-purple-300 transition-colors">MolMIM</h3>
           <div class="text-xs font-mono text-purple-400 font-semibold mb-3">Generative Small Molecule</div>
           <p class="text-xs text-gray-400 leading-relaxed">
             Controlled molecular optimization using mutual information maximization. Explores chemical latent space for lead analogues with optimized QED, LogP, and SAScore.
@@ -1017,12 +1171,12 @@
       </div>
 
       <!-- Pillar 4: DiffDock -->
-      <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between group hover:border-amber-500/50 transition-all">
+      <div class="pillar-card p-6 flex flex-col justify-between group">
         <div>
-          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl mb-4 group-hover:scale-110 group-hover:border-amber-400/50 group-hover:shadow-lg group-hover:shadow-amber-500/20 transition-all">
             🎯
           </div>
-          <h3 class="text-lg font-bold text-white font-heading mb-1">DiffDock</h3>
+          <h3 class="text-lg font-bold text-white font-heading mb-1 group-hover:text-amber-300 transition-colors">DiffDock</h3>
           <div class="text-xs font-mono text-amber-400 font-semibold mb-3">SE(3) Equivariant Docking</div>
           <p class="text-xs text-gray-400 leading-relaxed">
             Generative diffusion model over the degrees of freedom of ligand translation, rotation, and torsion angles to predict high-affinity binding poses without predefined boxes.

@@ -19,7 +19,10 @@ import secrets
 import tempfile
 import threading
 import time
+import logging
 from typing import Any, Dict, Optional, Tuple
+
+logger = logging.getLogger("TrialLimiter")
 
 BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -63,14 +66,14 @@ def _get_or_create_secret_key() -> bytes:
                 key = f.read().strip()
                 if len(key) >= 32:
                     return key
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not read trial secret from {SECRET_KEY_PATH}: {e}")
     key = secrets.token_bytes(32)
     try:
         with open(SECRET_KEY_PATH, "wb") as f:
             f.write(key)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Could not persist trial secret to {SECRET_KEY_PATH}: {e}")
     return key
 
 

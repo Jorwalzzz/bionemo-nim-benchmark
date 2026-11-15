@@ -55,10 +55,10 @@ class BiosecurityScreener:
     HAZARDOUS_MOTIFS = [
         re.compile(r"EAARF", re.IGNORECASE),  # Ricin A-chain catalytic core
         re.compile(
-            r"HE[LIVM]XH", re.IGNORECASE
+            r"HE[LIVM][A-Z]H", re.IGNORECASE
         ),  # Botulinum zinc-endopeptidase consensus
         re.compile(
-            r"Y[FILV]R[FILV]X{2}[DE]", re.IGNORECASE
+            r"Y[FILV]R[FILV][A-Z]{2}[DE]", re.IGNORECASE
         ),  # Shiga-like ribosome-inactivating signature
     ]
 
