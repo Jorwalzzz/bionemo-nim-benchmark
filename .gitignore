@@ -58,4 +58,20 @@ docs/guides/*.html
 GEMINI.md
 ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md
 scratch/
-audit/
+
+# Local Playwright & visual audit artifacts (keep results/ and assets/ tracked)
+/audit/
+
+# Python bytecode & test/lint caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments & OS/editor clutter
+.venv/
+venv/
+.DS_Store
+Thumbs.db
