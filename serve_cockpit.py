@@ -257,9 +257,12 @@ app.mount("/results", StaticFiles(directory=RESULTS_DIR), name="results")
 HTML_PATH = os.path.join(BASE_DIR, "cockpit.html")
 LANDING_PATH = os.path.join(BASE_DIR, "index.html")
 
+ROOT_ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 ASSETS_DIR = os.path.join(RESULTS_DIR, "assets")
 DATA_DIR = os.path.join(BASE_DIR, "data")
-if os.path.exists(ASSETS_DIR):
+if os.path.exists(ROOT_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=ROOT_ASSETS_DIR), name="assets")
+elif os.path.exists(ASSETS_DIR):
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 if os.path.exists(DATA_DIR):
     app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
@@ -415,6 +418,7 @@ ALLOWED_ROOT_ASSETS = {
     "app.min.css",
     "cockpit.css",
     "cockpit.js",
+    "theme.css",
     "input.css",
     "favicon.ico",
 }
@@ -423,6 +427,7 @@ ALLOWED_ROOT_ASSETS = {
 @app.get("/app.min.css")
 @app.get("/cockpit.css")
 @app.get("/cockpit.js")
+@app.get("/theme.css")
 @app.get("/input.css")
 @app.get("/favicon.ico")
 def get_root_asset(request: Request):
