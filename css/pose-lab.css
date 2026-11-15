@@ -1,0 +1,500 @@
+/**
+ * BioNeMo NIM Inference Benchmark - Stage C Stylesheet
+ * Module: ./css/pose-lab.css
+ * Covers:
+ * - Section 04: Cinematic Near-Full-Bleed 3D Molecular Pose Lab & Floating Glass HUD
+ * - Section 05: Lead Candidate Evaluator Table, Drag-and-Drop Loader & Pareto Frontier Scatter
+ */
+
+/* ==========================================================================
+   Section 04: Cinematic 3D Molecular Pose Lab
+   ========================================================================== */
+.pose-lab-container {
+  position: relative;
+  width: 100%;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.pose-lab-stage {
+  position: relative;
+  width: 100%;
+  min-height: clamp(560px, 78vh, 860px);
+  height: clamp(560px, 78vh, 860px);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-hairline);
+  background: radial-gradient(circle at 50% 50%, #0d1527 0%, #05070a 100%);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+}
+
+.mol-viewport-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: grab;
+}
+
+.mol-viewport-canvas:active {
+  cursor: grabbing;
+}
+
+/* Loading Scanline Overlay */
+.pose-scan-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 7, 10, 0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.pose-scan-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.pose-scan-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(118, 245, 162, 0.2);
+  border-top-color: var(--color-signal-green);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Mobile Scroll Guard Overlay (< 768px) */
+.mobile-touch-guard {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: rgba(5, 7, 10, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .mobile-touch-guard {
+    display: flex;
+  }
+  .mobile-touch-guard.unlocked {
+    display: none !important;
+  }
+}
+
+.btn-mobile-exit-3d {
+  display: none;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 28;
+  padding: 0.4rem 0.8rem;
+  border-radius: 9999px;
+  background: rgba(5, 7, 10, 0.85);
+  border: 1px solid var(--border-hairline);
+  color: var(--color-signal-green);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 768px) {
+  .btn-mobile-exit-3d.active {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+}
+
+/* Floating Glass HUD Controls */
+.hud-pill-button {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(13, 19, 34, 0.7);
+  color: var(--color-ink-muted);
+  border: 1px solid var(--border-hairline);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hud-pill-button:hover {
+  color: var(--color-ink-primary);
+  border-color: var(--color-signal-green);
+}
+
+.hud-pill-button.active {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--color-signal-green);
+  border-color: var(--color-signal-green);
+  box-shadow: 0 0 10px rgba(118, 245, 162, 0.3);
+}
+
+/* Top-Left HUD Dock */
+.pose-hud-top-left {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Bottom-Left Camera & Style Dock */
+.pose-hud-bottom-left {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  z-index: 20;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  background: rgba(5, 7, 10, 0.75);
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-hairline);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Right-Side Floating Discovery & Telemetry HUD */
+.pose-hud-right {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  width: 350px;
+  max-width: calc(100% - 2.5rem);
+  z-index: 20;
+  overflow-y: auto;
+  background: rgba(5, 7, 10, 0.85);
+  border: 1px solid var(--border-hairline);
+  border-radius: 14px;
+  padding: 1.25rem;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+
+.pose-hud-right::-webkit-scrollbar {
+  width: 4px;
+}
+.pose-hud-right::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+}
+
+@media (max-width: 1024px) {
+  .pose-lab-stage {
+    min-height: 480px;
+    height: 520px;
+  }
+  .pose-hud-right {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 1rem;
+    height: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+.hud-panel-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-ink-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hud-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.hud-metric-box {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.hud-metric-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-muted);
+}
+
+.hud-metric-val {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-primary);
+  transition: color 0.2s ease;
+}
+
+.hud-metric-val.highlight-green {
+  color: var(--color-signal-green);
+}
+
+.hud-metric-val.highlight-cyan {
+  color: #5CE1FF;
+}
+
+/* SMILES Readout Box */
+.hud-smiles-box {
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--border-hairline);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-ink-secondary);
+  word-break: break-all;
+  line-height: 1.4;
+  position: relative;
+}
+
+/* End-to-End Discovery Pipeline Acceleration Strip */
+.hud-e2e-strip {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(118, 245, 162, 0.25);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-ink-secondary);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Section 05: Lead Candidate Evaluator & Pareto Scatter
+   ========================================================================== */
+.lead-eval-layout {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .lead-eval-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+}
+
+.lead-table-col {
+  grid-column: span 7;
+}
+
+.lead-pareto-col {
+  grid-column: span 5;
+  position: sticky;
+  top: 6rem;
+}
+
+@media (max-width: 1100px) {
+  .lead-table-col,
+  .lead-pareto-col {
+    width: 100%;
+    position: static;
+  }
+}
+
+/* Table Card Styling */
+.lead-table-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.3);
+}
+
+.lead-table-header-bar {
+  padding: 1.25rem 1.5rem;
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--border-hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.lead-table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lead-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.lead-matrix-table th {
+  background: var(--color-surface-sunken);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-secondary);
+  border-bottom: 1px solid var(--border-hairline);
+  white-space: nowrap;
+}
+
+.lead-matrix-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-hairline);
+  color: var(--color-ink-primary);
+  font-family: var(--font-body);
+  transition: background 0.15s ease;
+}
+
+.lead-matrix-table tr:hover td,
+.lead-matrix-table tr.highlighted td {
+  background: rgba(118, 245, 162, 0.06);
+}
+
+/* Candidate ID: Strict Non-Wrapping Monospace */
+.lead-id-cell {
+  font-family: var(--font-mono) !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  color: var(--color-signal-green) !important;
+}
+
+.lead-score-cell {
+  font-family: var(--font-mono) !important;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Pareto Scatter Plot Card */
+.pareto-scatter-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--border-hairline);
+  border-radius: 14px;
+  padding: 1.75rem;
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.3);
+}
+
+.pareto-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pareto-axis-line {
+  stroke: var(--border-hairline);
+}
+
+.pareto-axis-grid {
+  stroke: rgba(148, 163, 184, 0.08);
+  stroke-dasharray: 3 3;
+}
+
+.pareto-axis-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--color-ink-muted);
+}
+
+.pareto-curve {
+  fill: none;
+  stroke: var(--color-signal-green);
+  stroke-width: 2px;
+  stroke-dasharray: 4 4;
+}
+
+.pareto-point {
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pareto-point:hover,
+.pareto-point.highlighted {
+  r: 9px !important;
+  filter: drop-shadow(0 0 8px rgba(118, 245, 162, 0.9));
+}
+
+/* Drag & Drop CSV / JSON Dropzone */
+.lead-dropzone {
+  margin-top: 2rem;
+  background: var(--color-surface-elevated);
+  border: 1.5px dashed var(--border-hairline);
+  border-radius: 14px;
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.lead-dropzone:hover,
+.lead-dropzone.drag-active {
+  border-color: var(--color-signal-green);
+  background: rgba(16, 185, 129, 0.05);
+  box-shadow: 0 0 24px rgba(118, 245, 162, 0.15);
+}
+
+.dropzone-input-file {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}

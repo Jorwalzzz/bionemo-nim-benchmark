@@ -30,16 +30,25 @@
   <link rel="stylesheet" href="./css/tokens.css"/>
   <link rel="stylesheet" href="./css/base.css"/>
   <link rel="stylesheet" href="./css/stage-b.css"/>
+  <link rel="stylesheet" href="./css/pose-lab.css"/>
 
   <!-- Theme Engine (Executes immediately for zero FOUC) -->
   <script src="./js/theme.js"></script>
   <!-- Hero WebGL Canvas Ribbon -->
   <script src="./js/hero-webgl.js" defer></script>
+  <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback) -->
+  <script src="./vendor/3Dmol-min.js" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
+  <!-- Pre-cached PDB Coordinates for Zero-Latency Offline Execution -->
+  <script src="./results/pdb_data.js" defer></script>
   <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
   <script src="./js/data-hydrator.js" defer></script>
   <script src="./js/race-scroll.js" defer></script>
   <script src="./js/charts.js" defer></script>
   <script src="./js/calculator.js" defer></script>
+  <!-- Stage C: 3D Pose Lab, Discovery Studio, and Lead Evaluator -->
+  <script src="./js/molviewer.js" defer></script>
+  <script src="./js/studio.js" defer></script>
+  <script src="./js/lead-evaluator.js" defer></script>
 </head>
 
 <body>
@@ -518,25 +527,267 @@
       </div>
     </section>
 
-    <!-- Stage C.2 Anchor: 3D Pose Lab -->
-    <section id="pose-lab" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-measured">STAGE C.2 QUEUED</span>
-        <h2 class="font-display text-xl font-bold">Target-to-Lead 3D Pose Inspection Studio (3Dmol.js)</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          3D WebGL viewport for KRAS G12D (8AZV), BRAF V600E (4MNE), and SARS-CoV-2 Mpro (7BQY) with DiffDock ranked poses and contact vectors.
+    <!-- SECTION 04: CINEMATIC 3D MOLECULAR POSE LAB -->
+    <section id="pose-lab" class="stage-section" style="padding-bottom: 3rem;">
+      <div style="margin-bottom: 1.5rem;">
+        <span class="section-numeral">04</span>
+        <h2 class="section-title">Target-to-Lead 3D Pose Inspection Studio (3Dmol.js)</h2>
+        <p class="section-narrative" style="max-width:760px;margin-bottom:0.75rem;">
+          Publication-grade WebGL structural examination. Inspect atomic coordinates of oncogenic receptors, DiffDock-predicted ligand binding conformations, translucent catalytic pocket envelopes, and active-site hydrogen bond interaction cylinders.
         </p>
+      </div>
+
+      <!-- Near-Full-Bleed 3D Stage Container -->
+      <div class="pose-lab-container">
+        <div class="pose-lab-stage">
+          <!-- 3Dmol WebGL Canvas Container -->
+          <div id="molViewer3D" class="mol-viewport-canvas"></div>
+
+          <!-- Loading Scanline Reveal Overlay -->
+          <div id="pose-scan-overlay" class="pose-scan-overlay hidden" aria-hidden="true">
+            <div class="pose-scan-spinner"></div>
+            <div style="font-family:var(--font-mono);font-size:0.85rem;color:var(--color-signal-green);letter-spacing:0.05em;">
+              FETCHING ATOMIC COORDINATES // RESOLVING PDB
+            </div>
+          </div>
+
+          <!-- Mobile Touch Guard (<768px) -->
+          <div id="mobile-touch-guard" class="mobile-touch-guard">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--color-signal-green);"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+            <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">Tap to Interact in 3D</div>
+            <div style="font-size:0.8rem;color:var(--color-ink-muted);">Prevents canvas touch from trapping vertical page scrolling</div>
+          </div>
+          <button id="btn-mobile-exit-3d" class="btn-mobile-exit-3d" aria-label="Exit 3D Interaction">
+            <span>&times; Exit 3D</span>
+          </button>
+
+          <!-- Top-Left Target Switcher HUD Dock -->
+          <div class="pose-hud-top-left">
+            <div id="pose-source-badge" style="margin-right:0.25rem;">
+              <span class="badge-measured">RCSB Live PDB</span>
+            </div>
+            <button class="hud-pill-button target-switch-pill active" data-target-pdb="8AZV" title="KRAS G12D Switch-II Pocket">KRAS G12D (8AZV)</button>
+            <button class="hud-pill-button target-switch-pill" data-target-pdb="4MNE" title="BRAF V600E Kinase Domain">BRAF V600E (4MNE)</button>
+            <button class="hud-pill-button target-switch-pill" data-target-pdb="7BQY" title="SARS-CoV-2 Mpro Catalytic Dyad">Mpro (7BQY)</button>
+          </div>
+
+          <!-- Bottom-Left Camera & Representation Dock -->
+          <div class="pose-hud-bottom-left">
+            <button id="btn-pose-rotate" class="hud-pill-button" title="Toggle Auto-Rotation">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>Auto-Rotate</span>
+            </button>
+            <button id="btn-pose-focus" class="hud-pill-button" title="Focus Camera on Active Pocket">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              <span>Focus Pocket</span>
+            </button>
+            <button id="btn-pose-surface" class="hud-pill-button" title="Toggle Translucent Binding Surface">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              <span>Molecular Surface</span>
+            </button>
+            <button id="btn-pose-reset" class="hud-pill-button" title="Reset Viewport Framing">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+              <span>Reset View</span>
+            </button>
+          </div>
+
+          <!-- Right-Side Floating Discovery & Telemetry HUD -->
+          <div class="pose-hud-right">
+            <div>
+              <div class="hud-panel-title">
+                <span>Discovery Studio // Pose HUD</span>
+                <span class="badge-illustrative">Illustrative Discovery Preview</span>
+              </div>
+              <div id="hud-scaffold-note" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);margin-top:0.35rem;">
+                MRTX1133 Core Fragment (378.5 Da vs 600.64 Da Full Clinical)
+              </div>
+            </div>
+
+            <!-- Series Selector -->
+            <div>
+              <div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                Lead Series Candidate
+              </div>
+              <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                <button class="hud-pill-button lead-series-pill" data-series="lead_01">Lead 01 Core</button>
+                <button class="hud-pill-button lead-series-pill active" data-series="lead_02">Lead 02 +F (Nominated)</button>
+                <button class="hud-pill-button lead-series-pill" data-series="lead_03">Lead 03 Evolved</button>
+              </div>
+            </div>
+
+            <!-- R-Group Chemical Modifier Chips -->
+            <div>
+              <div style="font-family:var(--font-mono);font-size:0.7rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                In-Silico R-Group Tweaks
+              </div>
+              <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                <button class="hud-pill-button lead-mod-chip" data-mod="f">+F (C5)</button>
+                <button class="hud-pill-button lead-mod-chip" data-mod="cf3">+CF3</button>
+                <button class="hud-pill-button lead-mod-chip" data-mod="me">+Me (N4)</button>
+                <button class="hud-pill-button lead-mod-chip" data-mod="pyridine">Swap Pyridine</button>
+              </div>
+            </div>
+
+            <!-- Live SMILES Box -->
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+                <span style="font-family:var(--font-mono);font-size:0.7rem;color:var(--color-ink-muted);">CANONICAL SMILES</span>
+                <span class="badge-measured" style="font-size:0.65rem;">RDKit Graph Valid</span>
+              </div>
+              <div id="hud-smiles-display" class="hud-smiles-box">
+                O=C(N1CCN(C2=NC=C(F)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5
+              </div>
+            </div>
+
+            <!-- Physicochemical & Affinity Metrics Grid -->
+            <div class="hud-metrics-grid">
+              <div class="hud-metric-box">
+                <span class="hud-metric-label">DiffDock Score</span>
+                <span id="hud-metric-deltag" class="hud-metric-val highlight-green">-4.81 kcal/mol</span>
+              </div>
+              <div class="hud-metric-box">
+                <span class="hud-metric-label">MM-GBSA Rescore</span>
+                <span id="hud-metric-mmgbsa" class="hud-metric-val highlight-cyan">-10.82 kcal/mol</span>
+              </div>
+              <div class="hud-metric-box">
+                <span class="hud-metric-label">Drug-Likeness (QED)</span>
+                <span id="hud-metric-qed" class="hud-metric-val">0.309</span>
+              </div>
+              <div class="hud-metric-box">
+                <span class="hud-metric-label">Synthetic Access</span>
+                <span id="hud-metric-sascore" class="hud-metric-val">7.74</span>
+              </div>
+              <div class="hud-metric-box">
+                <span class="hud-metric-label">Scaffold MW</span>
+                <span id="hud-metric-mw" class="hud-metric-val">531.5 Da</span>
+              </div>
+              <div class="hud-metric-box">
+                <span class="hud-metric-label">Calc. cLogP</span>
+                <span id="hud-metric-clogp" class="hud-metric-val">5.55</span>
+              </div>
+            </div>
+
+            <!-- Target Contact Vector & Ro5 -->
+            <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.75rem;">
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--color-ink-muted);font-family:var(--font-mono);">Active Vectors:</span>
+                <span id="hud-metric-vector" style="font-family:var(--font-mono);color:var(--color-ink-primary);font-weight:600;">Asp12, Tyr96, Gln61</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--color-ink-muted);font-family:var(--font-mono);">Lipinski Ro5:</span>
+                <span id="hud-metric-ro5" style="font-family:var(--font-mono);font-weight:600;color:#F59E0B;">2 Violations (MW > 500, LogP > 5)</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--color-ink-muted);font-family:var(--font-mono);">Biosecurity Gate:</span>
+                <span id="hud-metric-biosecurity" style="font-family:var(--font-mono);font-weight:700;color:var(--color-signal-green);">PASSED (Tier 1 Cleared)</span>
+              </div>
+            </div>
+
+            <!-- End-to-End Discovery Pipeline Acceleration Strip -->
+            <div class="hud-e2e-strip">
+              <div style="font-weight:700;color:var(--color-signal-green);margin-bottom:0.25rem;">
+                58.9x End-to-End Pipeline Speedup
+              </div>
+              <div>
+                32.40s CPU cycle collapsed to 0.55s on NVIDIA H100 SXM5 NIM microservices. Saves ~88.5 hours of compute per 10k screening campaign.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Stage C.3 Anchor: Lead Evaluation & Client-Side Dropzone -->
-    <section id="lead-eval" class="stage-placeholder-section">
-      <div class="stage-placeholder-card">
-        <span class="badge-measured">STAGE C.3 QUEUED</span>
-        <h2 class="font-display text-xl font-bold">ADMET Auditor & Client-Side File Dropzone</h2>
-        <p class="text-sm" style="color:var(--color-ink-muted);max-width:560px;">
-          Nominated lead series with Lipinski Ro5, Veber criteria, PAINS alerts, and in-browser JSON/CSV FileReader dropzone.
+    <!-- SECTION 05: LEAD CANDIDATE EVALUATOR & PARETO SCATTER -->
+    <section id="lead-eval" class="stage-section">
+      <div style="margin-bottom: 2.5rem;">
+        <span class="section-numeral">05</span>
+        <h2 class="section-title">ADMET Auditor // Multi-Objective Pareto Frontier</h2>
+        <p class="section-narrative" style="max-width:760px;">
+          Multi-parameter candidate evaluation balancing binding affinity, synthetic accessibility, drug-likeness (QED), and Rule of 5 parameters. Inspect the non-dominated Pareto frontier or upload custom screening libraries for immediate client-side visualization.
         </p>
+      </div>
+
+      <!-- Asymmetric 12-Column Split Layout -->
+      <div class="lead-eval-layout">
+        <!-- 7-Column Candidate Table -->
+        <div class="lead-table-col">
+          <div class="lead-table-card">
+            <div class="lead-table-header-bar">
+              <div>
+                <h3 class="font-display font-bold text-base" style="color:var(--color-ink-primary);margin-bottom:0.2rem;">
+                  Screened Candidate Series
+                </h3>
+                <span class="text-xs" style="font-family:var(--font-mono);color:var(--color-ink-muted);">
+                  Hover rows to cross-highlight points on the Pareto scatter plot
+                </span>
+              </div>
+              <div style="display:flex;gap:0.5rem;align-items:center;">
+                <span class="badge-measured">4 SYNTHESIZED LEADS</span>
+              </div>
+            </div>
+
+            <div class="lead-table-scroll-container">
+              <table class="lead-matrix-table">
+                <thead>
+                  <tr>
+                    <th>Candidate ID</th>
+                    <th>SMILES / Scaffold</th>
+                    <th>DiffDock &Delta;G</th>
+                    <th>MM-GBSA</th>
+                    <th>QED</th>
+                    <th>SAScore</th>
+                    <th>MW / LogP</th>
+                    <th>Ro5</th>
+                    <th>Pareto Status</th>
+                  </tr>
+                </thead>
+                <tbody id="lead-matrix-body">
+                  <!-- Rendered by lead-evaluator.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5-Column Retina SVG Pareto Scatter Plot -->
+        <div class="lead-pareto-col">
+          <div class="pareto-scatter-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+              <h3 class="font-display font-bold text-base" style="color:var(--color-ink-primary);">
+                Pareto Frontier (&Delta;G vs. QED)
+              </h3>
+              <span class="text-xs" style="font-family:var(--font-mono);color:var(--color-signal-green);font-weight:700;">
+                ★ Non-Dominated
+              </span>
+            </div>
+            <div id="pareto-scatter-container">
+              <!-- Rendered by lead-evaluator.js -->
+            </div>
+            <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--color-ink-muted);margin-top:0.75rem;line-height:1.4;">
+              Point radius indicates Synthetic Accessibility (SAScore). Dashed curve marks the non-dominated multi-objective frontier.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full-Width Drag-and-Drop CSV / JSON Loader -->
+      <div id="lead-dropzone" class="lead-dropzone">
+        <input id="lead-file-input" type="file" accept=".csv,.json" class="dropzone-input-file" aria-label="Upload custom benchmark or candidate file"/>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;pointer-events:none;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--color-signal-green);"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          <div class="font-display font-bold text-lg" style="color:var(--color-ink-primary);">
+            Drop Custom Screening CSV or JSON Here
+          </div>
+          <p class="text-sm" style="color:var(--color-ink-muted);max-width:520px;">
+            Parse custom candidate batches 100% in-browser via FileReader. Immediately re-computes the Pareto frontier and updates table metrics without server upload.
+          </p>
+        </div>
+        <div style="margin-top:1.25rem;">
+          <button id="btn-load-sample-batch" class="btn-race-action" style="position:relative;z-index:10;pointer-events:auto;" title="Load complete 4-lead sample batch">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>Load Sample Multi-Candidate Batch</span>
+          </button>
+        </div>
       </div>
     </section>
 
