@@ -560,6 +560,40 @@
       border: 1px solid rgba(245, 158, 11, 0.45);
       box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
     }
+
+    /* Hero Aurora Spotlight */
+    .hero-aurora-glow {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 900px;
+      height: 420px;
+      background: radial-gradient(ellipse 65% 55% at 50% 10%, rgba(16, 185, 129, 0.20) 0%, rgba(0, 241, 253, 0.10) 45%, transparent 75%);
+      filter: blur(60px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Benchmark Table Filter Pills */
+    .bench-pill {
+      background: rgba(16, 24, 38, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .bench-pill:hover, .bench-pill.active {
+      color: #03060a;
+      background: #76b900;
+      border-color: #8bee00;
+      box-shadow: 0 0 16px rgba(118, 185, 0, 0.55);
+    }
   </style>
 </head>
 <body class="bg-dark text-slate-100 antialiased selection:bg-emerald-500 selection:text-black overflow-x-hidden font-sans">
@@ -658,10 +692,13 @@
   </header>
 
   <!-- HERO SECTION -->
-  <section id="showcase" class="max-w-7xl mx-auto px-6 pt-12 pb-8 flex flex-col justify-center">
+  <section id="showcase" class="relative max-w-7xl mx-auto px-6 pt-12 pb-8 flex flex-col justify-center">
     
+    <!-- Hero Ambient Aurora Spotlight -->
+    <div class="hero-aurora-glow"></div>
+
     <!-- Hero Callout & Headline -->
-    <div class="text-center space-y-4 max-w-4xl mx-auto mb-10">
+    <div class="relative z-10 text-center space-y-4 max-w-4xl mx-auto mb-10">
       
       <!-- High-Bench Status Pill -->
       <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glow-badge text-xs font-mono font-semibold">
@@ -671,9 +708,9 @@
         </span>
         <span class="text-emerald-300 font-bold">NVIDIA BioNeMo & NIM Accelerated</span>
         <span class="text-gray-500">•</span>
-        <span class="text-cyan-300">54.8× Mean Model Speedup</span>
+        <span class="text-cyan-300 font-bold">54.8× Mean Model Speedup</span>
         <span class="text-gray-500">•</span>
-        <span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">H100 SXM5</span>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">H100 SXM5</span>
       </div>
 
       <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight font-heading">
@@ -706,26 +743,26 @@
       </div>
 
       <!-- High-Impact Live Hero Stat Matrix (Balanced & Compact) -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-3xl mx-auto pt-2 text-left">
-        <div class="hero-stat-card">
-          <div class="text-xl sm:text-2xl font-extrabold text-emerald-400 font-mono">54.8×</div>
-          <div class="text-[10px] text-gray-300 font-mono font-semibold">Mean GPU Speedup</div>
-          <div class="text-[9px] text-gray-500 font-mono">TensorRT vs 16-Core EPYC</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto pt-3 text-left">
+        <div class="hero-stat-card border-t-2 border-t-emerald-400/80">
+          <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono tracking-tight">54.8×</div>
+          <div class="text-[11px] text-gray-200 font-mono font-bold mt-0.5">Mean GPU Speedup</div>
+          <div class="text-[10px] text-gray-500 font-mono">TensorRT vs 16-Core EPYC</div>
         </div>
-        <div class="hero-stat-card">
-          <div class="text-xl sm:text-2xl font-extrabold text-cyan-400 font-mono">0.08s</div>
-          <div class="text-[10px] text-gray-300 font-mono font-semibold">ESM-2 Latency</div>
-          <div class="text-[9px] text-gray-500 font-mono">650M Token Embedding</div>
+        <div class="hero-stat-card border-t-2 border-t-cyan-400/80">
+          <div class="text-2xl sm:text-3xl font-extrabold text-cyan-400 font-mono tracking-tight">0.08s</div>
+          <div class="text-[11px] text-gray-200 font-mono font-bold mt-0.5">ESM-2 Latency</div>
+          <div class="text-[10px] text-gray-500 font-mono">650M Token Embedding</div>
         </div>
-        <div class="hero-stat-card">
-          <div class="text-xl sm:text-2xl font-extrabold text-purple-400 font-mono">88.5h</div>
-          <div class="text-[10px] text-gray-300 font-mono font-semibold">Compute Saved</div>
-          <div class="text-[9px] text-gray-500 font-mono">Per 10,000 Campaign</div>
+        <div class="hero-stat-card border-t-2 border-t-purple-400/80">
+          <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 font-mono tracking-tight">88.5h</div>
+          <div class="text-[11px] text-gray-200 font-mono font-bold mt-0.5">Compute Saved</div>
+          <div class="text-[10px] text-gray-500 font-mono">Per 10,000 Campaign</div>
         </div>
-        <div class="hero-stat-card">
-          <div class="text-xl sm:text-2xl font-extrabold text-amber-400 font-mono">101/101</div>
-          <div class="text-[10px] text-gray-300 font-mono font-semibold">Hermetic Tests</div>
-          <div class="text-[9px] text-gray-500 font-mono">Zero-Defect Quality</div>
+        <div class="hero-stat-card border-t-2 border-t-amber-400/80">
+          <div class="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono tracking-tight">101/101</div>
+          <div class="text-[11px] text-gray-200 font-mono font-bold mt-0.5">Hermetic Tests</div>
+          <div class="text-[10px] text-gray-500 font-mono">Zero-Defect Quality</div>
         </div>
       </div>
     </div>
@@ -852,7 +889,7 @@
 
           <!-- High-Precision 8-Metric Biophysical Parameter Matrix (Deterministic IUPAC / Crippen / Bickerton) -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-left font-mono">
-            <div class="metric-spec-box">
+            <div class="metric-spec-box border-t-2 border-t-emerald-400/80">
               <div class="text-[9px] text-gray-400 uppercase tracking-wider flex justify-between">
                 <span>Rescored ΔG (Est.)</span>
                 <span class="text-emerald-400 font-bold">Vina/MM-GBSA</span>
@@ -861,7 +898,7 @@
               <div id="specKd" class="text-[10px] text-gray-400">Calculated Kd ~ 22.4 nM (298K)</div>
             </div>
 
-            <div class="metric-spec-box">
+            <div class="metric-spec-box border-t-2 border-t-cyan-400/80">
               <div class="text-[9px] text-gray-400 uppercase tracking-wider flex justify-between">
                 <span>Drug-Likeness</span>
                 <span class="text-cyan-400 font-bold">QED</span>
@@ -870,7 +907,7 @@
               <div id="specLipinski" class="text-[10px] text-emerald-400">Ro5: 0 Violations</div>
             </div>
 
-            <div class="metric-spec-box">
+            <div class="metric-spec-box border-t-2 border-t-amber-400/80">
               <div class="text-[9px] text-gray-400 uppercase tracking-wider flex justify-between">
                 <span>Synthesizability</span>
                 <span class="text-amber-400 font-bold">SAScore</span>
@@ -879,7 +916,7 @@
               <div class="text-[10px] text-gray-400">High Feasibility</div>
             </div>
 
-            <div class="metric-spec-box">
+            <div class="metric-spec-box border-t-2 border-t-purple-400/80">
               <div class="text-[9px] text-gray-400 uppercase tracking-wider flex justify-between">
                 <span>Molecular Wt</span>
                 <span class="text-purple-400 font-bold">IUPAC</span>
@@ -1047,6 +1084,29 @@
       </div>
     </div>
 
+    <!-- Interactive Microservice Filter & Telemetry Toolbar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-mono uppercase text-gray-400 font-bold mr-1">Filter Microservice:</span>
+        <button onclick="filterBenchmark('all')" id="benchFilter-all" class="bench-pill active">All Models (5)</button>
+        <button onclick="filterBenchmark('esm2')" id="benchFilter-esm2" class="bench-pill">ESM-2 Embeddings</button>
+        <button onclick="filterBenchmark('esmfold')" id="benchFilter-esmfold" class="bench-pill">ESMFold Structure</button>
+        <button onclick="filterBenchmark('diffdock')" id="benchFilter-diffdock" class="bench-pill">DiffDock Docking</button>
+        <button onclick="filterBenchmark('molmim')" id="benchFilter-molmim" class="bench-pill">MolMIM Generative</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="./results/benchmark_summary.json" download="bionemo_benchmark_summary.json" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 text-[11px] font-mono flex items-center gap-1.5 transition-all shadow-sm">
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>JSON Telemetry</span>
+        </a>
+        <a href="./results/benchmark_summary.csv" download="bionemo_benchmark_summary.csv" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 text-[11px] font-mono flex items-center gap-1.5 transition-all shadow-sm">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>CSV Export</span>
+        </a>
+      </div>
+    </div>
+
     <!-- Benchmark Comparison Table / Visual Grid -->
     <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
       <div class="overflow-x-auto">
@@ -1064,7 +1124,7 @@
           </thead>
           <tbody class="divide-y divide-white/5 text-gray-300">
             <!-- Row 1: Ubiquitin -->
-            <tr class="hover:bg-white/[0.02] transition-colors">
+            <tr data-service="esm2" class="hover:bg-white/[0.02] transition-colors">
               <td class="py-4 px-6 font-sans font-bold text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                 Ubiquitin (1UBQ)
@@ -1085,7 +1145,7 @@
             </tr>
 
             <!-- Row 2: DHFR -->
-            <tr class="hover:bg-white/[0.02] transition-colors">
+            <tr data-service="esmfold" class="hover:bg-white/[0.02] transition-colors">
               <td class="py-4 px-6 font-sans font-bold text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                 DHFR (1DHF)
@@ -1106,7 +1166,7 @@
             </tr>
 
             <!-- Row 3: BCR-ABL1 -->
-            <tr class="hover:bg-white/[0.02] transition-colors">
+            <tr data-service="diffdock" class="hover:bg-white/[0.02] transition-colors">
               <td class="py-4 px-6 font-sans font-bold text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                 BCR-ABL1 Kinase (2HYY)
@@ -1127,7 +1187,7 @@
             </tr>
 
             <!-- Row 4: EGFR -->
-            <tr class="hover:bg-white/[0.02] transition-colors">
+            <tr data-service="molmim" class="hover:bg-white/[0.02] transition-colors">
               <td class="py-4 px-6 font-sans font-bold text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                 EGFR Kinase Domain (1M17)
@@ -1148,7 +1208,7 @@
             </tr>
 
             <!-- Row 5: SARS-CoV-2 RdRp -->
-            <tr class="hover:bg-white/[0.02] transition-colors">
+            <tr data-service="esmfold" class="hover:bg-white/[0.02] transition-colors">
               <td class="py-4 px-6 font-sans font-bold text-white flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                 SARS-CoV-2 RdRp (7BV2)
@@ -1198,8 +1258,6 @@
           <div class="text-gray-200 font-bold font-sans">3. Protocol & Output Parity</div>
           <p class="text-gray-400">Warm container inference, n=5 iterations (mean reported). Network transit excluded (pure container execution). Structural and embedding parity verified via cosine similarity and Cα RMSD.</p>
         </div>
-      </div>
-    </div>
       </div>
     </div>
   </section>
@@ -1337,10 +1395,16 @@
         <div class="lg:col-span-7 bg-[#03060a] rounded-2xl border border-white/10 p-5 font-mono text-xs overflow-x-auto shadow-2xl">
           <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3 text-gray-400 text-[11px]">
             <span class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-              <span>results/ot2_synthesis_protocol_KRAS_G12D.py</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+              <span class="text-white font-semibold">results/ot2_synthesis_protocol_KRAS_G12D.py</span>
             </span>
-            <span class="text-emerald-400 font-bold">Python v2.15</span>
+            <div class="flex items-center gap-2.5">
+              <span class="text-emerald-400 font-bold">Python v2.15</span>
+              <button onclick="copyProtocolCode(this)" title="Copy Python Protocol" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white border border-white/15 flex items-center gap-1.5 transition-all text-[11px] font-mono cursor-pointer shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <span>Copy Protocol</span>
+              </button>
+            </div>
           </div>
           <pre class="text-gray-300 leading-relaxed"><code><span class="text-purple-400">from</span> opentrons <span class="text-purple-400">import</span> protocol_api
 
@@ -1483,7 +1547,7 @@ metadata = {
         <div class="flex items-center gap-4 font-mono text-[11px]">
           <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" class="hover:text-gray-300 transition-colors">License (AGPLv3)</a>
           <span>•</span>
-          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/actions" target="_blank" class="hover:text-emerald-400 text-emerald-400 font-bold transition-colors">Hermetic Tests: 77/77 Passing ✓</a>
+          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/actions" target="_blank" class="hover:text-emerald-400 text-emerald-400 font-bold transition-colors">Hermetic Tests: 101/101 Passing ✓</a>
           <span>•</span>
           <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" class="hover:text-gray-300 transition-colors">GitHub Repository</a>
         </div>
@@ -2134,6 +2198,35 @@ metadata = {
         setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
       }).catch(err => {
         console.warn('Clipboard write error:', err);
+      });
+    }
+
+    function filterBenchmark(service) {
+      document.querySelectorAll('[id^="benchFilter-"]').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('benchFilter-' + service);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const rows = document.querySelectorAll('.benchmark-table tbody tr');
+      rows.forEach(row => {
+        const s = row.getAttribute('data-service');
+        if (service === 'all' || s === service) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    function copyProtocolCode(btn) {
+      const codeEl = document.querySelector('#robotics pre code');
+      if (!codeEl || !navigator.clipboard) return;
+      const rawText = codeEl.innerText;
+      navigator.clipboard.writeText(rawText).then(() => {
+        const origHTML = btn.innerHTML;
+        btn.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-emerald-400 font-bold">Copied!</span>`;
+        setTimeout(() => { btn.innerHTML = origHTML; }, 2000);
+      }).catch(err => {
+        console.warn('Protocol copy error:', err);
       });
     }
   </script>
