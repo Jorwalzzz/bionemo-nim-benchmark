@@ -4,9 +4,11 @@ if(window.top!==window.self){try{window.top.location=window.self.location}catch(
 // Host Sentinel (detects GitHub Pages / Cloudflare Pages / Static vs Local Workstation server)
 const isStaticHost = window.location.protocol === 'file:' || 
                      window.location.hostname.endsWith('github.io') || 
-                     window.location.hostname.endsWith('pages.dev');
+                     window.location.hostname.endsWith('pages.dev') ||
+                     (window.location.protocol.startsWith('http') && window.location.port !== '8000');
 const isLocalServer = window.location.protocol.startsWith('http') && 
-                      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+                      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
+                      window.location.port === '8000';
 
 // --- Block 5 ---
 let selectedRounds = 2;
@@ -1071,9 +1073,7 @@ class ClientAuthManager {
     this.user = null;
     this.token = null;
     this.pendingAction = null;
-    this.isStaticHost = window.location.protocol === 'file:' || 
-                        window.location.hostname.endsWith('github.io') ||
-                        (window.location.hostname === 'localhost' && window.location.port === '8080');
+    this.isStaticHost = isStaticHost;
   }
 
   async init() {
@@ -1090,7 +1090,7 @@ class ClientAuthManager {
       console.warn('Failed to parse cached auth session:', e);
     }
 
-    if (!this.isStaticHost) {
+    if (!this.isStaticHost && this.token) {
       try {
         const headers = this.token ? { 'Authorization': `Bearer ${this.token}` } : {};
         const res = await fetch('/api/auth/me', { headers });

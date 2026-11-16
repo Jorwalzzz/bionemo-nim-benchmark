@@ -266,6 +266,12 @@ elif os.path.exists(ASSETS_DIR):
     app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 if os.path.exists(DATA_DIR):
     app.mount("/data", StaticFiles(directory=DATA_DIR), name="data")
+CSS_DIR = os.path.join(BASE_DIR, "css")
+if os.path.exists(CSS_DIR):
+    app.mount("/css", StaticFiles(directory=CSS_DIR), name="css")
+JS_DIR = os.path.join(BASE_DIR, "js")
+if os.path.exists(JS_DIR):
+    app.mount("/js", StaticFiles(directory=JS_DIR), name="js")
 VENDOR_DIR = os.path.join(BASE_DIR, "vendor")
 if os.path.exists(VENDOR_DIR):
     app.mount("/vendor", StaticFiles(directory=VENDOR_DIR), name="vendor")
