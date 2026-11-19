@@ -72,6 +72,19 @@ import {
   onWorkbenchInput,
   loadWorkbenchPreset,
   tweakSmiles,
+  updateTargetInfo,
+  setAgent,
+  resetAgents,
+  logEntry,
+  renderLeads,
+  selectLead,
+  switchTab,
+  copyCode,
+  showToast,
+  sleep
+} from './ui-controls.js';
+
+import {
   openAuthModal,
   closeAuthModal,
   switchAuthTab,
@@ -85,46 +98,43 @@ import {
   closeFeedbackModal,
   renderFeedbackHistory,
   handleFeedbackSubmit,
-  updateTargetInfo,
-  setAgent,
-  resetAgents,
-  logEntry,
-  renderLeads,
-  selectLead,
   openInstallModal,
   closeInstallModal,
   closeModalOnBackdrop,
-  switchTab,
-  copyCode,
-  showToast,
-  downloadInstaller,
-  downloadDossier,
-  downloadSDF,
-  sleep,
   openBenchmarkModal,
   closeBenchmarkModal,
   closeBenchmarkModalDirect,
-  generateINDPdf,
-  generateRobotProtocol,
-  generateLabCard,
   openRobotModal,
   closeRobotModal,
+  openResistanceModal,
+  closeResistanceModal,
+  closeAllModals
+} from './modals.js';
+
+import {
+  downloadInstaller,
+  downloadDossier,
+  downloadSDF,
+  generateINDPdf,
+  downloadIndPdf,
+  generateRobotProtocol,
+  generateLabCard,
   downloadCurrentOT2Py,
   copyOT2Code,
   runResistanceStressTest,
-  openResistanceModal,
-  closeResistanceModal,
   adoptEvolvedScaffold,
-  copyEvolvedSmiles,
+  copyEvolvedSmiles
+} from './exports.js';
+
+import {
   TOUR_STEPS,
   startInteractiveTour,
   closeInteractiveTour,
   renderTourStep,
   nextTourStep,
   prevTourStep,
-  executeTourAction,
-  closeAllModals
-} from './ui-controls.js';
+  executeTourAction
+} from './tour.js';
 
 // Anti-clickjacking / framing sentinel
 if (window.top !== window.self) {

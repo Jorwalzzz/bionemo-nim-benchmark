@@ -64,14 +64,19 @@ class QuietHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         return
 
 
+class _ThreadingServer(socketserver.ThreadingTCPServer):
+    request_queue_size = 128
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 class ThreadedStaticServer:
     """Context-managed ephemeral HTTP server bound to 127.0.0.1 on an OS-assigned port."""
 
     def __init__(self, root_dir: Path) -> None:
         self.root_dir = root_dir
         handler = functools.partial(QuietHTTPRequestHandler, directory=str(root_dir))
-        self._httpd = socketserver.TCPServer(("127.0.0.1", 0), handler)
-        self._httpd.allow_reuse_address = True
+        self._httpd = _ThreadingServer(("127.0.0.1", 0), handler)
         self.port: int = self._httpd.server_address[1]
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
 
@@ -173,9 +178,9 @@ def run_audit(repo_root: Path) -> int:
 
                             page.on(
                                 "console",
-                                lambda msg, errs=console_errors: errs.append(msg.text)
-                                if msg.type == "error"
-                                else None,
+                                lambda msg, errs=console_errors: (
+                                    errs.append(msg.text) if msg.type == "error" else None
+                                ),
                             )
                             page.on(
                                 "pageerror",

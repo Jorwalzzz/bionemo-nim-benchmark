@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from bionemo_benchmark.server.app import app
-from bionemo_benchmark.server.routes_benchmark import get_hardware_speedup_benchmark
+from bionemo_benchmark.server.routes_campaign import get_hardware_speedup_benchmark
 
 
 @pytest.fixture
