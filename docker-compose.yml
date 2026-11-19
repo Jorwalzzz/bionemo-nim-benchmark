@@ -1,0 +1,16 @@
+services:
+  cockpit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bionemo-cockpit:latest
+    container_name: bionemo-cockpit
+    ports:
+      - "8088:8088"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PORT=8088
+      - HOST=0.0.0.0
+    restart: unless-stopped
