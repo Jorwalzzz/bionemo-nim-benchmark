@@ -30,6 +30,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Verify Package Imports & Syntax
+        run: |
+          python -c "import bionemo_benchmark; import bionemo_benchmark.core; import bionemo_benchmark.domain; import bionemo_benchmark.server; import bionemo_benchmark.mcp"
+          python -m py_compile run_benchmark.py serve_cockpit.py
+
       - name: Prepare Working Directories
         run: |
           mkdir -p results data/pdbs
@@ -42,6 +47,10 @@ jobs:
           ADMIN_RESET_KEY: "bionemo-admin-prod-9821"
         run: |
           pytest -v tests/
+
+      - name: Run Release Static Parity Audit
+        run: |
+          python scripts/audit/audit_release.py
 
       - name: Execute End-to-End Mock Benchmark & Chart Generation
         env:
