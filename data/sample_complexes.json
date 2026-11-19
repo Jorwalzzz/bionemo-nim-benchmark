@@ -58,5 +58,65 @@
     "drug_indication": "Viral RNA-dependent RNA polymerase inhibitor",
     "smiles": "CCC(CC)COC(=O)[C@H](C)N[P@](=O)(OC[C@H]1O[C@](C#N)(c2ccc3n2ncnc3N)[C@H](O)[C@@H]1O)Oc4ccccc4",
     "expected_mw": 602.58
+  },
+  {
+    "id": "complex_06",
+    "target_name": "SARS-CoV-2 Main Protease (Mpro / 3CLpro)",
+    "uniprot_id": "P0DTD1",
+    "pdb_id": "7BQY",
+    "residue_count": 306,
+    "sequence": "SGFRKMAFPSGKVEGCMVQVTCGTTTLNGLWLDDVVYCPRHVICTSEDMLNPNYEDLLIRKSNHNFLVQAGNVQLRVIGHSMQNCVLKLKVDTANPKTPKYKFVRIQPGQTFSVLACYNGSPSGVYQCAMRPNFTIKGSFLNGSCGSVGFNIDYDCVSFCYMHHMELPTGVHAGTDLEGNFYGPFVDRQTAQAAGTDTTITVNVLAWLYAAVINGDRWFLNRFTTTLNDFNLVAMKYNYEPLTQDHVDILGPLSAQTGIAVLDMCASLKELLQNGMNGRTILGSALLEDEFTPFDVVRQCSGVTFQ",
+    "drug_name": "Nirmatrelvir (Paxlovid)",
+    "drug_indication": "SARS-CoV-2 3CL protease (Mpro) inhibitor",
+    "smiles": "CC1([C@@H]2[C@H]1[C@H](N(C2)C(=O)[C@H](C(C)(C)C)NC(=O)C(F)(F)F)C(=O)N[C@@H](C[C@@H]3CCNC3=O)C#N)C",
+    "expected_mw": 499.53
+  },
+  {
+    "id": "complex_07",
+    "target_name": "Human EGFR T790M Kinase Domain",
+    "uniprot_id": "P00533",
+    "pdb_id": "2ITZ",
+    "residue_count": 303,
+    "sequence": "EAPNQALLRILKETEFKKIKVLGSGAFGTVYKGLWIPEGEKVKIPVAIKELREATSPKANKEILDEAYVMASVDNPHVCRLLGICLTSTVQLITQLMPFGCLLDYVREHKDNIGSQYLLNWCVQIAKGMNYLEDRRLVHRDLAARNVLVKTPQHVKITDFGRAKLLGAEVPIKWMALESILHRIYTHQSDVWSYGVTVWELMTFGSKPYDGIPASEISSILEKGERLPQPPICTIDVYMIMVKCWMIDADSRPKFRELIIEFSKMARDPQRYLVIQGDERMHLPMDEEDMDDVVDADEYLIPQ",
+    "drug_name": "Osimertinib (Tagrisso)",
+    "drug_indication": "Non-small cell lung cancer (NSCLC) EGFR T790M inhibitor",
+    "smiles": "C=CC(=O)Nc1cc(Nc2nccc(-c3cn(C)c4ccccc34)n2)c(OC)cc1N(C)CCN(C)C",
+    "expected_mw": 499.62
+  },
+  {
+    "id": "complex_08",
+    "target_name": "Human Cyclin-Dependent Kinase 2 (CDK2)",
+    "uniprot_id": "P24941",
+    "pdb_id": "3PP0",
+    "residue_count": 286,
+    "sequence": "APNQALLRILKETELRKVKVLGSGAFGTVYKGIWIPDGENVKIPVAIKVLRENTSPKANKEILDEAYVMAGVGSPYVSRLLGICLTSTVQLVTQLMPYGCLLDHVRENRGRLGSQDLLNWCMQIAKGMSYLEDVRLVHRDLAARNVLVKSPNHVKITDFGLARLLDIDETEYHAGKVPIKWMALESILRRRFTHQSDVWSYGVTVWELMTFGAKPYDGIPAREIPDLLEKGERLPQPPICTIDVYMIMVKCWMIDSECRPRFRELVSEFSRMARDPQRFVVIQNED",
+    "drug_name": "Dinaciclib (SCH 727965)",
+    "drug_indication": "Cyclin-dependent kinase (CDK1/CDK2/CDK5/CDK9) inhibitor",
+    "smiles": "CCc1cnn2c(NCc3ccc[n+]([O-])c3)cc(N3CCCC[C@H]3CCO)nc12",
+    "expected_mw": 396.50
+  },
+  {
+    "id": "complex_09",
+    "target_name": "Human Poly(ADP-Ribose) Polymerase 1 (PARP1)",
+    "uniprot_id": "P09874",
+    "pdb_id": "4MNE",
+    "residue_count": 286,
+    "sequence": "LKDDDFEKISELGAGNGGVVFKVSHKPSGLVMARKLIHLEIKPAIRNQIIRELQVLHECNSPYIVGFYGAFYSDGEISICMEHMDGGSLDQVLKKAGRIPEQILGKVSIAVIKGLTYLREKHKIMHRDVKPSNILVNSRGEIKLCDFGVSGQLIDSMANSFVGTRSYMSPERLQGTHYSVQSDIWSMGLSLVEMAVGRYPIPPPDAKELELMPPMAIFELLDYIVNEPPPKLPSGVFSLEFQDFVNKCLIKNPAERADLKQLMVHAFIKRSDAEEVDFAGWLCSTI",
+    "drug_name": "Olaparib (Lynparza)",
+    "drug_indication": "PARP inhibitor for BRCA-mutated advanced ovarian and breast cancer",
+    "smiles": "O=C(c1cc(Cc2n[nH]c(=O)c3ccccc23)ccc1F)N1CCN(C(=O)C2CC2)CC1",
+    "expected_mw": 434.47
+  },
+  {
+    "id": "complex_10",
+    "target_name": "Human KRAS G12C",
+    "uniprot_id": "P01116",
+    "pdb_id": "8AZV",
+    "residue_count": 168,
+    "sequence": "GMTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKSDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQGVDDAFYTLVREIRKHK",
+    "drug_name": "Sotorasib (Lumakras)",
+    "drug_indication": "Non-small cell lung cancer (NSCLC) KRAS G12C covalent inhibitor",
+    "smiles": "C=CC(=O)N1CCN(c2nc(=O)n(-c3c(C)ccnc3C(C)C)c3nc(-c4c(O)cccc4F)c(F)cc23)[C@@H](C)C1",
+    "expected_mw": 560.61
   }
 ]
