@@ -4,7 +4,7 @@ Delegates to modular bionemo_benchmark.server package.
 """
 
 from bionemo_benchmark.server.app import app, main
-from bionemo_benchmark.server.routes_benchmark import get_hardware_speedup_benchmark
+from bionemo_benchmark.server.routes_campaign import get_hardware_speedup_benchmark
 from bionemo_benchmark.server.serializers import client_ip, sanitize_target_query
 
 __all__ = [

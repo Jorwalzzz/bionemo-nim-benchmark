@@ -14,13 +14,13 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import logging
 import os
 import secrets
 import tempfile
 import threading
 import time
-import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger("TrialLimiter")
 
@@ -93,9 +93,9 @@ class TrialLimiter:
         self.max_global_daily_runs = max_global_daily_runs
         self._secret_key = _get_or_create_secret_key()
         self._lock = threading.Lock()
-        self._ledger: Dict[str, Any] = self._load_ledger()
+        self._ledger: dict[str, Any] = self._load_ledger()
 
-    def _load_ledger(self) -> Dict[str, Any]:
+    def _load_ledger(self) -> dict[str, Any]:
         """Load ledger from disk or initialize empty ledger."""
         default_ledger = {
             "version": 2,
@@ -109,7 +109,7 @@ class TrialLimiter:
         }
         if os.path.exists(self.ledger_path):
             try:
-                with open(self.ledger_path, "r", encoding="utf-8") as f:
+                with open(self.ledger_path, encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, dict) and "sessions" in data:
                         if "daily_usage" not in data:
@@ -140,14 +140,14 @@ class TrialLimiter:
     # ─────────────────────────────────────────────────────────────
 
     @staticmethod
-    def is_bot_user_agent(user_agent: Optional[str]) -> bool:
+    def is_bot_user_agent(user_agent: str | None) -> bool:
         """Check if incoming request is from an automated scraping tool."""
         if not user_agent:
             return False
         ua_lower = user_agent.lower().strip()
         return any(bot in ua_lower for bot in BLOCKED_USER_AGENTS)
 
-    def create_signed_session_token(self, session_id: Optional[str] = None) -> str:
+    def create_signed_session_token(self, session_id: str | None = None) -> str:
         """Generate a tamper-proof session token: <session_id>:<timestamp>:<hmac_signature>"""
         if not session_id:
             session_id = secrets.token_hex(16)
@@ -159,8 +159,8 @@ class TrialLimiter:
         return f"{payload}:{sig}"
 
     def verify_and_extract_session(
-        self, token_str: Optional[str], max_age_seconds: int = 86400 * 30
-    ) -> Optional[str]:
+        self, token_str: str | None, max_age_seconds: int = 86400 * 30
+    ) -> str | None:
         """Validate HMAC signature of incoming session token, check expiry, and extract session_id."""
         if not token_str or not isinstance(token_str, str):
             return None
@@ -190,7 +190,7 @@ class TrialLimiter:
     # ─────────────────────────────────────────────────────────────
 
     @staticmethod
-    def normalize_ip(ip_str: str) -> Tuple[str, str]:
+    def normalize_ip(ip_str: str) -> tuple[str, str]:
         """
         Normalize IPv4/IPv6 address and extract /24 (IPv4) or /48 (IPv6) subnet.
         Handles localhost loopbacks gracefully.
@@ -211,9 +211,9 @@ class TrialLimiter:
 
     @staticmethod
     def compute_composite_fingerprint(
-        client_fp: Optional[str],
-        user_agent: Optional[str],
-        accept_lang: Optional[str] = None,
+        client_fp: str | None,
+        user_agent: str | None,
+        accept_lang: str | None = None,
     ) -> str:
         """Compute high-entropy SHA-256 fingerprint from client hardware canvas/webgl hash."""
         raw = f"{client_fp or 'unknown_fp'}|{user_agent or 'unknown_ua'}|{accept_lang or 'unknown_lang'}"
@@ -224,8 +224,8 @@ class TrialLimiter:
     # ─────────────────────────────────────────────────────────────
 
     def check_usage(
-        self, session_id: Optional[str], fp_hash: str, ip_str: str
-    ) -> Dict[str, Any]:
+        self, session_id: str | None, fp_hash: str, ip_str: str
+    ) -> dict[str, Any]:
         """Check current trial usage without consuming."""
         if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
             return {
@@ -307,8 +307,8 @@ class TrialLimiter:
         fp_hash: str,
         ip_str: str,
         target_name: str = "Unknown",
-        user_agent: Optional[str] = None,
-    ) -> Tuple[bool, Dict[str, Any]]:
+        user_agent: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
         """Atomically verify availability and consume 1 trial run."""
         if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
             return True, {

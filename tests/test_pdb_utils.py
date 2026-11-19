@@ -7,8 +7,6 @@ Copyright (C) 2026 Jorwalzzz.
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 import pytest
 
 from bionemo_benchmark.domain.pdb_utils import (
@@ -74,7 +72,7 @@ class TestGenerateSyntheticBackbone:
         lines = pdb_str.strip().splitlines()
 
         assert lines[0].startswith("HEADER")
-        atom_lines = [l for l in lines if l.startswith("ATOM")]
+        atom_lines = [line for line in lines if line.startswith("ATOM")]
         assert len(atom_lines) == len(seq)
         assert lines[-1] == "END"
 
@@ -97,7 +95,7 @@ class TestGenerateSyntheticBackbone:
     def test_sequence_whitespace_stripped(self):
         seq = " M T E Y\nK L V V "
         pdb_str = generate_synthetic_backbone(seq)
-        atom_lines = [l for l in pdb_str.splitlines() if l.startswith("ATOM")]
+        atom_lines = [line for line in pdb_str.splitlines() if line.startswith("ATOM")]
         assert len(atom_lines) == 8
 
 

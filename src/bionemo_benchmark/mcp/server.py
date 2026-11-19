@@ -8,21 +8,21 @@ Provides native Model Context Protocol (MCP) tools for interacting with:
 - BioNeMo benchmark runner and metric profiling
 """
 
-import os
-import sys
 import json
+import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-# Ensure project root and src/ are on sys.path
+from bionemo_benchmark.core.client import CANONICAL_AMINO_ACIDS, NimBioClient
+from bionemo_benchmark.core.pipeline import BenchmarkPipeline
+from bionemo_benchmark.domain.pdb_utils import (
+    generate_synthetic_backbone,
+    sanitize_pdb_atom_records,
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 while PROJECT_ROOT != PROJECT_ROOT.parent and not (PROJECT_ROOT / "pyproject.toml").exists():
     PROJECT_ROOT = PROJECT_ROOT.parent
-
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-if str(PROJECT_ROOT / "src") not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -39,15 +39,11 @@ except (ImportError, ModuleNotFoundError):
                     return func
                 return decorator
 
-from bionemo_benchmark.core.client import NimBioClient, CANONICAL_AMINO_ACIDS
-from bionemo_benchmark.core.pipeline import BenchmarkPipeline
-from bionemo_benchmark.domain.pdb_utils import sanitize_pdb_atom_records, generate_synthetic_backbone
-
 mcp = FastMCP("bionemo-tools")
 
 
 @mcp.tool()
-def bionemo_validate_sequence(sequence: str) -> Dict[str, Any]:
+def bionemo_validate_sequence(sequence: str) -> dict[str, Any]:
     """
     Validate and profile a protein amino acid sequence for NVIDIA BioNeMo / ESM-2.
     
@@ -78,7 +74,7 @@ def bionemo_validate_sequence(sequence: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def bionemo_sanitize_smiles(smiles: str) -> Dict[str, Any]:
+def bionemo_sanitize_smiles(smiles: str) -> dict[str, Any]:
     """
     Validate, sanitize, and extract physicochemical descriptors for a small molecule SMILES
     before dispatching to NVIDIA NIM DiffDock or MolMIM.
@@ -111,7 +107,7 @@ def bionemo_sanitize_smiles(smiles: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def bionemo_query_esm2_embedding(sequence: str, mock: bool = True) -> Dict[str, Any]:
+def bionemo_query_esm2_embedding(sequence: str, mock: bool = True) -> dict[str, Any]:
     """
     Query NVIDIA NIM ESM-2 (650M) for per-residue embeddings.
     
@@ -143,9 +139,9 @@ def bionemo_query_esm2_embedding(sequence: str, mock: bool = True) -> Dict[str, 
 def bionemo_query_diffdock(
     protein_sequence: str,
     ligand_smiles: str,
-    pdb_content: Optional[str] = None,
+    pdb_content: str | None = None,
     mock: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Predict small molecule binding poses and affinities using NVIDIA NIM DiffDock.
     
@@ -192,7 +188,7 @@ def bionemo_run_benchmark(
     mock: bool = True,
     complexes_path: str = "data/sample_complexes.json",
     save_plots: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Execute the NVIDIA BioNeMo & NIM Inference Benchmark Suite across the sample complexes.
     
@@ -209,7 +205,7 @@ def bionemo_run_benchmark(
     if not json_path.exists():
         return {"error": f"Complexes file not found at {json_path}"}
         
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(json_path, encoding="utf-8") as f:
         complexes = json.load(f)
         
     pipeline = BenchmarkPipeline(mock=mock)
@@ -239,7 +235,7 @@ def bionemo_run_benchmark(
 
 
 @mcp.tool()
-def bionemo_fetch_rcsb_pdb(pdb_id: str) -> Dict[str, Any]:
+def bionemo_fetch_rcsb_pdb(pdb_id: str) -> dict[str, Any]:
     """
     Fetch, clean, and validate macromolecular structures directly from RCSB PDB.
     Strips solvent, crystallographic waters, and isolates canonical protein chains.
@@ -265,13 +261,13 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> Dict[str, Any]:
         return {"valid": False, "error": f"Failed to download PDB {clean_id} from RCSB: {str(exc)}"}
         
     clean_pdb = sanitize_pdb_atom_records(raw_pdb)
-    atom_lines = [l for l in clean_pdb.splitlines() if l.startswith("ATOM  ")]
-    
+    atom_lines = [line for line in clean_pdb.splitlines() if line.startswith("ATOM  ")]
+
     # Extract unique residue IDs
     residues = set()
-    for l in atom_lines:
-        if len(l) >= 26:
-            residues.add((l[21], l[22:26].strip())) # (chain, resseq)
+    for line in atom_lines:
+        if len(line) >= 26:
+            residues.add((line[21], line[22:26].strip()))  # (chain, resseq)
             
     return {
         "valid": True,
@@ -284,7 +280,7 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def bionemo_query_esmfold(sequence: str, mock: bool = True) -> Dict[str, Any]:
+def bionemo_query_esmfold(sequence: str, mock: bool = True) -> dict[str, Any]:
     """
     Predict atomic 3D protein structure from amino acid sequence via NVIDIA BioNeMo ESMFold NIM.
     
@@ -344,7 +340,7 @@ def bionemo_query_esmfold(sequence: str, mock: bool = True) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def bionemo_compare_known_inhibitors(target_name: str, candidate_affinity_kcal_mol: Optional[float] = None) -> Dict[str, Any]:
+def bionemo_compare_known_inhibitors(target_name: str, candidate_affinity_kcal_mol: float | None = None) -> dict[str, Any]:
     """
     Benchmark AI-generated candidate molecules against clinically approved reference drugs.
     

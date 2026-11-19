@@ -7,11 +7,9 @@ from __future__ import annotations
 import argparse
 import os
 import socket
-import sys
 import threading
 import uuid
 import webbrowser
-from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
@@ -20,7 +18,8 @@ from fastapi.staticfiles import StaticFiles
 
 from bionemo_benchmark.infra.security_sentinel import SecretScrubber
 from bionemo_benchmark.server.routes_auth import router as auth_router
-from bionemo_benchmark.server.routes_benchmark import router as benchmark_router
+from bionemo_benchmark.server.routes_campaign import router as campaign_router
+from bionemo_benchmark.server.routes_structure import router as structure_router
 from bionemo_benchmark.server.serializers import (
     ASSETS_DIR,
     BASE_DIR,
@@ -170,7 +169,8 @@ if os.path.exists(VENDOR_DIR):
 # -------------------------------------------------------------------------
 
 app.include_router(auth_router)
-app.include_router(benchmark_router)
+app.include_router(campaign_router)
+app.include_router(structure_router)
 
 
 # -------------------------------------------------------------------------
@@ -187,7 +187,7 @@ def _free_port(host: str, port: int, tries: int = 20) -> int:
     return port
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     """Entry point for the BioNeMo Cockpit server."""
     import uvicorn
 

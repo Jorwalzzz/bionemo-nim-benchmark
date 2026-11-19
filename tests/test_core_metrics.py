@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+
 import pytest
 
 from bionemo_benchmark.core.metrics import (
@@ -132,7 +133,7 @@ class TestBenchmarkReporter:
         csv_file = reporter.export_csv("summary_test.csv")
 
         assert os.path.isfile(csv_file)
-        with open(csv_file, "r", encoding="utf-8") as f:
+        with open(csv_file, encoding="utf-8") as f:
             header = f.readline()
             assert "target_name" in header
             assert "speedup_factor" in header

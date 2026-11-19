@@ -5,8 +5,9 @@ Manages inter-agent communication, topic routing, debate history, and real-time 
 
 import logging
 import time
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from bionemo_benchmark.core.models import CouncilMessage
 
@@ -15,11 +16,11 @@ logger = logging.getLogger("SwarmMessageBus")
 
 class SwarmMessageBus:
     def __init__(self):
-        self.subscribers: Dict[str, List[Callable[[CouncilMessage], None]]] = {}
-        self.global_listeners: List[Callable[[CouncilMessage], None]] = []
-        self.history: List[CouncilMessage] = []
-        self.active_vetoes: List[CouncilMessage] = []
-        self.clearances: List[CouncilMessage] = []
+        self.subscribers: dict[str, list[Callable[[CouncilMessage], None]]] = {}
+        self.global_listeners: list[Callable[[CouncilMessage], None]] = []
+        self.history: list[CouncilMessage] = []
+        self.active_vetoes: list[CouncilMessage] = []
+        self.clearances: list[CouncilMessage] = []
 
     def subscribe(self, topic: str, callback: Callable[[CouncilMessage], None]):
         """Subscribe to a specific message intent/topic."""
@@ -38,7 +39,7 @@ class SwarmMessageBus:
         avatar: str,
         intent: str,
         content: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> CouncilMessage:
         """Publish a structured council message to the swarm."""
         now_str = datetime.now().strftime("%H:%M:%S")
@@ -77,7 +78,7 @@ class SwarmMessageBus:
 
         return msg
 
-    def get_council_summary(self) -> Dict[str, Any]:
+    def get_council_summary(self) -> dict[str, Any]:
         """Returns consolidated council statistics."""
         return {
             "total_messages": len(self.history),

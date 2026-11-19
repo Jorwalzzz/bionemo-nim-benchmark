@@ -12,13 +12,13 @@ Verifies all 5 high-impact enterprise defenses:
 import pytest
 from starlette.testclient import TestClient
 
-from serve_cockpit import app
 from bionemo_benchmark.infra.security_sentinel import (
     BiosecurityScreener,
     SafeSanitizer,
     SecretScrubber,
     TokenBucketRateLimiter,
 )
+from serve_cockpit import app
 
 
 @pytest.fixture
@@ -282,6 +282,7 @@ def test_biosecurity_consensus_motif_botulinum_regex():
 def test_client_ip_spoofing_defense():
     """SEC-03: Verifies that untrusted peer IPs cannot forge X-Forwarded-For."""
     from unittest.mock import MagicMock
+
     from serve_cockpit import client_ip
 
     mock_req = MagicMock()

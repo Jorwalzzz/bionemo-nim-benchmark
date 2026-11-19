@@ -1,6 +1,6 @@
 # NVIDIA BioNeMo & NIM Inference Benchmark Suite
 
-[![CI / Pytest](https://img.shields.io/badge/pytest-77%20hermetic%20passed-brightgreen.svg)](tests/)
+[![CI / Pytest](https://img.shields.io/badge/pytest-144%20hermetic%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![NVIDIA NIM](https://img.shields.io/badge/NVIDIA-BioNeMo%20NIM-76B900.svg)](https://build.nvidia.com)
 [![Green Compute](https://img.shields.io/badge/ESG-98.4%25%20Energy%20Cut-047857.svg)](#-enterprise-discovery-capabilities-closing-the-loop)
@@ -28,7 +28,7 @@ This repository provides both an automated benchmark harness (CLI + CI/CD) and a
 5. **📄 Candidate Dossier Generator**: Compiles structured markdown summaries and downloadable PDF briefing documents with physicochemical descriptors, ADMET screening, and binding affinity metrics.
 6. **🤖 Opentrons OT-2 Protocol Export**: Generates executable Python liquid-handling scripts (Opentrons API v2.15) and wet-lab SOP cards for automated pipetting verification.
 7. **🌱 Energy & Carbon Comparison**: Calculates estimated compute cost and power reduction when offloading heavy inference from CPU nodes to GPU microservices.
-8. **🔒 100% Hermetic Test Harness**: 77 automated pytest tests with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
+8. **🔒 100% Hermetic Test Harness**: 144 automated pytest tests with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
 9. **🧭 Interactive Walkthrough**: Built-in 10-step guided tour explaining each component of the pipeline directly inside the web UI.
 
 ### 📦 Example Generated Outputs
@@ -144,7 +144,7 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 │   ├── js/cockpit/             # Modular ES6 biocompute studio & 3Dmol.js visualizer
 │   ├── assets/                 # Vector brand icons and logos
 │   └── data/                   # Embedded structural coordinate datasets
-├── tests/                      # 100% hermetic test suite (77 tests)
+├── tests/                      # 100% hermetic test suite (144 tests)
 └── results/                    # Publication charts, CSV telemetry, FDA dossiers
 ```
 
@@ -152,7 +152,19 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 
 ## Quickstart Guide
 
-### 1. Installation
+### Quickstart (Docker)
+
+Launch the isolated production container with zero local dependency installation using Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+The interactive cockpit dashboard is available at **`http://localhost:8088/cockpit.html`** with automated health monitoring at `http://localhost:8088/api/health`. To use live NVIDIA NIM endpoints within the container, supply your `NVIDIA_API_KEY` via a root `.env` file or export it directly.
+
+---
+
+### Local Installation
 
 Clone the repository and initialize the Python 3.12+ virtual environment:
 

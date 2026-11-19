@@ -6,7 +6,7 @@ Powered by NVIDIA BioNeMo & NIM Inference.
 
 import datetime
 from io import BytesIO
-from typing import Any, Dict, Optional
+from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -32,7 +32,7 @@ BORDER_GRAY = colors.HexColor("#CBD5E1")
 
 
 def generate_ind_pdf(
-    dossier_data: Dict[str, Any], benchmark_data: Optional[Dict[str, Any]] = None
+    dossier_data: dict[str, Any], benchmark_data: dict[str, Any] | None = None
 ) -> bytes:
     """
     Generates a production-grade FDA IND Section 2 briefing dossier PDF.
@@ -145,7 +145,7 @@ def generate_ind_pdf(
     mol = None
     try:
         from rdkit import Chem
-        from rdkit.Chem import Descriptors, Lipinski, QED, Draw
+        from rdkit.Chem import QED, Descriptors, Draw, Lipinski
         mol = Chem.MolFromSmiles(smiles)
     except Exception:
         mol = None
@@ -234,7 +234,7 @@ def generate_ind_pdf(
                 "<b>IN SILICO PRECLINICAL PHARMACOLOGY BRIEFING</b>", meta_style
             ),
             Paragraph(
-                f"<b>DATE:</b> {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
+                f"<b>DATE:</b> {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M UTC')}",
                 meta_style,
             ),
         ],

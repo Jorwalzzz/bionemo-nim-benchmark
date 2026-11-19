@@ -7,7 +7,6 @@ to simulate 3D receptor-ligand complexes and compute predicted binding free ener
 import logging
 import os
 import time
-from typing import List, Tuple
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -28,8 +27,8 @@ class BiophysicsDockingAgent:
         self.name = name
 
     def dock_candidates(
-        self, candidates: List[MoleculeCandidate], target: TargetProfile
-    ) -> Tuple[List[MoleculeCandidate], AgentMessage]:
+        self, candidates: list[MoleculeCandidate], target: TargetProfile
+    ) -> tuple[list[MoleculeCandidate], AgentMessage]:
         """
         Docks all non-rejected candidates into the target pocket using NVIDIA NIM DiffDock.
         Generates 3D conformers, binding affinities (kcal/mol), and interaction maps.
@@ -105,7 +104,7 @@ class BiophysicsDockingAgent:
         return docked_leads, message
 
     @staticmethod
-    def _evaluate_biophysics_conformer(mol) -> Tuple[float, int]:
+    def _evaluate_biophysics_conformer(mol) -> tuple[float, int]:
         """Calculates MMFF94 force-field strain energy (kcal/mol) and counts steric clashes."""
         strain_energy = 0.0
         clash_count = 0
@@ -135,7 +134,7 @@ class BiophysicsDockingAgent:
 
     def _compute_diffdock_pose(
         self, cand: MoleculeCandidate, target: TargetProfile
-    ) -> Tuple[float, float, List[str]]:
+    ) -> tuple[float, float, list[str]]:
         """Computes docking pose binding free energy and interaction residues."""
         # Baseline seed affinities
         if "KRAS" in target.name:

@@ -8,7 +8,7 @@ counter-designed scaffolds that bypass the resistance barrier.
 
 import logging
 import random
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from rdkit import Chem
 
@@ -17,7 +17,7 @@ from bionemo_benchmark.core.models import MoleculeCandidate, ResistanceScan, Tar
 
 logger = logging.getLogger("ResistanceEngine")
 
-CLINICAL_RESISTANCE_CATALOG: Dict[str, Dict[str, Any]] = {
+CLINICAL_RESISTANCE_CATALOG: dict[str, dict[str, Any]] = {
     "KRAS G12D": {
         "mutation": "G12D -> G12C (Switch-II Covalent Escape)",
         "hotspots": ["Gly12", "Asp12", "Tyr96", "Gln61"],
@@ -138,9 +138,9 @@ class ResistanceEscapeEngine:
         self,
         lead: MoleculeCandidate,
         target: TargetProfile,
-        catalog_entry: Optional[Dict[str, Any]],
+        catalog_entry: dict[str, Any] | None,
         orig_aff: float,
-    ) -> Tuple[str, float]:
+    ) -> tuple[str, float]:
         """
         Invokes MolMIM steering or smart chemical modification to bypass the resistance clash.
         """

@@ -6,9 +6,13 @@ steers iterative refinement, and authors the Candidate Selection Dossier.
 
 import logging
 import time
-from typing import List, Tuple
 
-from bionemo_benchmark.core.models import AgentMessage, DossierReport, MoleculeCandidate, TargetProfile
+from bionemo_benchmark.core.models import (
+    AgentMessage,
+    DossierReport,
+    MoleculeCandidate,
+    TargetProfile,
+)
 
 logger = logging.getLogger("PIAgent")
 
@@ -19,10 +23,10 @@ class PrincipalInvestigatorAgent:
 
     def evaluate_and_rank_leads(
         self,
-        candidates: List[MoleculeCandidate],
+        candidates: list[MoleculeCandidate],
         target: TargetProfile,
         max_leads: int = 5,
-    ) -> Tuple[List[MoleculeCandidate], AgentMessage]:
+    ) -> tuple[list[MoleculeCandidate], AgentMessage]:
         """
         Calculates the non-dominated Pareto frontier across:
         1. Binding affinity (min ΔG, kcal/mol)
@@ -100,9 +104,9 @@ class PrincipalInvestigatorAgent:
     def generate_dossier(
         self,
         target: TargetProfile,
-        all_candidates: List[MoleculeCandidate],
-        top_leads: List[MoleculeCandidate],
-        audit_log: List[AgentMessage],
+        all_candidates: list[MoleculeCandidate],
+        top_leads: list[MoleculeCandidate],
+        audit_log: list[AgentMessage],
     ) -> DossierReport:
         """Authors comprehensive Markdown & JSON Candidate Selection Dossier."""
         timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())

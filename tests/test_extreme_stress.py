@@ -5,35 +5,30 @@ Tests all endpoints, pipeline functions, data models, error handlers, and edge c
 
 import ast
 import os
-import sys
 
 import pytest
 from fastapi.testclient import TestClient
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
-
-from serve_cockpit import app
 from bionemo_benchmark.agents.admet_critic import ADMETCriticAgent
 from bionemo_benchmark.agents.docking_agent import BiophysicsDockingAgent
 from bionemo_benchmark.agents.generative_chemist import GenerativeChemistAgent
+from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
+from bionemo_benchmark.agents.pi_agent import PrincipalInvestigatorAgent
+from bionemo_benchmark.agents.resistance_engine import ResistanceEscapeEngine
+from bionemo_benchmark.agents.retrosynthesis_agent import RetrosynthesisAgent
+from bionemo_benchmark.agents.target_scout import TargetScoutAgent
 from bionemo_benchmark.core.models import (
     DossierReport,
     MoleculeCandidate,
     ResistanceScan,
     TargetProfile,
 )
-from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
 from bionemo_benchmark.domain.pdb_utils import (
     clean_pdb_structure,
     extract_sequence_from_pdb,
     resolve_protein_structure,
 )
-from bionemo_benchmark.agents.pi_agent import PrincipalInvestigatorAgent
-from bionemo_benchmark.agents.resistance_engine import ResistanceEscapeEngine
-from bionemo_benchmark.agents.retrosynthesis_agent import RetrosynthesisAgent
-from bionemo_benchmark.agents.target_scout import TargetScoutAgent
+from serve_cockpit import app
 
 
 @pytest.fixture

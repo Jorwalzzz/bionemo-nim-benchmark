@@ -8,7 +8,6 @@ import os
 import matplotlib
 
 matplotlib.use("Agg")
-from typing import List
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -34,7 +33,7 @@ plt.rcParams.update(
 
 
 def plot_pareto_frontier(
-    candidates: List[MoleculeCandidate],
+    candidates: list[MoleculeCandidate],
     target: TargetProfile,
     output_path: str = "results/pareto_frontier.png",
 ):
@@ -194,7 +193,7 @@ def plot_pareto_frontier(
 
 
 def plot_chemical_leads_grid(
-    top_leads: List[MoleculeCandidate],
+    top_leads: list[MoleculeCandidate],
     output_path: str = "results/top_leads_chemical_grid.png",
 ):
     """Renders 2D chemical structure grid of nominated leads."""

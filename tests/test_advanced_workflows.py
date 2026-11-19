@@ -10,16 +10,16 @@ import ast
 import pytest
 from fastapi.testclient import TestClient
 
-from serve_cockpit import app
-from bionemo_benchmark.reporting.ind_dossier import generate_ind_pdf
+from bionemo_benchmark.agents.resistance_engine import ResistanceEscapeEngine
 from bionemo_benchmark.core.models import (
     MoleculeCandidate,
     RetrosynthesisPlan,
     RetrosynthesisStep,
     TargetProfile,
 )
-from bionemo_benchmark.agents.resistance_engine import ResistanceEscapeEngine
 from bionemo_benchmark.domain.robot_protocol import generate_lab_card, generate_ot2_protocol
+from bionemo_benchmark.reporting.ind_dossier import generate_ind_pdf
+from serve_cockpit import app
 
 
 @pytest.fixture

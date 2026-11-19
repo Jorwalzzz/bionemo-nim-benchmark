@@ -1,8 +1,8 @@
 import re
+import sys
 import urllib.request
 from urllib.parse import urljoin
 
-import sys
 base_url = sys.argv[1] if len(sys.argv) > 1 else "https://jorwalzzz.github.io/bionemo-nim-benchmark/"
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 

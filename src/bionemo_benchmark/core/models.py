@@ -5,7 +5,7 @@ Defines structured classes for targets, molecules, docking poses, and agent acti
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any
 
 
 @dataclass
@@ -16,10 +16,10 @@ class TargetProfile:
     pdb_id: str  # "8AZV"
     description: str  # Clinical oncology background
     canonical_sequence: str  # 20 IUPAC amino acid sequence
-    pocket_residues: List[str]  # ["Gly12Asp", "Gln61", "Tyr96", "Asp69"]
+    pocket_residues: list[str]  # ["Gly12Asp", "Gln61", "Tyr96", "Asp69"]
     reference_ligand_name: str  # "MRTX1133"
     reference_ligand_smiles: str  # Parent chemical scaffold
-    target_pocket_coords: Dict[str, float] = field(
+    target_pocket_coords: dict[str, float] = field(
         default_factory=lambda: {"x": 12.4, "y": -4.2, "z": 18.9}
     )
     pdb_text: str = ""  # Full PDB coordinate string for 3D visualization
@@ -41,16 +41,16 @@ class MoleculeCandidate:
     rotatable_bonds: int = 0
     qed: float = 0.0
     sascore: float = 0.0  # Synthetic Accessibility Score (1=easy, 10=hard)
-    pains_alerts: List[str] = field(default_factory=list)
+    pains_alerts: list[str] = field(default_factory=list)
     passes_lipinski: bool = True
     passes_veber: bool = True
     bbb_permeable: bool = False
     herg_liability: bool = False  # Cardiac ion channel risk heuristic
     admet_verdict: str = "PENDING"  # "PASS", "FLAGGED", "REJECT"
-    admet_notes: List[str] = field(default_factory=list)
+    admet_notes: list[str] = field(default_factory=list)
     binding_affinity: float = 0.0  # kcal/mol (negative is favorable)
     diffdock_confidence: float = 0.0  # 0.0 to 1.0
-    contact_residues: List[str] = field(default_factory=list)
+    contact_residues: list[str] = field(default_factory=list)
     pose_sdf: str = ""
     strain_energy: float = 0.0  # MMFF94 conformational strain energy (kcal/mol)
     steric_clash_count: int = 0  # Inter/intra-atomic steric clash penalty
@@ -73,13 +73,13 @@ class AgentMessage:
 @dataclass
 class DossierReport:
     target: TargetProfile
-    top_leads: List[MoleculeCandidate]
+    top_leads: list[MoleculeCandidate]
     screened_count: int
     passed_admet_count: int
     docked_count: int
     pareto_leads_count: int
     executive_summary: str
-    agent_audit_log: List[AgentMessage]
+    agent_audit_log: list[AgentMessage]
     timestamp: str = ""
 
 
@@ -90,7 +90,7 @@ class CouncilMessage:
     avatar: str  # "⚖️", "🧪", "🎯", "⚡", "🔬", "👑", "👨‍🔬"
     intent: str  # "PROPOSAL", "VETO", "COUNTER_PROPOSAL", "CLEARANCE", "DOCKING_RESULT", "CONSENSUS", "USER_DIRECTIVE"
     content: str  # Rich scientific dialogue
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
     timestamp_str: str = ""
 
@@ -100,8 +100,8 @@ class RetrosynthesisStep:
     step_number: int
     reaction_type: str  # e.g. "Suzuki-Miyaura Coupling", "Amide Condensation"
     reaction_smarts: str
-    reactants: List[Dict[str, str]]  # [{"name": "...", "smiles": "...", "cas": "..."}]
-    reagents: List[str]  # ["HATU", "DIPEA", "DMF", "rt, 2h"]
+    reactants: list[dict[str, str]]  # [{"name": "...", "smiles": "...", "cas": "..."}]
+    reagents: list[str]  # ["HATU", "DIPEA", "DMF", "rt, 2h"]
     product_smiles: str
     estimated_yield_pct: float
     difficulty: str  # "Routine (★☆☆)", "Moderate (★★☆)", "Challenging (★★★)"
@@ -115,8 +115,8 @@ class RetrosynthesisPlan:
     overall_feasibility: (
         str  # "Commercially Accessible (1-2 steps)", "Custom Multi-Step"
     )
-    steps: List[RetrosynthesisStep] = field(default_factory=list)
-    starting_materials: List[str] = field(default_factory=list)
+    steps: list[RetrosynthesisStep] = field(default_factory=list)
+    starting_materials: list[str] = field(default_factory=list)
     estimated_turnaround_days: int = 7
 
 
@@ -135,7 +135,7 @@ class SafetyRadarScore:
 class ResistanceScan:
     original_lead_id: str
     original_affinity: float  # kcal/mol
-    hotspot_residues: List[str]  # High-entropy positions e.g. ["Gly12", "Asp69"]
+    hotspot_residues: list[str]  # High-entropy positions e.g. ["Gly12", "Asp69"]
     mutation_simulated: str  # e.g. "G12D -> G12C (Switch-II Escape)"
     mutant_affinity: float  # Degraded affinity against mutant
     resistance_detected: bool  # True if loss > 1.5 kcal/mol

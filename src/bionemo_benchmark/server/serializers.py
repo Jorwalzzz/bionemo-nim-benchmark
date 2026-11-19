@@ -8,16 +8,14 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import Request, Response
-from fastapi.responses import JSONResponse
 
 from bionemo_benchmark.infra.auth_manager import AuthManager
 from bionemo_benchmark.infra.security_sentinel import (
     BiosecurityScreener,
-    SecretScrubber,
     TokenBucketRateLimiter,
 )
 from bionemo_benchmark.infra.trial_limiter import TrialLimiter
@@ -56,7 +54,7 @@ ALLOWED_ROOT_ASSETS: frozenset[str] = frozenset(
 )
 
 MAX_PAYLOAD_SIZE: int = 128 * 1024  # 128 KB max request body size
-ADMIN_RESET_KEY: Optional[str] = os.environ.get("ADMIN_RESET_KEY")
+ADMIN_RESET_KEY: str | None = os.environ.get("ADMIN_RESET_KEY")
 TRUSTED_PROXIES: frozenset[str] = frozenset({"127.0.0.1", "::1", "localhost", "testclient"})
 
 logger: logging.Logger = logging.getLogger("CockpitSecurity")
@@ -156,7 +154,7 @@ def verify_request_origin(request: Request) -> bool:
     return False
 
 
-def get_authenticated_user(request: Request) -> Optional[Dict[str, Any]]:
+def get_authenticated_user(request: Request) -> dict[str, Any] | None:
     """Extracts and verifies JWT/HMAC token from Authorization header or cookie."""
     token = None
     auth_header = request.headers.get("Authorization") or ""
@@ -173,7 +171,7 @@ def get_authenticated_user(request: Request) -> Optional[Dict[str, Any]]:
 
 
 def with_auth_cookie(
-    response: Response, token: str, request: Optional[Request] = None
+    response: Response, token: str, request: Request | None = None
 ) -> Response:
     """Sets secure HTTP-only authentication session cookie."""
     is_secure = False
@@ -195,7 +193,7 @@ def with_auth_cookie(
     return response
 
 
-def get_client_identifiers(request: Request) -> Tuple[str, str, str, str, Optional[str]]:
+def get_client_identifiers(request: Request) -> tuple[str, str, str, str, str | None]:
     """Extract or issue tamper-proof session token, proxy-aware client IP, and composite fingerprint."""
     cookie_token = request.cookies.get(COOKIE_NAME)
     session_id = trial_limiter.verify_and_extract_session(cookie_token)

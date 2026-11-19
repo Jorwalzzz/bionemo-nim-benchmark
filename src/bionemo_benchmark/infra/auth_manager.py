@@ -14,14 +14,14 @@ import datetime
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import secrets
 import tempfile
 import threading
 import time
-import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger("AuthManager")
 
@@ -84,7 +84,7 @@ EMAIL_STRICT_REGEX = re.compile(
 )
 
 
-def validate_email_address(email: str) -> Tuple[bool, str, Optional[str], str]:
+def validate_email_address(email: str) -> tuple[bool, str, str | None, str]:
     """
     Validates email format, domain existence checks, typo suggestions, and disposable address detection.
     Returns (is_valid, error_or_success_message, typo_suggestion, classification).
@@ -182,13 +182,13 @@ class AuthManager:
         self._secret = _get_or_create_auth_secret()
         # Use RLock to prevent self-deadlocks on nested helper calls
         self._lock = threading.RLock()
-        self._failed_logins: Dict[str, Dict[str, Any]] = {}
-        self._ledger: Dict[str, Any] = self._load_ledger()
+        self._failed_logins: dict[str, dict[str, Any]] = {}
+        self._ledger: dict[str, Any] = self._load_ledger()
         self._init_default_evaluator()
 
-    def _load_ledger(self) -> Dict[str, Any]:
+    def _load_ledger(self) -> dict[str, Any]:
         """Atomically load user auth ledger from disk."""
-        default_ledger: Dict[str, Any] = {
+        default_ledger: dict[str, Any] = {
             "version": 1,
             "users": {},  # user_id -> user_dict
             "emails": {},  # email_lower -> user_id
@@ -198,7 +198,7 @@ class AuthManager:
         }
         if os.path.exists(self.ledger_path):
             try:
-                with open(self.ledger_path, "r", encoding="utf-8") as f:
+                with open(self.ledger_path, encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, dict) and "users" in data:
                         data.setdefault("revoked_tokens", {})
@@ -271,7 +271,7 @@ class AuthManager:
         ).hexdigest()
         return f"{payload_b64}.{sig}"
 
-    def revoke_token(self, token: Optional[str]) -> bool:
+    def revoke_token(self, token: str | None) -> bool:
         """Revoke an active session token by recording its HMAC signature on the blocklist."""
         if not token or not isinstance(token, str) or "." not in token:
             return False
@@ -299,7 +299,7 @@ class AuthManager:
             self._save_ledger()
         return True
 
-    def verify_token(self, token: Optional[str]) -> Optional[str]:
+    def verify_token(self, token: str | None) -> str | None:
         """Verify token HMAC signature, revocation status, and expiration; returns user_id if valid."""
         if not token or not isinstance(token, str) or "." not in token:
             return None
@@ -332,7 +332,7 @@ class AuthManager:
     # ─────────────────────────────────────────────────────────────
 
     @staticmethod
-    def get_cycle_info(timestamp: Optional[float] = None) -> Dict[str, Any]:
+    def get_cycle_info(timestamp: float | None = None) -> dict[str, Any]:
         """
         Calculate current 24-hour cycle anchored to 3:00:00 PM IST (09:30:00 UTC).
         All users worldwide refresh in sync at this exact moment.
@@ -343,7 +343,7 @@ class AuthManager:
         seconds_remaining = max(0, int(next_reset_epoch - t))
 
         cycle_dt = datetime.datetime.fromtimestamp(
-            cycle_idx * 86400 + RESET_OFFSET_SECONDS, datetime.timezone.utc
+            cycle_idx * 86400 + RESET_OFFSET_SECONDS, datetime.UTC
         )
         cycle_key = cycle_dt.strftime("%Y-%m-%d_1500IST")
 
@@ -376,7 +376,7 @@ class AuthManager:
         password: str,
         full_name: str = "Researcher",
         organization: str = "Independent Academic",
-    ) -> Tuple[bool, Optional[Dict[str, Any]], str]:
+    ) -> tuple[bool, dict[str, Any] | None, str]:
         """Register a new researcher account."""
         email_clean = email.strip() if email else ""
         is_valid, msg, typo, _ = validate_email_address(email_clean)
@@ -428,7 +428,7 @@ class AuthManager:
 
     def authenticate_user(
         self, email: str, password: str
-    ) -> Tuple[bool, Optional[Dict[str, Any]], str]:
+    ) -> tuple[bool, dict[str, Any] | None, str]:
         """Authenticate user credentials and return session token + quota info with brute-force lockout defense."""
         email_key = email.strip().lower()
         now = int(time.time())
@@ -487,7 +487,7 @@ class AuthManager:
         rec["count"] += 1
         rec["last_attempt"] = now
 
-    def get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+    def get_user_profile(self, user_id: str) -> dict[str, Any] | None:
         """Retrieve user profile by user_id."""
         with self._lock:
             user = self._ledger.get("users", {}).get(user_id)
@@ -508,8 +508,8 @@ class AuthManager:
     # ─────────────────────────────────────────────────────────────
 
     def get_user_quota(
-        self, user_id: str, timestamp: Optional[float] = None
-    ) -> Dict[str, Any]:
+        self, user_id: str, timestamp: float | None = None
+    ) -> dict[str, Any]:
         """Return remaining runs and countdown to 3:00 PM IST for given user."""
         cycle_info = self.get_cycle_info(timestamp)
         cycle_key = cycle_info["cycle_key"]
@@ -532,8 +532,8 @@ class AuthManager:
         }
 
     def consume_run(
-        self, user_id: str, timestamp: Optional[float] = None
-    ) -> Tuple[bool, Dict[str, Any], str]:
+        self, user_id: str, timestamp: float | None = None
+    ) -> tuple[bool, dict[str, Any], str]:
         """Atomically verify availability and consume 1 discovery screening run."""
         cycle_info = self.get_cycle_info(timestamp)
         cycle_key = cycle_info["cycle_key"]
@@ -569,7 +569,7 @@ class AuthManager:
         comments: str,
         target_complex: str = "General",
         client_ip: str = "Unknown",
-    ) -> Tuple[bool, Dict[str, Any], str]:
+    ) -> tuple[bool, dict[str, Any], str]:
         """Validate, sanitize, and record feedback submitted by an authenticated researcher."""
         profile = self.get_user_profile(user_id)
         if not profile:
@@ -612,10 +612,10 @@ class AuthManager:
         }
 
         with self._lock:
-            submissions: List[Dict[str, Any]] = []
+            submissions: list[dict[str, Any]] = []
             if os.path.exists(self.feedback_path):
                 try:
-                    with open(self.feedback_path, "r", encoding="utf-8") as f:
+                    with open(self.feedback_path, encoding="utf-8") as f:
                         submissions = json.load(f)
                         if not isinstance(submissions, list):
                             submissions = []
@@ -638,13 +638,13 @@ class AuthManager:
 
         return True, entry, "Thank you! Your feedback has been recorded."
 
-    def get_feedback_for_user(self, user_id: str) -> List[Dict[str, Any]]:
+    def get_feedback_for_user(self, user_id: str) -> list[dict[str, Any]]:
         """Retrieve feedback history for a given researcher."""
         with self._lock:
             if not os.path.exists(self.feedback_path):
                 return []
             try:
-                with open(self.feedback_path, "r", encoding="utf-8") as f:
+                with open(self.feedback_path, encoding="utf-8") as f:
                     all_fb = json.load(f)
                     if isinstance(all_fb, list):
                         return [fb for fb in all_fb if fb.get("user_id") == user_id]

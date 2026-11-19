@@ -1,0 +1,39 @@
+# Git & version control
+.git/
+.gitignore
+.gitattributes
+
+# Python virtual environment & bytecode
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Testing, coverage & lint caches
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# Node & frontend build dependencies
+node_modules/
+package-lock.json
+
+# Local Playwright & visual audit runs
+audit/
+
+# Local credentials & environment overrides
+.env
+.env.*
+!.env.example
+
+# IDE, OS, & log clutter
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

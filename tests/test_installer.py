@@ -4,7 +4,9 @@ Validates install.bat, install.ps1, install.sh, download endpoints, and checksum
 """
 
 import os
+
 from fastapi.testclient import TestClient
+
 from serve_cockpit import app
 
 client = TestClient(app)
@@ -14,7 +16,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def test_install_bat_content_and_invariants():
     bat_path = os.path.join(BASE_DIR, "scripts", "installers", "install.bat")
     assert os.path.exists(bat_path), "install.bat must exist"
-    with open(bat_path, "r", encoding="utf-8", errors="ignore") as f:
+    with open(bat_path, encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
     assert "BioNeMo Agentic Scientist" in content
@@ -26,7 +28,7 @@ def test_install_bat_content_and_invariants():
 def test_install_ps1_content_and_invariants():
     ps1_path = os.path.join(BASE_DIR, "scripts", "installers", "install.ps1")
     assert os.path.exists(ps1_path), "install.ps1 must exist"
-    with open(ps1_path, "r", encoding="utf-8", errors="ignore") as f:
+    with open(ps1_path, encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
     assert "JORWAL NIM" in content
@@ -41,7 +43,7 @@ def test_install_ps1_content_and_invariants():
 def test_install_sh_content_and_invariants():
     sh_path = os.path.join(BASE_DIR, "scripts", "installers", "install.sh")
     assert os.path.exists(sh_path), "install.sh must exist"
-    with open(sh_path, "r", encoding="utf-8", errors="ignore") as f:
+    with open(sh_path, encoding="utf-8", errors="ignore") as f:
         content = f.read()
 
     assert "BioNeMo Agentic Scientist" in content
