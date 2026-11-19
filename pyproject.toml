@@ -39,7 +39,7 @@ keywords = [
 ]
 dependencies = [
   "requests>=2.31.0",
-  "rdkit>=2023.09.1",
+  "rdkit>=2026.9.2",
   "numpy>=1.26",
   "pandas>=2.0.0",
   "matplotlib>=3.8.0",
