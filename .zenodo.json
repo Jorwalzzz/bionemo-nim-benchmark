@@ -1,5 +1,6 @@
 {
   "title": "Agentic BioNeMo: Autonomous Multi-Agent AI Scientist for Target-to-Lead Drug Discovery",
+  "version": "2.2.0",
   "description": "An autonomous multi-agent artificial intelligence discovery system orchestrating specialized AI agents to generate, filter, dock, and optimize clinical drug candidates against high-priority oncology and viral targets using NVIDIA BioNeMo NIM microservices (MolMIM, DiffDock, ESM-2), RDKit, and automated retrosynthesis.",
   "creators": [
     {
