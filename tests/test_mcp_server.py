@@ -64,3 +64,13 @@ class TestBionemoMcpTools:
     def test_fetch_rcsb_pdb_validation(self):
         res = bionemo_fetch_rcsb_pdb("INVALID_ID_TOO_LONG")
         assert res["valid"] is False
+
+    def test_package_and_shim_exports(self):
+        from bionemo_benchmark.mcp.server import (
+            bionemo_validate_sequence as pkg_val,
+            main as pkg_main,
+            mcp as pkg_mcp,
+        )
+        assert callable(pkg_val)
+        assert callable(pkg_main)
+        assert pkg_mcp is not None
