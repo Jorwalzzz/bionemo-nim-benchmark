@@ -295,7 +295,7 @@ def test_client_ip_spoofing_defense():
 def test_root_asset_whitelist_blocking(client):
     """SEC-14: Verifies that arbitrary root paths outside the whitelist are rejected."""
     # Whitelisted asset
-    r_valid = client.get("/cockpit.js")
+    r_valid = client.get("/cockpit.css")
     assert r_valid.status_code in (200, 304)
 
     # Disallowed non-whitelisted assets

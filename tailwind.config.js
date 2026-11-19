@@ -3,7 +3,7 @@ module.exports = {
   content: [
     "./index.html",
     "./cockpit.html",
-    "./cockpit.js"
+    "./js/**/*.js"
   ],
   darkMode: 'class',
   theme: {

@@ -86,42 +86,56 @@
   let mobileGuardEl = null;
   let mobileExitBtn = null;
 
+  const pdbCache = new Map();
+
   /**
-   * Fetch PDB with 4000ms timeout and embedded fallback
+   * Fetch PDB with on-demand local/RCSB caching
    */
   async function fetchPDBWithFallback(pdbId) {
-    const target = TARGET_REGISTRY[pdbId];
-    if (scanOverlayEl) scanOverlayEl.classList.remove('hidden');
+    if (pdbCache.has(pdbId)) {
+      return pdbCache.get(pdbId);
+    }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    if (scanOverlayEl) scanOverlayEl.classList.remove('hidden');
 
     let pdbText = null;
     let isOfflineCache = false;
 
+    // 1. Try on-demand fetch from local repository ./data/pdbs/<pdbId>.pdb
     try {
-      const res = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        pdbText = await res.text();
+      const localRes = await fetch(`./data/pdbs/${pdbId}.pdb`);
+      if (localRes.ok) {
+        pdbText = await localRes.text();
+        if (pdbText && pdbText.length > 100) {
+          isOfflineCache = true;
+        }
       }
-    } catch (e) {
-      console.warn(`[3D Pose Lab] RCSB PDB fetch for ${pdbId} unavailable or timed out. Engaging offline fallback.`);
+    } catch (_) {}
+
+    // 2. If not found locally, fetch from RCSB PDB with timeout
+    if (!pdbText || pdbText.length < 100) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      try {
+        const res = await fetch(`https://files.rcsb.org/download/${pdbId}.pdb`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+          pdbText = await res.text();
+        }
+      } catch (e) {
+        console.warn(`[3D Pose Lab] RCSB PDB fetch for ${pdbId} unavailable or timed out.`);
+      }
     }
 
-    if (!pdbText || pdbText.length < 100) {
-      // Use embedded window PDB cache
-      if (window[target.fallbackKey]) {
-        pdbText = window[target.fallbackKey];
-        isOfflineCache = true;
-      }
+    if (pdbText && pdbText.length > 100) {
+      pdbCache.set(pdbId, pdbText);
     }
 
     if (statusBadgeEl) {
       if (isOfflineCache) {
-        statusBadgeEl.innerHTML = `<span class="badge-measured" style="background:rgba(255,138,76,0.15);color:#FF8A4C;border-color:rgba(255,138,76,0.3);">Offline PDB Cache Active</span>`;
+        statusBadgeEl.innerHTML = `<span class="badge-measured" style="background:rgba(255,138,76,0.15);color:#FF8A4C;border-color:rgba(255,138,76,0.3);">Local PDB Cache Active</span>`;
       } else {
         statusBadgeEl.innerHTML = `<span class="badge-measured">RCSB Live PDB (${pdbId})</span>`;
       }

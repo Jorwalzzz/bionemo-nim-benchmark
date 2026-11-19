@@ -87,6 +87,8 @@ def get_root_asset(request: Request) -> Response:
     fpath = os.path.join(BASE_DIR, name)
     if name == "theme.css" and not os.path.isfile(fpath):
         fpath = os.path.join(ROOT_ASSETS_DIR, "css", "theme.css")
+    if name == "cockpit.js" and not os.path.isfile(fpath):
+        fpath = os.path.join(BASE_DIR, "js", "cockpit", "main.js")
     if os.path.isfile(fpath):
         media_type = "text/css" if name.endswith(".css") else "application/javascript" if name.endswith(".js") else None
         return FileResponse(fpath, media_type=media_type, headers={"Cache-Control": "no-cache, must-revalidate"})
