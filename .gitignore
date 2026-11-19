@@ -56,8 +56,10 @@ docs/guides/*.html
 # AI scaffolding and local dev files — not for public repo
 .agents/
 GEMINI.md
-ANTIGRAVITY_IDE_COMPLETE_MASTER_VOLUME.md
 scratch/
+Lenia/
+jidu6411_flash/
+docs/reports/codebase_exhaustive_audit_report.md
 
 # Local Playwright & visual audit artifacts (keep results/ and assets/ tracked)
 /audit/

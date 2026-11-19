@@ -313,8 +313,16 @@ def audit_json_parity(json_path: Path, index_state: HTMLAuditState) -> list[Audi
     return issues
 
 
+def find_repo_root() -> Path:
+    """Resolve repository root directory reliably from current script location."""
+    for p in Path(__file__).resolve().parents:
+        if (p / "index.html").exists() and (p / "results").exists():
+            return p
+    return Path(__file__).resolve().parent.parent.parent
+
+
 def main() -> int:
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = find_repo_root()
     index_path = repo_root / "index.html"
     cockpit_path = repo_root / "cockpit.html"
     json_path = repo_root / "results" / "benchmark_summary.json"

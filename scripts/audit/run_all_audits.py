@@ -2,7 +2,7 @@
 """
 Unified Stage E Release Audit Runner for bionemo-nim-benchmark.
 
-Executes `scripts/audit_release.py` and `scripts/verify_viewports.py` sequentially
+Executes `scripts/audit/audit_release.py` and `scripts/audit/verify_viewports.py` sequentially
 using the active Python interpreter (`sys.executable`), streams diagnostic logs on
 failure, and prints a copy-ready Markdown summary table for the final release report.
 """
@@ -113,13 +113,21 @@ def render_markdown_table(results: list[SuiteResult]) -> str:
     return "\n".join(lines)
 
 
+def find_repo_root() -> Path:
+    """Resolve repository root directory reliably from current script location."""
+    for p in Path(__file__).resolve().parents:
+        if (p / "index.html").exists() and (p / "results").exists():
+            return p
+    return Path(__file__).resolve().parent.parent.parent
+
+
 def main() -> int:
-    repo_root = Path(__file__).resolve().parent.parent
-    scripts_dir = repo_root / "scripts"
+    repo_root = find_repo_root()
+    audit_dir = repo_root / "scripts" / "audit"
 
     suites = [
-        ("Static Path, WCAG & JSON Parity", scripts_dir / "audit_release.py"),
-        ("Playwright Multi-Viewport & Theme", scripts_dir / "verify_viewports.py"),
+        ("Static Path, WCAG & JSON Parity", audit_dir / "audit_release.py"),
+        ("Playwright Multi-Viewport & Theme", audit_dir / "verify_viewports.py"),
     ]
 
     results: list[SuiteResult] = []

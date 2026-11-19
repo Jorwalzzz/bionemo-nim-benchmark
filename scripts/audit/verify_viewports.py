@@ -230,6 +230,14 @@ def run_audit(repo_root: Path) -> int:
     return 1 if failures else 0
 
 
+def find_repo_root() -> Path:
+    """Resolve repository root directory reliably from current script location."""
+    for p in Path(__file__).resolve().parents:
+        if (p / "index.html").exists() and (p / "results").exists():
+            return p
+    return Path(__file__).resolve().parent.parent.parent
+
+
 if __name__ == "__main__":
-    root = Path(__file__).resolve().parent.parent
+    root = find_repo_root()
     sys.exit(run_audit(root))
