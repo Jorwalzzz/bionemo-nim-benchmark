@@ -68,3 +68,14 @@ jobs:
           test -f results/benchmark_summary.csv
           test -f results/throughput_comparison.png
           test -f results/latency_vs_length.png
+
+  docker-build:
+    name: Docker Build Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Container
+        run: |
+          docker build -t bionemo-cockpit:ci .

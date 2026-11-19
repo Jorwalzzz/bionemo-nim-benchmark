@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jorwal"
-version = "1.0.0"
+version = "2.2.0"
 description = "Benchmark suite and interactive cockpit for NVIDIA BioNeMo & NIM microservices (ESM-2, DiffDock, MolMIM, ESMFold)."
 readme = "README.md"
 authors = [
