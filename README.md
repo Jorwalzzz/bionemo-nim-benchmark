@@ -141,7 +141,7 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 │   ├── index.html              # Main landing portal
 │   ├── cockpit.html            # Interactive WebGL biocompute studio
 │   ├── cockpit.css             # Glassmorphic dark theme styles
-│   ├── cockpit.js              # Real-time state machine & 3Dmol.js viewer
+│   ├── js/cockpit/             # Modular ES6 biocompute studio & 3Dmol.js visualizer
 │   ├── assets/                 # Vector brand icons and logos
 │   └── data/                   # Embedded structural coordinate datasets
 ├── tests/                      # 100% hermetic test suite (77 tests)

@@ -83,6 +83,7 @@ Issues = "https://github.com/Jorwalzzz/bionemo-nim-benchmark/issues"
 jorwal = "serve_cockpit:main"
 jorwal-nim = "serve_cockpit:main"
 bionemo-benchmark = "run_benchmark:main"
+bionemo-mcp = "bionemo_benchmark.mcp.server:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

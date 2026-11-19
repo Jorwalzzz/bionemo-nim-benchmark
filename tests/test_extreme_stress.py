@@ -266,16 +266,16 @@ class TestExtremeLoop4ResistanceEngine:
 class TestExtremeLoop5OrchestratorAndFullCampaign:
     """Loop 5: Full end-to-end campaign execution from target to final dossier."""
 
-    def test_full_autonomous_campaign(self):
+    def test_full_autonomous_campaign(self, tmp_path):
         orchestrator = AgenticScientistOrchestrator(mock=True)
         report = orchestrator.run_discovery_campaign(
-            target_query="KRAS G12D", num_candidates=4
+            target_query="KRAS G12D", num_candidates=4, output_dir=str(tmp_path)
         )
         assert report is not None
         assert isinstance(report, DossierReport)
         assert len(report.top_leads) > 0
         assert report.target.name == "KRAS G12D"
         assert os.path.exists(
-            os.path.join(BASE_DIR, "results", "CANDIDATE_SELECTION_DOSSIER.md")
+            os.path.join(tmp_path, "CANDIDATE_SELECTION_DOSSIER.md")
         )
-        assert os.path.exists(os.path.join(BASE_DIR, "results", "top_leads_docked.sdf"))
+        assert os.path.exists(os.path.join(tmp_path, "top_leads_docked.sdf"))

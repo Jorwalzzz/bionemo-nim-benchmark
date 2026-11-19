@@ -57,7 +57,7 @@ jobs:
       - name: Run Automated Release Audits
         run: |
           set -o pipefail
-          python scripts/run_all_audits.py | tee -a "$GITHUB_STEP_SUMMARY"
+          python scripts/audit/run_all_audits.py | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Viewport & Theme Screenshots
         if: always()
