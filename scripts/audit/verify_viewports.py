@@ -173,11 +173,14 @@ def run_audit(repo_root: Path) -> int:
 
                             page.on(
                                 "console",
-                                lambda msg: console_errors.append(msg.text)
+                                lambda msg, errs=console_errors: errs.append(msg.text)
                                 if msg.type == "error"
                                 else None,
                             )
-                            page.on("pageerror", lambda err: page_errors.append(str(err)))
+                            page.on(
+                                "pageerror",
+                                lambda err, errs=page_errors: errs.append(str(err)),
+                            )
 
                             url = f"{server.base_url}/{page_file}"
                             page.goto(url, wait_until="domcontentloaded", timeout=15000)

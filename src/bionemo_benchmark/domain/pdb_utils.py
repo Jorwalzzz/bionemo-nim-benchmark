@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import Optional
 
 import requests
 
@@ -80,7 +79,7 @@ def fetch_rcsb_pdb(
     for cp in candidate_paths:
         if os.path.exists(cp):
             logger.debug("Loading cached PDB structure from %s", cp)
-            with open(cp, "r", encoding="utf-8") as f:
+            with open(cp, encoding="utf-8") as f:
                 return f.read()
 
     # Query RCSB PDB
@@ -139,8 +138,8 @@ def generate_synthetic_backbone(sequence: str) -> str:
 
 
 def resolve_protein_structure(
-    pdb_id: Optional[str] = None,
-    sequence: Optional[str] = None,
+    pdb_id: str | None = None,
+    sequence: str | None = None,
     cache_dir: str = "data/pdbs",
 ) -> str:
     """

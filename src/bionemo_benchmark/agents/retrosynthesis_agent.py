@@ -4,7 +4,6 @@ Deconstructs lead candidate molecules into commercially accessible chemical buil
 and proposes robust, validated organic synthesis reaction steps.
 """
 
-from typing import List
 
 from rdkit import Chem
 
@@ -29,8 +28,8 @@ class RetrosynthesisAgent:
                 steps=[],
             )
 
-        steps: List[RetrosynthesisStep] = []
-        starting_materials: List[str] = []
+        steps: list[RetrosynthesisStep] = []
+        starting_materials: list[str] = []
 
         # Check for Amide functional group: C(=O)N
         has_amide = mol.HasSubstructMatch(Chem.MolFromSmarts("[NX3][CX3](=[OX1])"))

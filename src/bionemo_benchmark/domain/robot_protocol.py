@@ -5,7 +5,7 @@ Python lab automation scripts (Opentrons API v2.15) and wet-lab SOP cards.
 """
 
 import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from bionemo_benchmark.core.models import RetrosynthesisPlan, RetrosynthesisStep
 
@@ -72,10 +72,10 @@ def run(protocol: protocol_api.ProtocolContext):
 
 
 def generate_ot2_protocol(
-    plan: Optional[RetrosynthesisPlan] = None,
-    lead_id: Optional[str] = None,
-    lead_smiles: Optional[str] = None,
-    synthesis_steps: Optional[List[Dict[str, Any]]] = None,
+    plan: RetrosynthesisPlan | None = None,
+    lead_id: str | None = None,
+    lead_smiles: str | None = None,
+    synthesis_steps: list[dict[str, Any]] | None = None,
     **kwargs,
 ) -> str:
     """
@@ -181,7 +181,7 @@ def generate_ot2_protocol(
         candidate_id=safe_candidate_id,
         num_steps=plan.num_steps,
         feasibility=safe_feasibility,
-        timestamp=datetime.datetime.now(datetime.timezone.utc).strftime(
+        timestamp=datetime.datetime.now(datetime.UTC).strftime(
             "%Y-%m-%d %H:%M UTC"
         ),
         step_commands=all_steps_text,
@@ -189,10 +189,10 @@ def generate_ot2_protocol(
 
 
 def generate_lab_card(
-    plan: Optional[RetrosynthesisPlan] = None,
-    lead_id: Optional[str] = None,
-    target_name: Optional[str] = None,
-    synthesis_steps: Optional[List[Dict[str, Any]]] = None,
+    plan: RetrosynthesisPlan | None = None,
+    lead_id: str | None = None,
+    target_name: str | None = None,
+    synthesis_steps: list[dict[str, Any]] | None = None,
     **kwargs,
 ) -> str:
     """
@@ -228,7 +228,7 @@ def generate_lab_card(
             starting_materials=["Precursor Scaffold A", "Commercial Reagent B"],
         )
 
-    now_str = datetime.datetime.now(datetime.timezone.utc).strftime(
+    now_str = datetime.datetime.now(datetime.UTC).strftime(
         "%Y-%m-%d %H:%M UTC"
     )
     lines = [

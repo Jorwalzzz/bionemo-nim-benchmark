@@ -12,14 +12,17 @@ Coordinates the decentralized autonomous scientific council:
 import csv
 import logging
 import os
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from rdkit import Chem
 
 from bionemo_benchmark.agents.admet_critic import ADMETCriticAgent
-from bionemo_benchmark.infra.message_bus import SwarmMessageBus
 from bionemo_benchmark.agents.docking_agent import BiophysicsDockingAgent
 from bionemo_benchmark.agents.generative_chemist import GenerativeChemistAgent
+from bionemo_benchmark.agents.pi_agent import PrincipalInvestigatorAgent
+from bionemo_benchmark.agents.retrosynthesis_agent import RetrosynthesisAgent
+from bionemo_benchmark.agents.target_scout import TargetScoutAgent
 from bionemo_benchmark.core.models import (
     AgentMessage,
     CouncilMessage,
@@ -27,9 +30,7 @@ from bionemo_benchmark.core.models import (
     MoleculeCandidate,
     RetrosynthesisPlan,
 )
-from bionemo_benchmark.agents.pi_agent import PrincipalInvestigatorAgent
-from bionemo_benchmark.agents.retrosynthesis_agent import RetrosynthesisAgent
-from bionemo_benchmark.agents.target_scout import TargetScoutAgent
+from bionemo_benchmark.infra.message_bus import SwarmMessageBus
 
 logger = logging.getLogger("Orchestrator")
 
@@ -39,8 +40,8 @@ class AgenticScientistOrchestrator:
         self,
         api_key: str = None,
         mock: bool = True,
-        on_message_callback: Optional[Callable[[AgentMessage], None]] = None,
-        on_council_dialogue: Optional[Callable[[CouncilMessage], None]] = None,
+        on_message_callback: Callable[[AgentMessage], None] | None = None,
+        on_council_dialogue: Callable[[CouncilMessage], None] | None = None,
     ):
         self.api_key = api_key or os.getenv("NVIDIA_API_KEY", "")
         self.mock = mock or (not self.api_key)
@@ -66,9 +67,9 @@ class AgenticScientistOrchestrator:
         self.pi_agent = PrincipalInvestigatorAgent(name="PIParetoArbiter")
         self.retro_agent = RetrosynthesisAgent()
 
-        self.audit_log: List[AgentMessage] = []
-        self.latest_retrosynthesis_plan: Optional[RetrosynthesisPlan] = None
-        self.evolution_rounds_data: List[Dict[str, Any]] = []
+        self.audit_log: list[AgentMessage] = []
+        self.latest_retrosynthesis_plan: RetrosynthesisPlan | None = None
+        self.evolution_rounds_data: list[dict[str, Any]] = []
 
     def _emit(self, msg: AgentMessage):
         self.audit_log.append(msg)
@@ -103,7 +104,7 @@ class AgenticScientistOrchestrator:
             },
         )
 
-        all_screened: List[MoleculeCandidate] = []
+        all_screened: list[MoleculeCandidate] = []
         current_seed_smiles = target_profile.reference_ligand_smiles
 
         # Multi-Round Evolutionary Swarm Loop
@@ -367,7 +368,7 @@ class AgenticScientistOrchestrator:
 
     def redock_modified_candidate(
         self, modified_smiles: str, target_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Interactive Chemical Workbench Tool (Human-in-the-Loop):
         Instantly evaluates, ADMET-cleans, and docks a human-edited or tweaked molecule.

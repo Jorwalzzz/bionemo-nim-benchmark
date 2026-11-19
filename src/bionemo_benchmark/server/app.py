@@ -7,11 +7,9 @@ from __future__ import annotations
 import argparse
 import os
 import socket
-import sys
 import threading
 import uuid
 import webbrowser
-from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
@@ -187,7 +185,7 @@ def _free_port(host: str, port: int, tries: int = 20) -> int:
     return port
 
 
-def main(argv: Optional[list[str]] = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     """Entry point for the BioNeMo Cockpit server."""
     import uvicorn
 

@@ -12,7 +12,7 @@ import logging
 import time
 import tracemalloc
 from dataclasses import dataclass, field
-from typing import Any, Dict, Tuple
+from typing import Any
 
 try:
     import torch
@@ -36,10 +36,10 @@ class BaselineProfileResult:
     tokens_per_sec: float
     peak_memory_mb: float
     tensor_bytes: int
-    tensor_shape: Tuple[int, ...]
+    tensor_shape: tuple[int, ...]
     model_name: str
     is_mock: bool = False
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class LocalCPUBaseline:

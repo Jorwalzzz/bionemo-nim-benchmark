@@ -12,8 +12,11 @@ import pytest
 from rdkit import Chem
 
 from bionemo_benchmark.agents.docking_agent import BiophysicsDockingAgent
+from bionemo_benchmark.agents.target_scout import (
+    RESTRICTED_PATHOGEN_SIGNATURES,
+    screen_biosecurity_dual_use,
+)
 from bionemo_benchmark.core.models import MoleculeCandidate, TargetProfile
-from bionemo_benchmark.agents.target_scout import RESTRICTED_PATHOGEN_SIGNATURES, screen_biosecurity_dual_use
 
 
 class TestDrArisThorneBiophysics:
@@ -96,7 +99,7 @@ class TestElenaVanceDesignSystem:
     def test_brand_vector_svg_integrity(self):
         svg_path = os.path.join("results", "assets", "brand_logo.svg")
         assert os.path.exists(svg_path)
-        with open(svg_path, "r", encoding="utf-8") as f:
+        with open(svg_path, encoding="utf-8") as f:
             content = f.read()
         assert "<svg" in content
         assert "viewBox" in content

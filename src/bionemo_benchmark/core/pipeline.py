@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from rdkit import Chem
 from rdkit.Chem import Descriptors, rdMolDescriptors
@@ -32,14 +32,14 @@ class LigandValidationResult:
     raw_smiles: str
     canonical_smiles: str
     is_valid: bool
-    error_message: Optional[str] = None
-    molecular_formula: Optional[str] = None
-    molecular_weight: Optional[float] = None
-    log_p: Optional[float] = None
-    num_hbd: Optional[int] = None
-    num_hba: Optional[int] = None
-    tpsa: Optional[float] = None
-    num_rotatable_bonds: Optional[int] = None
+    error_message: str | None = None
+    molecular_formula: str | None = None
+    molecular_weight: float | None = None
+    log_p: float | None = None
+    num_hbd: int | None = None
+    num_hba: int | None = None
+    tpsa: float | None = None
+    num_rotatable_bonds: int | None = None
 
 
 @dataclass
@@ -86,7 +86,7 @@ class ComplexBenchmarkRecord:
     diffdock_top_confidence: float
     diffdock_is_mock: bool
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Converts the record into a flat dictionary suitable for Pandas DataFrame export."""
         return {
             "complex_id": self.complex_id,
@@ -134,10 +134,10 @@ class BenchmarkPipeline:
 
     def __init__(
         self,
-        nim_client: Optional[NimBioClient] = None,
-        cpu_baseline: Optional[LocalCPUBaseline] = None,
+        nim_client: NimBioClient | None = None,
+        cpu_baseline: LocalCPUBaseline | None = None,
         mock: bool = False,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ):
         self.client = nim_client or NimBioClient(api_key=api_key, mock=mock)
         self.baseline = cpu_baseline or LocalCPUBaseline(mock_fallback=True)
@@ -209,7 +209,7 @@ class BenchmarkPipeline:
 
     def evaluate_complex(
         self,
-        sample: Dict[str, Any],
+        sample: dict[str, Any],
         benchmark_runs: int = 2,
     ) -> ComplexBenchmarkRecord:
         """
@@ -331,11 +331,11 @@ class BenchmarkPipeline:
 
     def run_suite(
         self,
-        samples: List[Dict[str, Any]],
+        samples: list[dict[str, Any]],
         benchmark_runs: int = 2,
-    ) -> List[ComplexBenchmarkRecord]:
+    ) -> list[ComplexBenchmarkRecord]:
         """Runs the benchmark pipeline across a list of target complexes."""
-        records: List[ComplexBenchmarkRecord] = []
+        records: list[ComplexBenchmarkRecord] = []
         for sample in samples:
             record = self.evaluate_complex(sample, benchmark_runs=benchmark_runs)
             records.append(record)

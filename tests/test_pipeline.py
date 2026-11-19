@@ -199,7 +199,7 @@ class TestPdbUtils:
 
         seq = "MQIFVKTLTG"
         pdb_str = generate_synthetic_backbone(seq)
-        lines = [l for l in pdb_str.splitlines() if l.startswith("ATOM")]
+        lines = [line for line in pdb_str.splitlines() if line.startswith("ATOM")]
         assert len(lines) == len(seq)
         assert "CA" in lines[0]
         assert pdb_str.strip().endswith("END")

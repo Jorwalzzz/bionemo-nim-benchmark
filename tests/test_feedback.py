@@ -4,10 +4,9 @@ Unit tests for Authenticated Feedback Submissions and Ingestion.
 
 import os
 import tempfile
+
 import pytest
-os.environ["PBKDF2_ITERATIONS"] = "1000"
-import bionemo_benchmark.infra.auth_manager as am
-am.PBKDF2_ITERATIONS = 1000
+
 from bionemo_benchmark.infra.auth_manager import AuthManager
 
 
@@ -16,7 +15,9 @@ def auth_mgr():
     with tempfile.TemporaryDirectory() as tmpdir:
         ledger = os.path.join(tmpdir, "test_auth.json")
         feedback = os.path.join(tmpdir, "test_feedback.json")
-        mgr = AuthManager(ledger_path=ledger, feedback_path=feedback, daily_limit=5)
+        mgr = AuthManager(
+            ledger_path=ledger, feedback_path=feedback, daily_limit=5, iterations=1000
+        )
         yield mgr
 
 

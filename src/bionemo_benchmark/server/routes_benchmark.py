@@ -12,7 +12,7 @@ import platform
 import re
 import time
 import urllib.request
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import (
@@ -109,7 +109,7 @@ def get_index_html_page(request: Request) -> Response:
 def get_landing(request: Request) -> Response:
     """Serves high-impact executive showcase landing portal."""
     if os.path.exists(LANDING_PATH):
-        with open(LANDING_PATH, "r", encoding="utf-8") as f:
+        with open(LANDING_PATH, encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return get_cockpit(request)
 
@@ -120,7 +120,7 @@ def get_cockpit(request: Request) -> Response:
     session_id, signed_token, _, _, _ = get_client_identifiers(request)
 
     if os.path.exists(HTML_PATH):
-        with open(HTML_PATH, "r", encoding="utf-8") as f:
+        with open(HTML_PATH, encoding="utf-8") as f:
             content = f.read()
         resp = with_cookie(HTMLResponse(content=content), signed_token)
         resp.delete_cookie(key="creator_mode")
@@ -130,7 +130,7 @@ def get_cockpit(request: Request) -> Response:
 
 @router.get("/api/health")
 @router.get("/healthz")
-def get_health() -> Dict[str, Any]:
+def get_health() -> dict[str, Any]:
     return {
         "status": "healthy",
         "service": "Agentic BioNeMo Cockpit API",
@@ -152,7 +152,7 @@ def get_dossier() -> Response:
                 "content": "No active dossier yet. Trigger a run first.",
             }
         )
-    with open(abs_dossier, "r", encoding="utf-8") as f:
+    with open(abs_dossier, encoding="utf-8") as f:
         content = f.read()
     return Response(
         content=content,
@@ -224,7 +224,7 @@ def download_powershell_installer() -> Response:
 def get_download_checksums() -> Response:
     """Cryptographic SHA-256 attestation manifest for installers and package integrity."""
     files_to_hash = ["install.bat", "install.sh", "install.ps1", "InstallerWizard.cs"]
-    checksums: Dict[str, Optional[str]] = {}
+    checksums: dict[str, str | None] = {}
     for fname in files_to_hash:
         fpath = os.path.join(INSTALLERS_DIR, fname)
         if os.path.exists(fpath):
@@ -247,7 +247,7 @@ def get_download_checksums() -> Response:
 
 
 @router.get("/api/setup-guide")
-def get_setup_guide() -> Dict[str, str]:
+def get_setup_guide() -> dict[str, str]:
     return {
         "windows_powershell": "irm https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.ps1 | iex",
         "unix_curl": "curl -sSL https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/install.sh | bash",
@@ -278,7 +278,7 @@ def trigger_run(
         target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
     )
 
-    retro_data: Dict[str, Any] = {}
+    retro_data: dict[str, Any] = {}
     if orchestrator.latest_retrosynthesis_plan:
         rp = orchestrator.latest_retrosynthesis_plan
         retro_data = {
@@ -397,7 +397,7 @@ async def stream_council_run(
             try:
                 item = await asyncio.wait_for(queue.get(), timeout=0.2)
                 yield f"data: {json.dumps(item)}\n\n"
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": keep-alive\n\n"
 
         try:
@@ -505,7 +505,7 @@ def get_target_pdb(pdb_id: str) -> Response:
         )
 
     if os.path.exists(file_path):
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return Response(content=f.read(), media_type="chemical/x-pdb")
 
     try:
@@ -534,7 +534,7 @@ async def api_redock(request: Request) -> Any:
             },
         )
 
-    if not os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+    if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() not in ("true", "1", "yes"):
         user = get_authenticated_user(request)
         if not user:
             return JSONResponse(
@@ -790,7 +790,7 @@ async def api_resistance_evolve(request: Request) -> Response:
             },
         )
 
-    if not os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+    if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() not in ("true", "1", "yes"):
         user = get_authenticated_user(request)
         if not user:
             return JSONResponse(
@@ -875,7 +875,7 @@ async def api_resistance_evolve(request: Request) -> Response:
 
 
 @router.get("/api/benchmark/speedup")
-def get_hardware_speedup_benchmark() -> Dict[str, Any]:
+def get_hardware_speedup_benchmark() -> dict[str, Any]:
     """
     Real-time benchmark comparing local laptop CPU compute against
     NVIDIA NIM H100 Tensor Core GPU cloud microservices.

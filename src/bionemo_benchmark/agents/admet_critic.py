@@ -5,7 +5,6 @@ PAINS structural alerts, and ADMET toxicity heuristics.
 """
 
 import logging
-from typing import List, Tuple
 
 from rdkit import Chem
 from rdkit.Chem import QED, Crippen, Descriptors, rdMolDescriptors
@@ -35,8 +34,8 @@ class ADMETCriticAgent:
         }
 
     def evaluate_candidates(
-        self, candidates: List[MoleculeCandidate]
-    ) -> Tuple[List[MoleculeCandidate], AgentMessage]:
+        self, candidates: list[MoleculeCandidate]
+    ) -> tuple[list[MoleculeCandidate], AgentMessage]:
         """Runs full ADMET screening across all generated molecule candidates."""
         passed_count = 0
         flagged_count = 0

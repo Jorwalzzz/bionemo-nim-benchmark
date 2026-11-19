@@ -15,7 +15,7 @@ import random
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -55,13 +55,13 @@ class LatencyProfile:
 class ESM2Response:
     """Standardized response from ESM-2 embedding endpoint."""
 
-    embeddings: List[List[float]]
+    embeddings: list[list[float]]
     sequence_length: int
     hidden_dim: int
     latency: LatencyProfile
     model: str = "nvidia/esm2-650m"
     is_mock: bool = False
-    raw_response: Dict[str, Any] = field(default_factory=dict)
+    raw_response: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -72,20 +72,20 @@ class DiffDockPose:
     confidence_score: float
     predicted_affinity_kcal_mol: float
     rmsd: float
-    sdf_data: Optional[str] = None
+    sdf_data: str | None = None
 
 
 @dataclass
 class DiffDockResponse:
     """Standardized response from DiffDock docking endpoint."""
 
-    poses: List[DiffDockPose]
+    poses: list[DiffDockPose]
     num_poses: int
     top_affinity_kcal_mol: float
     latency: LatencyProfile
     model: str = "nvidia/diffdock"
     is_mock: bool = False
-    raw_response: Dict[str, Any] = field(default_factory=dict)
+    raw_response: dict[str, Any] = field(default_factory=dict)
 
 
 class NimBioClient:
@@ -97,7 +97,7 @@ class NimBioClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         base_url: str = DEFAULT_NIM_BASE_URL,
         esm2_endpoint: str = DEFAULT_ESM2_ENDPOINT,
         diffdock_endpoint: str = DEFAULT_DIFFDOCK_ENDPOINT,
@@ -143,7 +143,7 @@ class NimBioClient:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -173,8 +173,8 @@ class NimBioClient:
         self,
         method: str,
         url: str,
-        payload: Dict[str, Any],
-    ) -> Tuple[requests.Response, LatencyProfile]:
+        payload: dict[str, Any],
+    ) -> tuple[requests.Response, LatencyProfile]:
         """
         Executes HTTP request with explicit handling for HTTP 429 (Rate Limit)
         using exponential backoff and jitter.
@@ -259,7 +259,9 @@ class NimBioClient:
 
                 safe_err = SecretScrubber.scrub(str(e))
                 if attempt > self.max_retries:
-                    raise RuntimeError(f"NIM upstream communication failed: {safe_err}")
+                    raise RuntimeError(
+                        f"NIM upstream communication failed: {safe_err}"
+                    ) from e
                 sleep_time = self.backoff_factor * (2**attempt) + random.uniform(
                     0.1, 0.5
                 )
@@ -295,7 +297,7 @@ class NimBioClient:
         )
 
         random.seed(hash(clean_seq) % (2**31 - 1))
-        mock_embeddings: List[List[float]] = [
+        mock_embeddings: list[list[float]] = [
             [round(random.gauss(0.0, 0.5), 4) for _ in range(hidden_dim)]
             for _ in range(min(seq_len, 4))
         ]
@@ -344,7 +346,7 @@ class NimBioClient:
 
             if resp.status_code == 200:
                 data = resp.json()
-                embeddings: List[List[float]] = []
+                embeddings: list[list[float]] = []
                 if (
                     "data" in data
                     and isinstance(data["data"], list)
@@ -408,7 +410,7 @@ class NimBioClient:
         )
 
         base_affinity = -7.5 - (hash(ligand_smiles) % 30) / 10.0
-        poses: List[DiffDockPose] = []
+        poses: list[DiffDockPose] = []
         for rank in range(1, num_poses + 1):
             conf = round(-0.4 - (rank * 0.15) + random.uniform(-0.05, 0.05), 3)
             aff = round(base_affinity + (rank * 0.4) + random.uniform(-0.2, 0.2), 2)
@@ -439,7 +441,7 @@ class NimBioClient:
         self,
         protein_sequence: str,
         ligand_smiles: str,
-        protein_pdb: Optional[str] = None,
+        protein_pdb: str | None = None,
         num_poses: int = 2,
     ) -> DiffDockResponse:
         """
@@ -458,7 +460,7 @@ class NimBioClient:
                 "data/pdbs/1UBQ.pdb",
             ]:
                 if os.path.exists(potential_path):
-                    with open(potential_path, "r", encoding="utf-8") as f:
+                    with open(potential_path, encoding="utf-8") as f:
                         pdb_text = f.read()
                     break
 
@@ -496,7 +498,7 @@ class NimBioClient:
                     confidences = data.get("position_confidence", [])
                     sdf_chunks = data.get("ligand_positions", [])
 
-                    parsed_poses: List[DiffDockPose] = []
+                    parsed_poses: list[DiffDockPose] = []
                     for idx, conf in enumerate(confidences):
                         conf_val = float(conf) if conf is not None else -1.5
                         # Estimate binding free energy from DiffDock confidence: ~ -7.0 + (conf * 1.5)

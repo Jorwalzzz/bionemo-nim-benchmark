@@ -4,9 +4,10 @@ Unit tests for AuthManager and Synchronized 3:00 PM IST Quota Engine.
 
 import os
 import tempfile
-import time
+
 import pytest
-from bionemo_benchmark.infra.auth_manager import AuthManager, RESET_OFFSET_SECONDS
+
+from bionemo_benchmark.infra.auth_manager import AuthManager
 
 
 @pytest.fixture
@@ -127,6 +128,7 @@ class TestAuthManager:
 def test_api_auth_and_feedback_flow():
     """Verify end-to-end FastAPI routes for auth and feedback."""
     from starlette.testclient import TestClient
+
     from serve_cockpit import app
 
     client = TestClient(app)
@@ -236,6 +238,7 @@ def test_email_validation_rules():
 def test_api_validate_email_endpoint():
     """Verify POST /api/auth/validate-email returns real-time feedback."""
     from starlette.testclient import TestClient
+
     from serve_cockpit import app
 
     client = TestClient(app)
@@ -295,7 +298,7 @@ def test_brute_force_account_lockout(auth_mgr):
     auth_mgr.register_user(email, "SecretPassword123!")
 
     # 4 failed attempts - not yet locked
-    for i in range(4):
+    for _ in range(4):
         ok, _, msg = auth_mgr.authenticate_user(email, "WrongPassword!")
         assert ok is False
         assert "temporarily locked" not in msg

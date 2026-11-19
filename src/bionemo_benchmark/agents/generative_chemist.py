@@ -7,7 +7,6 @@ to generate novel bioisosteric small-molecule analogs.
 import logging
 import os
 import time
-from typing import List, Tuple
 
 import requests
 
@@ -33,13 +32,13 @@ class GenerativeChemistAgent:
         num_molecules: int = 15,
         steering_prompt: str = "",
         round_num: int = 1,
-    ) -> Tuple[List[MoleculeCandidate], AgentMessage]:
+    ) -> tuple[list[MoleculeCandidate], AgentMessage]:
         """
         Executes generative latent space exploration via NVIDIA NIM MolMIM.
         Supports feedback steering from the PI agent.
         """
         start_time = time.time()
-        candidates: List[MoleculeCandidate] = []
+        candidates: list[MoleculeCandidate] = []
 
         if not self.mock and self.api_key:
             try:
@@ -102,7 +101,7 @@ class GenerativeChemistAgent:
 
     def _generate_target_specific_scaffolds(
         self, parent_smiles: str, target_name: str, count: int, round_num: int
-    ) -> List[MoleculeCandidate]:
+    ) -> list[MoleculeCandidate]:
         """Synthesizes high-affinity bioisosteric analogs targeted to the specific pocket."""
         # Curated bioisosteric analogs based on target oncology pocket
         if "KRAS" in target_name.upper():

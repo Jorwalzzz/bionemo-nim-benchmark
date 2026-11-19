@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 import matplotlib
 import numpy as np
@@ -32,7 +32,7 @@ CHARCOAL = "#212529"
 BG_LIGHT = "#F8F9FA"
 
 
-def compute_summary_statistics(values: List[float]) -> Dict[str, float]:
+def compute_summary_statistics(values: list[float]) -> dict[str, float]:
     """Computes mean, median, standard deviation, min, max, and 95th percentile."""
     if not values:
         return {
@@ -67,7 +67,7 @@ class BenchmarkReporter:
     """
 
     def __init__(
-        self, records: List[ComplexBenchmarkRecord], output_dir: str = "results"
+        self, records: list[ComplexBenchmarkRecord], output_dir: str = "results"
     ):
         self.records = records
         self.output_dir = output_dir
@@ -81,7 +81,7 @@ class BenchmarkReporter:
         logger.info("Saved benchmark CSV to %s", filepath)
         return filepath
 
-    def get_aggregate_stats(self) -> Dict[str, Any]:
+    def get_aggregate_stats(self) -> dict[str, Any]:
         """Calculates aggregate latency and throughput statistics."""
         return {
             "nim_latency_stats": compute_summary_statistics(

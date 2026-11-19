@@ -1,14 +1,12 @@
-import math
-import os
-import re
-
 """
 Agentic BioNeMo - Agent 1: Target Scout Agent
 Resolves oncology targets, fetches 3D crystal structures, identifies binding pockets,
 and validates canonical amino acid sequences.
 """
 import logging
-from typing import Dict, Optional, Tuple
+import math
+import os
+import re
 
 from bionemo_benchmark.core.models import AgentMessage, TargetProfile
 from bionemo_benchmark.domain.pdb_utils import (
@@ -28,7 +26,7 @@ RESTRICTED_PATHOGEN_SIGNATURES = {
 }
 
 
-def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
+def screen_biosecurity_dual_use(sequence: str) -> tuple[bool, str | None]:
     """
     Evaluates sequence against GDM-100 / Select Agent biosecurity catalogs.
     Implements multi-scale exact k-mer (12-mer) + fuzzy sliding-window homology (>=80% identity).
@@ -55,14 +53,14 @@ def screen_biosecurity_dual_use(sequence: str) -> Tuple[bool, Optional[str]]:
                 for j in range(0, len(clean) - window_size + 1, 5):
                     target_window = clean[j : j + window_size]
                     mismatches = sum(
-                        1 for a, b in zip(sig_window, target_window) if a != b
+                        1 for a, b in zip(sig_window, target_window, strict=True) if a != b
                     )
                     if mismatches <= max_mismatches:
                         return False, f"{agent_name} (Homology Variant)"
     return True, None
 
 
-TARGET_REGISTRY: Dict[str, Dict] = {
+TARGET_REGISTRY: dict[str, dict] = {
     "SARS-CoV-2 Mpro": {
         "gene": "ORF1ab",
         "uniprot_id": "P0DTD1",
@@ -124,7 +122,7 @@ TARGET_REGISTRY: Dict[str, Dict] = {
 class TargetScoutAgent:
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         mock: bool = True,
         name: str = "TargetScout",
     ):
@@ -142,8 +140,8 @@ class TargetScoutAgent:
         return len(cleaned) >= 15 and all(c in "ACDEFGHIKLMNPQRSTVWY" for c in cleaned)
 
     def fold_sequence_with_esmfold(
-        self, sequence: str, target_name: Optional[str] = None
-    ) -> Tuple[TargetProfile, AgentMessage]:
+        self, sequence: str, target_name: str | None = None
+    ) -> tuple[TargetProfile, AgentMessage]:
         """
         Predicts 3D atomic coordinates de novo from primary amino acid sequence
         using NVIDIA NIM ESMFold (or high-fidelity pLDDT simulation in mock mode).
@@ -221,10 +219,10 @@ class TargetScoutAgent:
                     if pdb_content:
                         # Extract pLDDT from B-factors
                         plddts = []
-                        for l in pdb_content.splitlines():
-                            if l.startswith("ATOM") and l[12:16].strip() == "CA":
+                        for line in pdb_content.splitlines():
+                            if line.startswith("ATOM") and line[12:16].strip() == "CA":
                                 try:
-                                    plddts.append(float(l[60:66].strip()))
+                                    plddts.append(float(line[60:66].strip()))
                                 except (ValueError, IndexError):
                                     continue
                         if plddts:
@@ -303,7 +301,7 @@ class TargetScoutAgent:
         )
         return profile, message
 
-    def scout_target(self, query: str) -> Tuple[TargetProfile, AgentMessage]:
+    def scout_target(self, query: str) -> tuple[TargetProfile, AgentMessage]:
         """Resolves target: auto-detects amino acid sequences (ESMFold), RCSB PDB IDs, or preset oncology targets."""
         # 1. Check if query is an amino acid sequence
         if self.is_amino_acid_sequence(query):

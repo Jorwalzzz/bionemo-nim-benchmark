@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -29,7 +29,7 @@ from bionemo_benchmark.server.serializers import (
 router: APIRouter = APIRouter()
 
 
-def gate_run(request: Request, target: str) -> Tuple[Optional[Response], Optional[Tuple[str, Optional[str], Dict[str, Any]]]]:
+def gate_run(request: Request, target: str) -> tuple[Response | None, tuple[str, str | None, dict[str, Any]] | None]:
     """Origin check, sanitize, and consume a trial run. Returns (error_response, ctx)."""
     if not verify_request_origin(request):
         return (
@@ -44,7 +44,7 @@ def gate_run(request: Request, target: str) -> Tuple[Optional[Response], Optiona
         )
     target = sanitize_target_query(target)
     # In production/trial mode, require authenticated researcher account and 3:00 PM IST quota
-    if not os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+    if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() not in ("true", "1", "yes"):
         user = get_authenticated_user(request)
         if not user:
             return (
@@ -164,7 +164,7 @@ def reset_trial(request: Request) -> Response:
 
 
 @router.post("/api/auth/validate-email")
-async def api_validate_email(request: Request) -> Dict[str, Any]:
+async def api_validate_email(request: Request) -> dict[str, Any]:
     """Validates email format, domain existence checks, typo suggestions, and disposable address detection."""
     try:
         body = await request.json()
@@ -318,7 +318,7 @@ def api_logout(request: Request) -> Response:
 
 
 @router.get("/api/auth/me")
-def api_get_current_user(request: Request) -> Dict[str, Any]:
+def api_get_current_user(request: Request) -> dict[str, Any]:
     """Fetches currently authenticated user and synchronized 3:00 PM IST quota."""
     user = get_authenticated_user(request)
     if user:

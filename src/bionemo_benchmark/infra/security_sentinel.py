@@ -14,7 +14,6 @@ Designed to satisfy NVIDIA Inception, GxP, and HIPAA zero-trust guidelines:
 import re
 import threading
 import time
-from typing import Dict, Optional, Tuple
 
 # ==============================================================================
 # 1. BIOSECURITY & DUAL-USE TOXIN SCREENING
@@ -64,8 +63,8 @@ class BiosecurityScreener:
 
     @classmethod
     def screen_target(
-        cls, target_name: str, sequence: Optional[str] = None
-    ) -> Tuple[bool, Optional[str]]:
+        cls, target_name: str, sequence: str | None = None
+    ) -> tuple[bool, str | None]:
         """
         Validates target against biological safety guidelines.
         Returns (is_safe: bool, rejection_reason: Optional[str]).
@@ -117,10 +116,10 @@ class TokenBucketRateLimiter:
         """
         self.capacity = float(capacity)
         self.refill_rate = float(refill_rate_per_sec)
-        self._buckets: Dict[str, Dict[str, float]] = {}
+        self._buckets: dict[str, dict[str, float]] = {}
         self._lock = threading.Lock()
 
-    def allow_request(self, ip_str: str, cost: float = 1.0) -> Tuple[bool, float]:
+    def allow_request(self, ip_str: str, cost: float = 1.0) -> tuple[bool, float]:
         """
         Checks if IP is allowed to proceed.
         Returns (allowed: bool, retry_after_seconds: float).

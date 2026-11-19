@@ -7,7 +7,7 @@ Directly addresses NVIDIA strategic priorities:
 3. BioNeMoBlueprintGenerator: Generates official production-ready Docker Compose & Helm Blueprints.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 
 class GreenComputeProfiler:
@@ -25,7 +25,7 @@ class GreenComputeProfiler:
     @classmethod
     def calculate_campaign_impact(
         cls, cpu_time_sec: float, gpu_time_sec: float, num_molecules: int = 1000
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calculates energy (kWh), cloud compute cost ($), and carbon footprint (gCO2e).
         """
@@ -87,7 +87,7 @@ class MultiGpuScalingEngine:
     @classmethod
     def simulate_cluster_scaling(
         cls, base_throughput_tokens_per_sec: float = 14500.0
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Returns scaling telemetry curves across 1, 2, 4, and 8 GPU configurations.
         Includes NVLink bus utilization and FP8 Tensor Core speedups.
@@ -247,7 +247,7 @@ services:
 """
 
     @staticmethod
-    def generate_blueprint_spec() -> Dict[str, Any]:
+    def generate_blueprint_spec() -> dict[str, Any]:
         return {
             "blueprint_version": "2.2.0",
             "name": "nvidia-bionemo-agentic-drug-discovery",

@@ -68,7 +68,11 @@ class TestBionemoMcpTools:
     def test_package_and_shim_exports(self):
         from bionemo_benchmark.mcp.server import (
             bionemo_validate_sequence as pkg_val,
+        )
+        from bionemo_benchmark.mcp.server import (
             main as pkg_main,
+        )
+        from bionemo_benchmark.mcp.server import (
             mcp as pkg_mcp,
         )
         assert callable(pkg_val)
