@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install System Dependencies (libGL & Cairo for RDKit / Matplotlib)
         run: |
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build Docker Container
         run: |
