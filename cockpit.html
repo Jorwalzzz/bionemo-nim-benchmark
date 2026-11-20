@@ -245,30 +245,64 @@
               <!-- Target Selection Tabs -->
         <div class="mb-3">
           <div class="flex items-center justify-between mb-2">
-            <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider block">🎯 Oncology Target</label>
+            <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+              </svg>
+              <span>Therapeutic Target</span>
+            </label>
             <span id="targetModeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRESET</span>
           </div>
           <div class="grid grid-cols-3 gap-1 bg-[#101620] p-1 rounded-lg border border-surface-border mb-2.5">
             <button aria-label="Switch to target presets" type="button" onclick="switchTargetTab('presets')" id="tabBtnPresets" class="py-1 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all">Presets</button>
             <button aria-label="Switch to RCSB PDB target input" type="button" onclick="switchTargetTab('rcsb')" id="tabBtnRcsb" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">RCSB PDB</button>
-            <button aria-label="Switch to ESMFold de novo folding" type="button" onclick="switchTargetTab('esmfold')" id="tabBtnEsmfold" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">🧬 ESMFold</button>
+            <button aria-label="Switch to ESMFold de novo folding" type="button" onclick="switchTargetTab('esmfold')" id="tabBtnEsmfold" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">ESMFold</button>
           </div>
 
           <!-- Tab 1: Presets -->
           <div id="targetTabPresets">
-            <select id="targetSelect" aria-label="Target Selection" class="w-full text-sm rounded-lg px-3 py-2.5 font-medium focus:outline-none focus:ring-2 transition-all" style="background: #161b22; border: 1px solid #30363d; color: #e6edf3;" onchange="updateTargetInfo()">
-              <option value="KRAS G12D">🧬 KRAS G12D (Colon/Lung Cancer)</option>
-              <option value="EGFR T790M">🔬 EGFR T790M (Lung Cancer)</option>
-              <option value="SARS-CoV-2 Mpro">🦠 SARS-CoV-2 Mpro (COVID-19)</option>
-              <option value="HER2">💊 HER2/ERBB2 (Breast Cancer)</option>
+            <select id="targetSelect" aria-label="Target Selection" class="w-full text-xs rounded-lg px-3 py-2.5 font-medium focus:outline-none focus:ring-2 transition-all" style="background: #161b22; border: 1px solid #30363d; color: #e6edf3;" onchange="updateTargetInfo()">
+              <optgroup label="Repo Benchmark Core">
+                <option value="7RPZ" selected>KRAS G12D (7RPZ · MRTX1133)</option>
+                <option value="4MNE">BRAF V600E (4MNE · Vemurafenib)</option>
+                <option value="2HYY">BCR-ABL1 (2HYY · Imatinib)</option>
+                <option value="3IKA">EGFR T790M (3IKA · WZ4002)</option>
+                <option value="1DHF">Human DHFR (1DHF · Folate)</option>
+              </optgroup>
+              <optgroup label="Oncology Kinases">
+                <option value="3PP0">HER2/ERBB2 (3PP0 · SYR127063)</option>
+                <option value="4CLI">ALK (4CLI · Lorlatinib)</option>
+                <option value="4JPS">PI3Kα (4JPS · Alpelisib)</option>
+                <option value="5P9J">BTK (5P9J · Ibrutinib)</option>
+              </optgroup>
+              <optgroup label="Cell Cycle & PPI">
+                <option value="5L2I">CDK6 (5L2I · Palbociclib)</option>
+                <option value="6O0K">BCL-2 (6O0K · Venetoclax · bRo5)</option>
+                <option value="5DS3">PARP1 (5DS3 · Olaparib)</option>
+                <option value="5J89">PD-L1 Dimer (5J89 · BMS-202)</option>
+              </optgroup>
+              <optgroup label="Infectious Disease">
+                <option value="7VH8">SARS-CoV-2 Mpro (7VH8 · Nirmatrelvir)</option>
+                <option value="7BV2">SARS-CoV-2 RdRp (7BV2 · Remdesivir)</option>
+                <option value="4TZK">M. tuberculosis InhA (4TZK · Pyrrolidine Carboxamide)</option>
+              </optgroup>
             </select>
           </div>
 
           <!-- Tab 2: RCSB PDB -->
           <div id="targetTabRcsb" class="hidden">
             <div class="flex gap-1.5">
-              <input type="text" id="customTargetInput" aria-label="Custom RCSB PDB ID" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
+              <input type="text" id="customTargetInput" aria-label="Custom RCSB PDB ID" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" oninput="onCustomTargetInput(this.value)" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
               <button aria-label="Fetch target structure from RCSB PDB" type="button" onclick="fetchCustomTarget()" class="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors">Fetch</button>
+            </div>
+            <div id="rcsbMetadataPreview" class="hidden mt-2 p-2.5 rounded-lg bg-black/40 border border-surface-border text-xs">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-emerald-400 font-mono text-[11px]" id="rcsbPreviewPdb"></span>
+                <span class="font-mono text-[10px] text-amber-400 font-semibold" id="rcsbPreviewRes"></span>
+              </div>
+              <p class="text-[11px] text-gray-300 leading-snug line-clamp-2" id="rcsbPreviewTitle"></p>
             </div>
             <p class="text-[10px] text-gray-500 mt-1">Fetches experimental crystallographic receptor from RCSB PDB.</p>
           </div>
@@ -283,30 +317,39 @@
               <textarea id="esmfoldSeqInput" aria-label="ESMFold Amino Acid Sequence" rows="3" placeholder="Paste FASTA or amino acid sequence (e.g. MTEYKLVVV...)" oninput="updateSeqCount()" class="w-full text-[11px] p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 font-mono focus:border-cyan-400 focus:outline-none resize-none"></textarea>
             </div>
             <div>
-              <div class="text-[10px] text-gray-400 mb-1">Quick Load Oncogenic Mutants:</div>
-              <div class="flex flex-wrap gap-1">
-                <button aria-label="Load de novo protein sequence preset" type="button" onclick="loadEsmPreset('kras')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">KRAS G12D</button>
-                <button aria-label="Load de novo protein sequence preset" type="button" onclick="loadEsmPreset('braf')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">BRAF V600E</button>
-                <button aria-label="Load de novo protein sequence preset" type="button" onclick="loadEsmPreset('mpro')" class="text-[10px] px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Mpro C145A</button>
+              <div class="text-[10px] text-gray-400 mb-1">Example FASTA Sequences:</div>
+              <div class="flex flex-wrap gap-1.5">
+                <button aria-label="Load Ubiquitin 76aa FASTA sequence" type="button" onclick="loadEsmPreset('ubiquitin')" id="chipEsmUbiquitin" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">Ubiquitin 76aa</button>
+                <button aria-label="Load KRAS G12D 169aa FASTA sequence" type="button" onclick="loadEsmPreset('kras')" id="chipEsmKras" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">KRAS G12D 169aa</button>
+                <button aria-label="Load Mpro 306aa FASTA sequence" type="button" onclick="loadEsmPreset('mpro')" id="chipEsmMpro" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">Mpro 306aa</button>
               </div>
             </div>
             <button aria-label="Fold de novo sequence with ESMFold" type="button" onclick="foldDeNovoSequence()" class="w-full py-1.5 text-xs font-bold rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors">
-              <span>🧬 Fold De Novo Structure (ESMFold)</span>
+              <span>Fold De Novo Structure (ESMFold)</span>
             </button>
           </div>
         </div>
 
       <!-- Target Info Card -->
       <div id="targetInfoCard" class="glass-bright rounded-xl p-4 mb-5">
-        <div class="flex items-center gap-2 mb-3">
-          <div class="w-2 h-2 rounded-full" style="background: var(--nvidia-green);"></div>
-          <span id="targetName" class="text-sm font-bold text-glow-green" style="color: var(--nvidia-green);">KRAS G12D</span>
+        <div class="flex items-center justify-between mb-2.5">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full" style="background: var(--nvidia-green);"></div>
+            <span id="targetName" class="text-sm font-bold text-glow-green" style="color: var(--nvidia-green);">KRAS G12D (Switch-II Pocket)</span>
+          </div>
+          <span id="targetTelemetryBadge" class="badge-illustrative text-[10px]">Illustrative In Silico</span>
         </div>
         <div class="space-y-1.5 text-xs">
-          <div class="flex justify-between"><span class="text-gray-500">PDB ID</span><span id="targetPdb" class="font-mono text-cyan-400">8AZV</span></div>
-          <div class="flex justify-between"><span class="text-gray-500">Indication</span><span id="targetInd" class="text-gray-300">Colorectal/NSCLC</span></div>
-          <div class="flex justify-between"><span class="text-gray-500">Key Pocket</span><span id="targetPocket" class="text-gray-300">Switch II</span></div>
-          <div class="flex justify-between"><span class="text-gray-500">Mutant</span><span id="targetMut" class="font-mono" style="color: #f87171;">G12D</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">PDB ID</span><span id="targetPdb" class="font-mono text-cyan-400">7RPZ</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Indication</span><span id="targetInd" class="text-gray-300">Repo Benchmark Core</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Key Pocket</span><span id="targetPocket" class="text-gray-300 font-mono text-[11px] truncate max-w-[170px]" title="Switch-II Pocket (G12D Induced Subpocket)">Switch-II Pocket</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Ligand / CCD</span><span id="targetLigand" class="text-gray-300 font-mono text-[11px]">MRTX1133 (7RP)</span></div>
+          <div class="flex justify-between"><span class="text-gray-500">Mutant / Status</span><span id="targetMut" class="font-mono" style="color: #f87171;">G12D</span></div>
+          <div id="targetMetricsRow" class="pt-2 border-t border-surface-border grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
+            <div class="p-1 rounded bg-black/40"><div class="text-gray-500">Est. Kd</div><div id="targetKd" class="text-cyan-400 font-bold">0.2 nM</div></div>
+            <div class="p-1 rounded bg-black/40"><div class="text-gray-500">Pred. ΔG</div><div id="targetDeltaG" class="text-emerald-400 font-bold">-12.4 kcal</div></div>
+            <div class="p-1 rounded bg-black/40"><div class="text-gray-500">Res.</div><div id="targetRes" class="text-amber-400 font-bold">1.30 Å</div></div>
+          </div>
         </div>
       </div>
 
@@ -405,8 +448,10 @@
   <p class="text-gray-500 text-[10px] leading-normal">
     Special thanks to the <a href="https://developer.nvidia.com" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-nvidia-green underline">NVIDIA Developer Program</a> & <a href="https://build.nvidia.com/explore/discover" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-nvidia-green underline">BioNeMo team</a> for providing the GPU microservices (MolMIM, DiffDock, ESM-2), and the open-source scientific community (RDKit, RCSB PDB, 3Dmol.js).
   </p>
-  <div class="mt-2 flex items-center gap-2 text-[10px] text-gray-500 font-mono">
+  <div class="mt-2 flex items-center gap-2 text-[10px] text-gray-500 font-mono flex-wrap">
     <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">AGPLv3 Copyleft</span>
+    <span>•</span>
+    <span class="badge-measured px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">145/145 HERMETIC TESTS PASSING</span>
     <span>•</span>
     <span>Permanent Academic DOI via Zenodo</span>
   </div>
@@ -1138,6 +1183,7 @@
 </div>
 
 <script src="./js/theme.js"></script>
+<script type="module" src="./js/data/target-presets.js"></script>
 <script type="module" src="./js/cockpit/main.js"></script>
 </body>
 </html>

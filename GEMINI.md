@@ -26,6 +26,6 @@ This document establishes project-wide invariants operating at highest workspace
 
 ## 5. Scientific Parity & Regulatory Attribution
 - **Single Source of Truth:** All speedup metrics, geometric means (54.1x), and campaign hours saved (88.5h / 10k) must derive directly from `results/benchmark_summary.json`.
-- **License & Tests:** Preserve the AGPLv3 license notices and the 101/101 hermetic test count across public views.
+- **License & Tests:** Preserve the AGPLv3 license notices and the 145/145 hermetic test count across public views.
 - **Mandatory Trademark Disclaimer:** The full legal notice must appear on all public entrypoints:
   > **NVIDIA Trademark & Non-Affiliation Notice:** NVIDIA, BioNeMo, NIM, TensorRT, and Hopper are trademarks and/or registered trademarks of NVIDIA Corporation in the United States and other jurisdictions. This open-source benchmark suite, web interface, and research evaluation are independently developed by Aarav Jorwal and are not sponsored, endorsed, certified, or affiliated with NVIDIA Corporation.

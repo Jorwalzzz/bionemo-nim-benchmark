@@ -46,6 +46,6 @@ Execute this workflow whenever `/deploy-pages` or `/deploy` is invoked to publis
 2. Verify HTTP 200 response status from `https://jorwalzzz.github.io/bionemo-nim-benchmark/`.
 3. Verify live presence of critical content markers:
    - `BioNeMo NIM`
-   - `101/101 HERMETIC TESTS PASSING`
+   - `145/145 HERMETIC TESTS PASSING`
    - `GNU Affero General Public License v3.0`
    - `NVIDIA Trademark & Non-Affiliation Notice`

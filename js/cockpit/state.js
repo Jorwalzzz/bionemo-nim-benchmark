@@ -3,29 +3,45 @@
  * for the Agentic BioNeMo Discovery Cockpit.
  */
 
+import { TARGET_PRESETS } from '../data/target-presets.js';
+
 // Host Sentinel (detects GitHub Pages / Cloudflare Pages / Static vs Local Workstation server)
-export const isStaticHost = window.location.protocol === 'file:' || 
+export const isStaticHost = typeof window === 'undefined' || 
+                     window.location.protocol === 'file:' || 
                      window.location.hostname.endsWith('github.io') || 
                      window.location.hostname.endsWith('pages.dev') ||
                      (window.location.protocol.startsWith('http') && window.location.port !== '8000');
 
-export const isLocalServer = window.location.protocol.startsWith('http') && 
+export const isLocalServer = typeof window !== 'undefined' && 
+                      window.location.protocol.startsWith('http') && 
                       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
                       window.location.port === '8000';
 
 // ESMFold De Novo Presets
 export const ESMFOLD_PRESETS = {
+  ubiquitin: {
+    name: 'Ubiquitin 76aa',
+    length: 76,
+    sequence: 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG',
+    seq: 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG'
+  },
   kras: {
-    name: 'KRAS G12D Oncogenic Variant',
-    seq: 'MTEYKLVVVGAGDVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLKKISKEEKTPGCVKIKKCIIM'
+    name: 'KRAS G12D 169aa',
+    length: 169,
+    sequence: 'MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLK',
+    seq: 'MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLK'
+  },
+  mpro: {
+    name: 'Mpro 306aa',
+    length: 306,
+    sequence: 'SGFRKMAFPSGKVEGCMVQVTCGTTTLNGLWLDDVVYCPRHVICTSEDMLNPNYEDLLIRKSNHNFLVQAGNVQLRVIGHSMQNCVLKLKVDTANPKTPKYKFVRIQPGQTFSVLACYNGSPSGVYQCAMRPNFTIKGSFLNGSCGSVGFNIDYDCVSFCYMHHMELPTGVHAGTDLEGNFYGPFVDRQTAQAAGTDTTITVNVLAWLYAAVINGDRWFLNRFTTTLNDFNLVAMKYNYEPLTQDHVDILGPLSAQTGIAVLDMCASLKELLQNGMNGRTILGSALLEDEFTPFDVVRQCSGVTFQ',
+    seq: 'SGFRKMAFPSGKVEGCMVQVTCGTTTLNGLWLDDVVYCPRHVICTSEDMLNPNYEDLLIRKSNHNFLVQAGNVQLRVIGHSMQNCVLKLKVDTANPKTPKYKFVRIQPGQTFSVLACYNGSPSGVYQCAMRPNFTIKGSFLNGSCGSVGFNIDYDCVSFCYMHHMELPTGVHAGTDLEGNFYGPFVDRQTAQAAGTDTTITVNVLAWLYAAVINGDRWFLNRFTTTLNDFNLVAMKYNYEPLTQDHVDILGPLSAQTGIAVLDMCASLKELLQNGMNGRTILGSALLEDEFTPFDVVRQCSGVTFQ'
   },
   braf: {
     name: 'BRAF V600E Kinase Domain',
-    seq: 'FGLATVKSRWSGSHQFEQLSGSILWMAPEVIRMQDKNPYSFQSDVYAFGIVLYELMTGQLPYSNINNRDQIIFMVGRGYLSPDLSKVRSNCPKAMKRLMAECLKKKRDERPLFPQILASIELLARSLPKIHRSASEPSLNRAGFQTEDFSLYACASPKTPIQAGGYGAFPVH'
-  },
-  mpro: {
-    name: 'SARS-CoV-2 Mpro C145A Protease',
-    seq: 'SGFRKMAFPSGKVEGCMVQVTCGTTTLNGLWLDDVVYCPRHVICTSEDMLNPNYEDLLIRKSNHNFLVQAGNVQLRVIGHSMQNCVLKLKVDTANPKTPKYKFVRIQPGQTFSVLACYNGSPSGVYQCAMRPNFTIKGSFLNGSCGSVGFNIDYDCVSFCYMHHMELPTGVHAGTDLEGNFYGPFVDRQTAQAAGTDTTITVNVLAWLYAAVINGDRWFLNRFTTTLNDFNLVAMKYNYEPLTQDHVDILGPLSAQTGIAVLDMCAASLGS'
+    length: 20,
+    sequence: 'FGLATVKSRWSGSPPQFDFL',
+    seq: 'FGLATVKSRWSGSPPQFDFL'
   }
 };
 
@@ -37,13 +53,59 @@ export const PRESET_INHIBITORS = {
   her2: { name: 'Tucatinib (HER2 Kinase)', smiles: 'CC1=C(C=CC(=C1)NC2=NC=NC3=C2C=C(C=C3)NC4=NC(CO4)(C)C)OC5=CC6=NC=NN6C=C5' }
 };
 
-// Verified Crystallographic Targets
-export const TARGETS = {
-  'KRAS G12D': { pdb: '8AZV', indication: 'Colorectal/NSCLC', pocket: 'Switch II', mutant: 'G12D', color: '#76b900' },
-  'EGFR T790M': { pdb: '2ITZ', indication: 'NSCLC', pocket: 'ATP Binding', mutant: 'T790M', color: '#00f1fd' },
-  'SARS-CoV-2 Mpro': { pdb: '7BQY', indication: 'COVID-19', pocket: 'Cys145 Dyad', mutant: '—', color: '#f59e0b' },
-  'HER2': { pdb: '3PP0', indication: 'Breast/Gastric', pocket: 'Kinase Domain', mutant: 'Amplified', color: '#a855f7' },
-};
+// Verified Crystallographic Targets (Loaded dynamically from TARGET_PRESETS)
+export const TARGETS = {};
+
+if (typeof TARGET_PRESETS !== 'undefined' && TARGET_PRESETS.all) {
+  TARGET_PRESETS.all.forEach(t => {
+    const entry = {
+      pdb: t.pdbId,
+      pdbId: t.pdbId,
+      name: t.name,
+      gene: t.gene,
+      indication: t.category,
+      pocket: t.pocketName,
+      pocketName: t.pocketName,
+      pocketResidues: t.pocketResidues,
+      mutant: t.mutation || 'Wild-Type',
+      mutation: t.mutation || 'Wild-Type',
+      ligandName: t.ligandName,
+      ligandCcd: t.ligandCcd,
+      resolutionA: t.resolutionA,
+      modality: t.modality,
+      referenceSmiles: t.referenceSmiles,
+      affinity: t.affinity,
+      admet: t.admet,
+      epistemicTag: t.epistemicTag || 'Illustrative',
+      color: t.category === 'Repo Benchmark Core' ? '#76b900' :
+             t.category === 'Oncology Kinases' ? '#00f1fd' :
+             t.category === 'Cell Cycle & PPI' ? '#a855f7' : '#f59e0b'
+    };
+    TARGETS[t.pdbId] = entry;
+    TARGETS[t.pdbId.toLowerCase()] = entry;
+    TARGETS[t.name] = entry;
+    if (t.gene) TARGETS[t.gene] = entry;
+  });
+}
+
+// Backwards-compatible aliases for legacy benchmark callers
+if (TARGETS['7RPZ']) {
+  TARGETS['KRAS G12D'] = TARGETS['7RPZ'];
+  TARGETS['8AZV'] = TARGETS['7RPZ'];
+}
+if (TARGETS['4MNE']) TARGETS['BRAF V600E'] = TARGETS['4MNE'];
+if (TARGETS['2HYY']) TARGETS['BCR-ABL1'] = TARGETS['2HYY'];
+if (TARGETS['3IKA']) {
+  TARGETS['EGFR T790M'] = TARGETS['3IKA'];
+  TARGETS['2ITZ'] = TARGETS['3IKA'];
+}
+if (TARGETS['1DHF']) TARGETS['Human DHFR'] = TARGETS['1DHF'];
+if (TARGETS['3PP0']) TARGETS['HER2'] = TARGETS['3PP0'];
+if (TARGETS['7VH8']) {
+  TARGETS['SARS-CoV-2 Mpro'] = TARGETS['7VH8'];
+  TARGETS['7BQY'] = TARGETS['7VH8'];
+}
+if (TARGETS['7BV2']) TARGETS['SARS-CoV-2 RdRp'] = TARGETS['7BV2'];
 
 // Empirical Benchmark Leads Database
 export const EMPIRICAL_TARGET_LEADS = {

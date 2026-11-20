@@ -35,6 +35,8 @@ import {
   generateClientDeNovoPdb,
   foldDeNovoSequence,
   fetchCustomTarget,
+  queryRcsbMetadata,
+  onCustomTargetInput,
   evaluateClientRedock,
   triggerRedockFromWorkbench,
   redockModifiedLead
@@ -171,6 +173,8 @@ Object.assign(window, {
   generateClientDeNovoPdb,
   foldDeNovoSequence,
   fetchCustomTarget,
+  queryRcsbMetadata,
+  onCustomTargetInput,
   evaluateClientRedock,
   triggerRedockFromWorkbench,
   redockModifiedLead,
@@ -300,16 +304,8 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener('DOMContentLoaded', async () => {
   fetchTrialStatus();
 
-  // Instant 3D Structure Render for Default Target (KRAS G12D / 8AZV) via on-demand PDB fetch
-  const pdbText = await loadPdb('8AZV');
-  if (pdbText) {
-    state.currentTargetPdbText = pdbText;
-    state.currentTargetPocketResidues = ['GLY12', 'ASP12', 'GLN61', 'TYR96'];
-    render3DComplex(state.currentTargetPdbText, null, state.currentTargetPocketResidues, false, 94.5);
-    if (primaryViewer) {
-      primaryViewer.spin('y', 0.5);
-    }
-  }
+  // Instant 3D Structure Render for Default Target via telemetry sync & PDB loader
+  updateTargetInfo();
 
   // Pre-load authentic empirical benchmark leads for instant interactive dashboard display
   if (!state.currentLeads || state.currentLeads.length === 0) {

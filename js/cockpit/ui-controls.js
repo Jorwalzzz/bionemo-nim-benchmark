@@ -63,10 +63,12 @@ export function switchTargetTab(tab) {
 
 export function updateSeqCount() {
   const input = document.getElementById('esmfoldSeqInput');
-  const countEl = document.getElementById('seqCharCount');
-  if (!input || !countEl) return;
+  if (!input) return;
   const clean = input.value.replace(/^>.*$/gm, '').replace(/\s+/g, '');
-  countEl.textContent = clean.length;
+  const countEl = document.getElementById('seqCharCount');
+  if (countEl) countEl.textContent = clean.length;
+  const badgeEl = document.getElementById('seqLenBadge');
+  if (badgeEl) badgeEl.textContent = `${clean.length} aa`;
 }
 
 export function loadEsmPreset(presetKey) {
@@ -74,9 +76,9 @@ export function loadEsmPreset(presetKey) {
   if (!p) return;
   const input = document.getElementById('esmfoldSeqInput');
   if (input) {
-    input.value = p.sequence;
+    input.value = p.sequence || p.seq;
     updateSeqCount();
-    showToast(`Loaded ${p.name} sequence (${p.length} aa)`);
+    showToast(`Loaded ${p.name} sequence (${p.length || (p.sequence || p.seq).length} aa)`);
   }
 }
 
@@ -135,7 +137,7 @@ export function tweakSmiles(type) {
 
 export function updateTargetInfo() {
   const currentTargetTab = state.currentTargetTab || 'presets';
-  let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
+  let target = document.getElementById('targetSelect')?.value || '7RPZ';
   let info = TARGETS[target];
 
   if (currentTargetTab === 'esmfold') {
@@ -143,27 +145,55 @@ export function updateTargetInfo() {
     target = rawSeq || 'De Novo Variant';
     info = {
       pdb: `DE NOVO (pLDDT ${(state.currentTargetMeanPlddt || 89.5).toFixed(1)})`,
+      pdbId: 'DE_NOVO',
+      name: 'De Novo Variant (ESMFold)',
       indication: 'De Novo Engineered Scaffold',
       pocket: 'Predicted Catalytic Core',
+      pocketName: 'Predicted Catalytic Core',
       mutant: 'Variant / De Novo',
+      mutation: 'Variant / De Novo',
+      ligandName: 'De Novo Scaffold',
+      ligandCcd: 'APO',
+      epistemicTag: 'Illustrative',
+      resolutionA: null,
+      affinity: { kd_nm: '—', delta_g_kcal_mol: '—' },
       color: '#a855f7'
     };
   } else if (currentTargetTab === 'rcsb') {
     const customCode = (document.getElementById('customTargetInput')?.value || '').trim().toUpperCase();
-    target = customCode || '8AZV';
-    info = {
+    target = customCode || '7RPZ';
+    info = TARGETS[target] || {
       pdb: target,
+      pdbId: target,
+      name: `${target} (RCSB PDB)`,
       indication: 'Crystallographic Target',
       pocket: 'Active Site Cleft',
+      pocketName: 'Active Site Cleft',
       mutant: 'WT / Custom',
+      mutation: 'WT / Custom',
+      ligandName: 'Bound Co-crystal',
+      ligandCcd: 'LIG',
+      epistemicTag: 'Empirical',
+      resolutionA: null,
+      affinity: { kd_nm: '—', delta_g_kcal_mol: '—' },
       color: '#00f1fd'
     };
   } else if (!info) {
-    info = {
-      pdb: '8AZV',
-      indication: 'Oncology Target',
-      pocket: 'Allosteric Pocket',
-      mutant: 'WT',
+    info = TARGETS['7RPZ'] || TARGETS['KRAS G12D'] || {
+      pdb: '7RPZ',
+      pdbId: '7RPZ',
+      name: 'KRAS G12D (Switch-II Pocket)',
+      indication: 'Repo Benchmark Core',
+      pocket: 'Switch-II Pocket',
+      pocketName: 'Switch-II Pocket',
+      pocketResidues: ['Asp12', 'Gly13', 'Val14', 'Glu62', 'His95', 'Tyr96', 'Gln99'],
+      mutant: 'G12D',
+      mutation: 'G12D',
+      ligandName: 'MRTX1133',
+      ligandCcd: '7RP',
+      epistemicTag: 'Illustrative',
+      resolutionA: 1.30,
+      affinity: { kd_nm: 0.2, delta_g_kcal_mol: -12.4 },
       color: '#76b900'
     };
   }
@@ -173,19 +203,66 @@ export function updateTargetInfo() {
   const indEl = document.getElementById('targetInd');
   const pocketEl = document.getElementById('targetPocket');
   const mutEl = document.getElementById('targetMut');
+  const ligandEl = document.getElementById('targetLigand');
+  const kdEl = document.getElementById('targetKd');
+  const deltaGEl = document.getElementById('targetDeltaG');
+  const resEl = document.getElementById('targetRes');
+  const badgeEl = document.getElementById('targetTelemetryBadge');
 
   if (nameEl) {
-    nameEl.textContent = currentTargetTab === 'esmfold' ? (target.length > 25 ? target.slice(0, 22) + '...' : target) : target;
-    nameEl.style.color = info.color;
+    nameEl.textContent = currentTargetTab === 'esmfold' 
+      ? (target.length > 25 ? target.slice(0, 22) + '...' : target) 
+      : (info.name || target);
+    nameEl.style.color = info.color || 'var(--nvidia-green)';
   }
-  if (pdbEl) pdbEl.textContent = info.pdb;
-  if (indEl) indEl.textContent = info.indication;
-  if (pocketEl) pocketEl.textContent = info.pocket;
-  if (mutEl) mutEl.textContent = info.mutant;
+  if (pdbEl) pdbEl.textContent = info.pdb || info.pdbId || target;
+  if (indEl) indEl.textContent = info.indication || info.category || 'Therapeutic Target';
+  if (pocketEl) {
+    const pocketDisplay = info.pocketName || info.pocket || 'Binding Pocket';
+    pocketEl.textContent = pocketDisplay;
+    if (info.pocketResidues && Array.isArray(info.pocketResidues)) {
+      pocketEl.title = `${pocketDisplay} [${info.pocketResidues.join(', ')}]`;
+    } else {
+      pocketEl.title = pocketDisplay;
+    }
+  }
+  if (mutEl) mutEl.textContent = info.mutation || info.mutant || 'Wild-Type';
+  if (ligandEl) {
+    if (info.ligandName) {
+      ligandEl.textContent = `${info.ligandName} (${info.ligandCcd || 'LIG'})`;
+    } else {
+      ligandEl.textContent = 'Apo / Custom';
+    }
+  }
+  if (kdEl) {
+    kdEl.textContent = (info.affinity && info.affinity.kd_nm !== undefined && info.affinity.kd_nm !== '—')
+      ? `${info.affinity.kd_nm} nM`
+      : '—';
+  }
+  if (deltaGEl) {
+    deltaGEl.textContent = (info.affinity && info.affinity.delta_g_kcal_mol !== undefined && info.affinity.delta_g_kcal_mol !== '—')
+      ? `${info.affinity.delta_g_kcal_mol} kcal`
+      : '—';
+  }
+  if (resEl) {
+    resEl.textContent = (info.resolutionA !== undefined && info.resolutionA !== null)
+      ? `${Number(info.resolutionA).toFixed(2)} Å`
+      : '—';
+  }
+  if (badgeEl) {
+    const tag = info.epistemicTag || 'Illustrative';
+    badgeEl.textContent = `${tag} In Silico`;
+    if (tag === 'Measured' || tag === 'Empirical') {
+      badgeEl.className = 'badge-measured text-[10px]';
+    } else {
+      badgeEl.className = 'badge-illustrative text-[10px]';
+    }
+  }
 
-  if (currentTargetTab === 'presets' && info && info.pdb) {
+  if (currentTargetTab === 'presets' && info && (info.pdb || info.pdbId)) {
+    const targetPdbId = info.pdbId || info.pdb;
     (async () => {
-      const pdbText = (typeof loadPdb === 'function') ? await loadPdb(info.pdb) : window['PDB_' + info.pdb];
+      const pdbText = (typeof loadPdb === 'function') ? await loadPdb(targetPdbId) : window['PDB_' + targetPdbId];
       if (pdbText && typeof render3DComplex === 'function') {
         state.currentTargetPdbText = pdbText;
         state.currentTargetPocketResidues = info.pocketResidues || [12, 13, 32, 60, 61, 96];
