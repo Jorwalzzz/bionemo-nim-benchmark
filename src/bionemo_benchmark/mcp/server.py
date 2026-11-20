@@ -19,6 +19,7 @@ from bionemo_benchmark.domain.pdb_utils import (
     generate_synthetic_backbone,
     sanitize_pdb_atom_records,
 )
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 while PROJECT_ROOT != PROJECT_ROOT.parent and not (PROJECT_ROOT / "pyproject.toml").exists():
@@ -201,7 +202,11 @@ def bionemo_run_benchmark(
     Returns:
         Consolidated summary metrics table, speedup factors, and throughput.
     """
-    json_path = PROJECT_ROOT / complexes_path
+    try:
+        json_path = SafeSanitizer.validate_safe_path(complexes_path, PROJECT_ROOT)
+    except ValueError as val_err:
+        return {"error": str(val_err)}
+
     if not json_path.exists():
         return {"error": f"Complexes file not found at {json_path}"}
         
@@ -247,15 +252,16 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> dict[str, Any]:
         Dictionary with status, clean PDB atom count, residue count, and extracted sequence.
     """
     import urllib.request
-    
-    clean_id = pdb_id.strip().upper()
-    if len(clean_id) != 4 or not clean_id.isalnum():
-        return {"valid": False, "error": f"Invalid PDB ID format: '{pdb_id}'. Must be 4 alphanumeric characters."}
-        
-    url = f"https://files.rcsb.org/download/{clean_id}.pdb"
+
+    try:
+        clean_id = SafeSanitizer.validate_pdb_id(pdb_id)
+    except ValueError as val_err:
+        return {"valid": False, "error": f"Invalid PDB ID format: '{pdb_id}'. Must strictly match ^[1-9][A-Za-z0-9]{{3}}$."}
+
+    url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Antigravity/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with urllib.request.urlopen(req, timeout=10) as response:  # nosec B310
             raw_pdb = response.read().decode("utf-8", errors="replace")
     except Exception as exc:
         return {"valid": False, "error": f"Failed to download PDB {clean_id} from RCSB: {str(exc)}"}
@@ -317,7 +323,7 @@ def bionemo_query_esmfold(sequence: str, mock: bool = True) -> dict[str, Any]:
     if not api_key:
         return {"valid": False, "error": "NVIDIA_API_KEY not configured in environment"}
         
-    url = "https://health.api.nvidia.com/v1/biology/meta/esmfold"
+    url = SafeSanitizer.validate_outbound_url("https://health.api.nvidia.com/v1/biology/meta/esmfold")
     payload = json.dumps({"sequence": clean_seq}).encode("utf-8")
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -327,7 +333,7 @@ def bionemo_query_esmfold(sequence: str, mock: bool = True) -> dict[str, Any]:
     
     try:
         req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310
             data = json.loads(resp.read().decode("utf-8"))
             return {
                 "model": "meta/esmfold",

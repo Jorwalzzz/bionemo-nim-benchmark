@@ -762,7 +762,7 @@ export function evaluateClientRedock(smiles, targetName) {
 }
 
 export function triggerRedockFromWorkbench() {
-  if (!clientAuth.isLoggedIn()) {
+  if (!clientAuth.isLoggedIn() && !window.isOwner) {
     clientAuth.pendingAction = 'redock';
     openAuthModal('🔒 Sign-In Required: Please sign in or register to test chemical modifications and re-dock leads.');
     return;

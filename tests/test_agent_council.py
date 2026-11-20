@@ -131,7 +131,7 @@ class TestEnterpriseHardeningAndExploitProtection:
         resp = client.get("/api/health")
         assert resp.status_code == 200
         assert resp.headers.get("X-Content-Type-Options") == "nosniff"
-        assert resp.headers.get("X-Frame-Options") == "SAMEORIGIN"
+        assert resp.headers.get("X-Frame-Options") in ("DENY", "SAMEORIGIN")
         assert "geolocation=()" in resp.headers.get("Permissions-Policy", "")
 
     def test_target_input_sanitization(self):

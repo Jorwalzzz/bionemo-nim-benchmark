@@ -11,8 +11,11 @@ from __future__ import annotations
 import logging
 import os
 import re
+from pathlib import Path
 
 import requests
+
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +58,11 @@ def fetch_rcsb_pdb(
     Returns:
         Sanitized PDB ATOM text string.
     """
-    clean_id = pdb_id.strip().upper()
-    if not re.match(r"^[0-9A-Z]{4}$", clean_id):
-        raise ValueError(
-            f"Invalid PDB ID format: '{clean_id}'. Expected 4-character alphanumeric code."
-        )
+    clean_id = SafeSanitizer.validate_pdb_id(pdb_id)
 
     os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(cache_dir, f"{clean_id}.pdb")
+    cache_path_obj = SafeSanitizer.validate_safe_path(f"{clean_id}.pdb", cache_dir)
+    cache_path = str(cache_path_obj)
 
     # Check candidate local cache locations before attempting any network requests
     candidate_paths = [
@@ -83,11 +83,11 @@ def fetch_rcsb_pdb(
                 return f.read()
 
     # Query RCSB PDB
-    download_url = RCSB_PDB_DOWNLOAD_URL.format(pdb_id=clean_id)
+    download_url = SafeSanitizer.validate_outbound_url(RCSB_PDB_DOWNLOAD_URL.format(pdb_id=clean_id))
     logger.info("Fetching PDB %s from RCSB (%s)...", clean_id, download_url)
 
     try:
-        response = requests.get(download_url, timeout=timeout)
+        response = requests.get(download_url, timeout=timeout, verify=True)
         if response.status_code != 200:
             raise RuntimeError(
                 f"RCSB PDB returned status {response.status_code} for ID '{clean_id}'"

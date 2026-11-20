@@ -12,6 +12,16 @@
 (function () {
   'use strict';
 
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   const state = {
     endpoint: 'health.api.nvidia.com',
     target: '8AZV',
@@ -52,11 +62,11 @@
     if (!terminalCodeEl) return;
 
     let html = `<span class="cmd-bin">python run_benchmark.py</span> \\\n`;
-    html += `  <span class="cmd-flag">--endpoint</span> <span class="cmd-val">"${state.endpoint}"</span> \\\n`;
-    html += `  <span class="cmd-flag">--target</span> <span class="cmd-val">${state.target}</span> \\\n`;
-    html += `  <span class="cmd-flag">--poses</span> <span class="cmd-val">${state.poses}</span> \\\n`;
-    html += `  <span class="cmd-flag">--batch-size</span> <span class="cmd-val">${state.batchSize}</span> \\\n`;
-    html += `  <span class="cmd-flag">--output-format</span> <span class="cmd-val">${state.outputFormat}</span>`;
+    html += `  <span class="cmd-flag">--endpoint</span> <span class="cmd-val">"${escapeHtml(state.endpoint)}"</span> \\\n`;
+    html += `  <span class="cmd-flag">--target</span> <span class="cmd-val">${escapeHtml(state.target)}</span> \\\n`;
+    html += `  <span class="cmd-flag">--poses</span> <span class="cmd-val">${escapeHtml(state.poses)}</span> \\\n`;
+    html += `  <span class="cmd-flag">--batch-size</span> <span class="cmd-val">${escapeHtml(state.batchSize)}</span> \\\n`;
+    html += `  <span class="cmd-flag">--output-format</span> <span class="cmd-val">${escapeHtml(state.outputFormat)}</span>`;
 
     if (state.admetFilter) {
       html += ` \\\n  <span class="cmd-flag">--admet-filter</span>`;

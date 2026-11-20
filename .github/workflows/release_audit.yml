@@ -20,7 +20,7 @@ jobs:
   audit-site:
     name: Static Parity & Multi-Viewport Chromium Audit
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository

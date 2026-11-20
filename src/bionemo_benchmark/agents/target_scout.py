@@ -321,13 +321,15 @@ class TargetScoutAgent:
         if not matched_key and len(clean_query) == 4 and clean_query.isalnum():
             # Universal RCSB PDB Ingestion
             import urllib.request
+            from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
             try:
-                url = f"https://files.rcsb.org/download/{clean_query}.pdb"
+                clean_id = SafeSanitizer.validate_pdb_id(clean_query)
+                url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
                 req = urllib.request.Request(
                     url, headers={"User-Agent": "BioNeMo-Scout/1.0"}
                 )
-                with urllib.request.urlopen(req, timeout=10) as r:
+                with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
                     raw_pdb = r.read().decode("utf-8", errors="replace")
                 cleaned_pdb = clean_pdb_structure(raw_pdb)
                 extracted_seq = extract_sequence_from_pdb(cleaned_pdb)

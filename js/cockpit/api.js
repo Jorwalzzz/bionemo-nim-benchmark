@@ -637,7 +637,7 @@ export class ClientAuthManager {
     // Update Run Controls based on Sign-In state
     const banner = document.getElementById('authRequiredBanner');
     if (banner) {
-      if (!this.user) {
+      if (!this.user && !window.isOwner) {
         banner.style.display = 'block';
         banner.classList.remove('hidden');
       } else {
@@ -649,7 +649,11 @@ export class ClientAuthManager {
     const runBtn = document.getElementById('runBtn');
     const runLabel = document.getElementById('runLabel');
     if (runBtn && !isRunning) {
-      if (!this.user) {
+      if (window.isOwner) {
+        runBtn.className = 'btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4';
+        runBtn.onclick = () => runDiscovery();
+        if (runLabel) runLabel.innerHTML = '🚀 Run Autonomous Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Owner Mode</span>';
+      } else if (!this.user) {
         runBtn.onclick = () => openAuthModal('🔒 Sign-In Required: Please sign in or register to launch autonomous discovery (5 free runs/day).');
         runBtn.className = 'w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4 bg-gradient-to-r from-amber-600 to-emerald-700 hover:from-amber-500 hover:to-emerald-600 shadow-lg border border-amber-400/40 cursor-pointer transition-all';
         if (runLabel) runLabel.innerHTML = '🔒 Sign In to Run Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-white/20">5 Runs/Day Free</span>';
@@ -714,17 +718,19 @@ export async function runDiscovery() {
   if (isRunning) return;
 
   // Gate check 1: Researcher Authentication Required
-  if (!clientAuth.isLoggedIn()) {
+  if (!clientAuth.isLoggedIn() && !window.isOwner) {
     clientAuth.pendingAction = 'discovery';
     openAuthModal('Please sign in or register to access the free trial discovery pipeline (5 runs/day).');
     return;
   }
 
   // Gate check 2: Quota Limit (5 runs / 24 hours synchronized at 3:00 PM IST)
-  const quota = clientAuth.getQuota();
-  if (quota.runs_remaining <= 0) {
-    openQuotaModal();
-    return;
+  if (!window.isOwner) {
+    const quota = clientAuth.getQuota();
+    if (quota.runs_remaining <= 0) {
+      openQuotaModal();
+      return;
+    }
   }
 
   // Consume 1 run

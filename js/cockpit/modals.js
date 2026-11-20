@@ -10,6 +10,10 @@ import { runLiveBenchmark } from './charts.js';
 import { close3DModalDirect } from './viewer3d.js';
 
 // ─── Authentication Modals ──────────────────────────────────────────────────
+import {
+  closeOwnerModal,
+} from './owner-auth.js';
+
 export function openAuthModal(noticeMessage) {
   const modal = document.getElementById('authModal');
   if (!modal) return;
@@ -194,7 +198,7 @@ export function closeQuotaModal() {
 
 // ─── Feedback Modal ─────────────────────────────────────────────────────────
 export function openFeedbackModal() {
-  if (!clientAuth.isLoggedIn()) {
+  if (!clientAuth.isLoggedIn() && !window.isOwner) {
     clientAuth.pendingAction = 'feedback';
     openAuthModal('Please sign in or register to submit scientific feedback.');
     return;
@@ -398,6 +402,7 @@ export function closeResistanceModal() {
 
 // ─── Close All Modals Utility ───────────────────────────────────────────────
 export function closeAllModals() {
+  closeOwnerModal();
   closeAuthModal();
   closeQuotaModal();
   closeFeedbackModal();

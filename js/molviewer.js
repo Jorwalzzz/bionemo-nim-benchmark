@@ -14,6 +14,16 @@
 (function () {
   'use strict';
 
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // Target complex metadata
   const TARGET_REGISTRY = {
     '8AZV': {
@@ -137,7 +147,7 @@
       if (isOfflineCache) {
         statusBadgeEl.innerHTML = `<span class="badge-measured" style="background:rgba(255,138,76,0.15);color:#FF8A4C;border-color:rgba(255,138,76,0.3);">Local PDB Cache Active</span>`;
       } else {
-        statusBadgeEl.innerHTML = `<span class="badge-measured">RCSB Live PDB (${pdbId})</span>`;
+        statusBadgeEl.innerHTML = `<span class="badge-measured">RCSB Live PDB (${escapeHtml(pdbId)})</span>`;
       }
     }
 

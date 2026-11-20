@@ -114,6 +114,15 @@ import {
 } from './modals.js';
 
 import {
+  initOwnerAccess,
+  openOwnerModal,
+  closeOwnerModal,
+  submitOwnerLogin,
+  handleOwnerLogout,
+  isOwner
+} from './owner-auth.js';
+
+import {
   downloadInstaller,
   downloadDossier,
   downloadSDF,
@@ -241,6 +250,11 @@ Object.assign(window, {
   openBenchmarkModal,
   closeBenchmarkModal,
   closeBenchmarkModalDirect,
+  openOwnerModal,
+  closeOwnerModal,
+  submitOwnerLogin,
+  handleOwnerLogout,
+  isOwner,
   generateINDPdf,
   generateRobotProtocol,
   generateLabCard,
@@ -302,6 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // ─── Cockpit Lifecycle Initialization ────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  initOwnerAccess();
   fetchTrialStatus();
 
   // Instant 3D Structure Render for Default Target via telemetry sync & PDB loader

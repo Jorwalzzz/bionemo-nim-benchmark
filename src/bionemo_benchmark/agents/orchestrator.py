@@ -31,6 +31,7 @@ from bionemo_benchmark.core.models import (
     RetrosynthesisPlan,
 )
 from bionemo_benchmark.infra.message_bus import SwarmMessageBus
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger("Orchestrator")
 
@@ -325,8 +326,8 @@ class AgenticScientistOrchestrator:
             for c in all_screened:
                 writer.writerow(
                     [
-                        c.id,
-                        c.smiles,
+                        SafeSanitizer.sanitize_csv_cell(c.id),
+                        SafeSanitizer.sanitize_csv_cell(c.smiles),
                         c.binding_affinity,
                         c.diffdock_confidence,
                         c.qed,
@@ -337,8 +338,8 @@ class AgenticScientistOrchestrator:
                         c.hba,
                         c.rotatable_bonds,
                         c.sascore,
-                        ";".join(c.pains_alerts),
-                        c.admet_verdict,
+                        SafeSanitizer.sanitize_csv_cell(";".join(c.pains_alerts)),
+                        SafeSanitizer.sanitize_csv_cell(c.admet_verdict),
                         c.is_pareto_optimal,
                         c.generation_round,
                     ]

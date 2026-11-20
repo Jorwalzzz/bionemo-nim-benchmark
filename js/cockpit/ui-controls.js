@@ -293,9 +293,10 @@ export function logEntry(icon, agent, role, text, color) {
   const safeAgent = escapeHtml(agent);
   const safeRole = escapeHtml(role);
   const safeColor = /^[#a-zA-Z0-9]+$/.test(color) ? color : '#76b900';
+  // Allow only safe inline tags (strong, span) with styling; strip scripts, handlers, and other tags
   const safeText = String(text ?? '')
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\bon\w+\s*=/gi, 'data-blocked=');
+    .replace(/<\/?(?!strong\b|span\b|\/strong|\/span)[a-z0-9-]+(?:\s+[^>]*)?>/gi, '')
+    .replace(/\b(?:on\w+|javascript:|data:)\b/gi, 'data-blocked=');
 
   const el = document.createElement('div');
   el.className = 'animate-fade-up';

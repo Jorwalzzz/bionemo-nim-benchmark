@@ -11,9 +11,13 @@ Designed to satisfy NVIDIA Inception, GxP, and HIPAA zero-trust guidelines:
 4. SafeSanitizer: Linear-time, ReDoS-safe input sanitization for SMILES, PDB IDs, and Python AST parameters.
 """
 
+import os
 import re
 import threading
 import time
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 # ==============================================================================
 # 1. BIOSECURITY & DUAL-USE TOXIN SCREENING
@@ -183,6 +187,11 @@ class SecretScrubber:
         if not text:
             return ""
         s = str(text)
+        # Redact active environment API key if configured
+        env_key = os.getenv("NVIDIA_API_KEY", "").strip()
+        if env_key and len(env_key) >= 8 and env_key in s:
+            s = s.replace(env_key, "[REDACTED_SECRET]")
+
         for pat in cls.SECRET_PATTERNS:
             s = pat.sub("[REDACTED_SECRET]", s)
         return s
@@ -196,8 +205,87 @@ class SecretScrubber:
 class SafeSanitizer:
     """
     Linear-time string sanitizers that prevent Command Injection, Python AST Injection,
-    and catastrophic Regular Expression backtracking (ReDoS).
+    Path Traversal (CWE-22), SSRF (CWE-918), and CSV Formula Injection (CWE-1236).
     """
+
+    PDB_ID_REGEX = re.compile(r"^[1-9][A-Za-z0-9]{3}$")
+
+    ALLOWED_OUTBOUND_HOSTS = frozenset({
+        "files.rcsb.org",
+        "data.rcsb.org",
+        "integrate.api.nvidia.com",
+        "health.api.nvidia.com",
+    })
+
+    @classmethod
+    def validate_pdb_id(cls, pdb_id: str) -> str:
+        """
+        Validates 4-character PDB code strictly against ^[1-9][A-Za-z0-9]{3}$.
+        Rejects control characters, null bytes, command injection tokens, and invalid formats.
+        Raises ValueError if invalid.
+        """
+        if not pdb_id or not isinstance(pdb_id, str):
+            raise ValueError("PDB ID must be a non-empty string.")
+        if "\x00" in pdb_id or any(ord(c) < 32 for c in pdb_id):
+            raise ValueError("PDB ID contains illegal control characters or null bytes.")
+        clean = pdb_id.strip().upper()
+        if not cls.PDB_ID_REGEX.match(clean):
+            raise ValueError(f"Invalid PDB ID format: '{pdb_id}'. Must strictly match ^[1-9][A-Za-z0-9]{{3}}$.")
+        return clean
+
+    @classmethod
+    def validate_outbound_url(cls, url: str) -> str:
+        """
+        Validates outbound HTTP requests against CWE-918 (SSRF).
+        Enforces HTTPS, allowed host whitelist, and prohibits embedded userinfo.
+        """
+        if not url or not isinstance(url, str):
+            raise ValueError("URL must be a non-empty string.")
+        if "\x00" in url or any(ord(c) < 32 for c in url):
+            raise ValueError("URL contains illegal control characters or null bytes.")
+        parsed = urlparse(url.strip())
+        if parsed.scheme.lower() != "https":
+            raise ValueError(f"Disallowed URL scheme '{parsed.scheme}'. Only HTTPS is permitted.")
+        host = (parsed.hostname or "").lower()
+        if host not in cls.ALLOWED_OUTBOUND_HOSTS:
+            raise ValueError(
+                f"Outbound host '{host}' is not in allowed hosts whitelist: {sorted(cls.ALLOWED_OUTBOUND_HOSTS)}"
+            )
+        if parsed.username or parsed.password:
+            raise ValueError("Embedded credentials in outbound URL are forbidden.")
+        return url
+
+    @staticmethod
+    def validate_safe_path(path: str | Path, base_dir: str | Path) -> Path:
+        """
+        Ensures target path resolves strictly within the allowed base directory (CWE-22 defense).
+        Raises ValueError if path traversal is detected.
+        """
+        resolved_base = Path(base_dir).resolve()
+        resolved_path = (resolved_base / path).resolve() if not Path(path).is_absolute() else Path(path).resolve()
+        if not resolved_path.is_relative_to(resolved_base):
+            raise ValueError(
+                f"Path traversal detected: '{path}' resolves outside allowed base directory '{resolved_base}'."
+            )
+        return resolved_path
+
+    @staticmethod
+    def sanitize_csv_cell(value: Any) -> str:
+        """
+        Sanitizes a string for safe CSV serialization and tabular rendering.
+        Neutralizes CSV Formula Injection (CWE-1236) by prepending a single quote
+        if cell starts with '=', '+', '-', '@', '\\t', or '\\r'.
+        Also escapes HTML markup to prevent DOM XSS when CSV is viewed in dashboards.
+        """
+        if value is None:
+            return ""
+        s = str(value).replace("\x00", "")
+        # Formula injection mitigation
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            s = "'" + s
+        # HTML tag neutralization
+        s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        return s
 
     @staticmethod
     def sanitize_chemical_smiles(smiles: str, max_length: int = 500) -> str:
@@ -211,16 +299,17 @@ class SafeSanitizer:
         cleaned = re.sub(r"[^A-Za-z0-9@+\-\[\]\(\)\\\/=#%.:]", "", s)
         return cleaned or "CC(=O)N1CCNCC1"
 
-    @staticmethod
-    def sanitize_pdb_id(pdb_id: str) -> str:
+    @classmethod
+    def sanitize_pdb_id(cls, pdb_id: str) -> str:
         """
         Sanitizes 4-character PDB code against Path Traversal and Command Injection.
         """
         if not pdb_id:
             return "8AZV"
+        if "\x00" in str(pdb_id) or any(ord(c) < 32 for c in str(pdb_id)):
+            return "8AZV"
         s = str(pdb_id).strip().upper()[:4]
-        cleaned = re.sub(r"[^A-Z0-9]", "", s)
-        return cleaned if len(cleaned) == 4 else "8AZV"
+        return s if cls.PDB_ID_REGEX.match(s) else "8AZV"
 
     @staticmethod
     def sanitize_code_literal(value: str, max_length: int = 80) -> str:

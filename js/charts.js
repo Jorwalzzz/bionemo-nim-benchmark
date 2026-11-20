@@ -12,6 +12,16 @@
 (function () {
   'use strict';
 
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   let benchmarkData = null;
   let activeFilter = 'all';
   let searchTerm = '';
@@ -169,10 +179,10 @@
     ensureTooltip();
     tooltipEl.innerHTML = `
       <div style="font-family:var(--font-display);font-weight:700;font-size:0.95rem;color:var(--color-ink-primary);margin-bottom:0.25rem;">
-        ${item.nim_service} &mdash; ${item.target_complex}
+        ${escapeHtml(item.nim_service)} &mdash; ${escapeHtml(item.target_complex)}
       </div>
       <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-ink-muted);margin-bottom:0.5rem;">
-        Task: ${item.task_type}
+        Task: ${escapeHtml(item.task_type)}
       </div>
       <div style="display:flex;justify-content:space-between;gap:1rem;margin-bottom:0.25rem;font-family:var(--font-mono);">
         <span style="color:var(--color-signal-green);">H100 SXM5: <strong>${item.gpu_latency_s}s</strong></span>
@@ -182,7 +192,7 @@
         Acceleration: ${item.speedup_multiplier}x
       </div>
       <div style="font-size:0.75rem;color:var(--color-ink-secondary);border-top:1px solid var(--border-hairline);padding-top:0.35rem;">
-        Output Parity: ${item.output_parity_metric}
+        Output Parity: ${escapeHtml(item.output_parity_metric)}
       </div>
     `;
     tooltipEl.style.display = 'block';
@@ -239,7 +249,7 @@
       tbody.innerHTML = `
         <tr>
           <td colspan="7" style="text-align:center;padding:2rem;color:var(--color-ink-muted);font-family:var(--font-mono);">
-            No benchmark records match query "${searchTerm}".
+            No benchmark records match query "${escapeHtml(searchTerm)}".
           </td>
         </tr>
       `;
@@ -251,20 +261,20 @@
       rowsHtml += `
         <tr>
           <td style="font-weight:600;">
-            ${b.nim_service}
-            <div style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">${b.nim_container}</div>
+            ${escapeHtml(b.nim_service)}
+            <div style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">${escapeHtml(b.nim_container)}</div>
           </td>
           <td>
-            ${b.target_complex}
-            <div style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">${b.uniprot_id} (${b.input_spec})</div>
+            ${escapeHtml(b.target_complex)}
+            <div style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">${escapeHtml(b.uniprot_id)} (${escapeHtml(b.input_spec)})</div>
           </td>
-          <td style="font-size:0.8rem;color:var(--color-ink-secondary);">${b.task_type}</td>
+          <td style="font-size:0.8rem;color:var(--color-ink-secondary);">${escapeHtml(b.task_type)}</td>
           <td class="matrix-td-mono" style="color:#FF8A4C;font-weight:600;">${b.cpu_latency_s.toFixed(2)}s</td>
           <td class="matrix-td-mono" style="color:var(--color-signal-green);font-weight:600;">${b.gpu_latency_s.toFixed(3)}s</td>
           <td class="matrix-td-mono">
             <span class="badge-measured" style="font-weight:700;">${b.speedup_multiplier.toFixed(1)}x</span>
           </td>
-          <td style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">${b.output_parity_metric}</td>
+          <td style="font-size:0.75rem;color:var(--color-ink-muted);font-family:var(--font-mono);">${escapeHtml(b.output_parity_metric)}</td>
         </tr>
       `;
     });

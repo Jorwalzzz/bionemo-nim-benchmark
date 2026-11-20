@@ -13,12 +13,14 @@ import webbrowser
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from bionemo_benchmark.infra.security_sentinel import SecretScrubber
 from bionemo_benchmark.server.routes_auth import router as auth_router
 from bionemo_benchmark.server.routes_campaign import router as campaign_router
+from bionemo_benchmark.server.routes_owner import router as owner_router
 from bionemo_benchmark.server.routes_structure import router as structure_router
 from bionemo_benchmark.server.serializers import (
     ASSETS_DIR,
@@ -43,6 +45,22 @@ if "PORT" not in os.environ and not os.environ.get("DISABLE_TRIAL_LIMIT"):
     os.environ["DISABLE_TRIAL_LIMIT"] = "true"
 
 app: FastAPI = FastAPI(title="Agentic BioNeMo Cockpit API", version="2.2.0")
+
+# Explicit CORS policy restricting origins to local workstations and verified production domains
+ALLOWED_CORS_ORIGINS = [
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "https://jorwalzzz.github.io",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_CORS_ORIGINS,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS", "HEAD"],
+    allow_headers=["*"],
+)
 
 
 # -------------------------------------------------------------------------
@@ -89,7 +107,7 @@ async def enterprise_security_headers_middleware(request: Request, call_next):
 
     # 3. Enterprise Hardened Security Headers
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = (
@@ -168,6 +186,7 @@ if os.path.exists(VENDOR_DIR):
 # Include Route Handlers
 # -------------------------------------------------------------------------
 
+app.include_router(owner_router)
 app.include_router(auth_router)
 app.include_router(campaign_router)
 app.include_router(structure_router)
@@ -193,7 +212,7 @@ def main(argv: list[str] | None = None) -> None:
 
     cloud = "PORT" in os.environ
     ap = argparse.ArgumentParser(prog="jorwal-nim", description="JORWAL NIM cockpit")
-    ap.add_argument("--host", default="0.0.0.0" if cloud else "127.0.0.1")
+    ap.add_argument("--host", default="127.0.0.1", help="Host interface to bind (defaults to 127.0.0.1)")
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     ap.add_argument("--open", action="store_true", help="open the browser once ready")
     args = ap.parse_args(argv)

@@ -147,7 +147,8 @@ class BenchmarkPipeline:
         """
         Parses, validates, and sanitizes small-molecule SMILES via RDKit.
         Performs Kekulization and valency integrity checking, and computes
-        key physicochemical descriptors.
+        key physicochemical descriptors. Rejects null bytes, control characters,
+        and strings exceeding length boundaries.
         """
         if not smiles or not isinstance(smiles, str) or not smiles.strip():
             return LigandValidationResult(
@@ -155,6 +156,22 @@ class BenchmarkPipeline:
                 canonical_smiles="",
                 is_valid=False,
                 error_message="Empty or non-string SMILES string provided.",
+            )
+
+        if "\x00" in smiles or any(ord(c) < 32 and c not in "\r\n\t" for c in smiles):
+            return LigandValidationResult(
+                raw_smiles=str(smiles),
+                canonical_smiles="",
+                is_valid=False,
+                error_message="SMILES string contains illegal control characters or null bytes.",
+            )
+
+        if len(smiles) > 2000:
+            return LigandValidationResult(
+                raw_smiles=str(smiles)[:100] + "...",
+                canonical_smiles="",
+                is_valid=False,
+                error_message=f"SMILES string length ({len(smiles)}) exceeds maximum allowed limit of 2000 characters.",
             )
 
         raw = smiles.strip()

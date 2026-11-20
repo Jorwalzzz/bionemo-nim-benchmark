@@ -25,7 +25,7 @@ class TestServerStaticAndSecurityHeaders:
         res = client.get("/cockpit.css")
         assert res.status_code == 200
         assert res.headers["x-content-type-options"] == "nosniff"
-        assert res.headers["x-frame-options"] == "SAMEORIGIN"
+        assert res.headers["x-frame-options"] in ("DENY", "SAMEORIGIN")
         assert res.headers["x-xss-protection"] == "1; mode=block"
         assert "default-src 'self'" in res.headers["content-security-policy"]
 

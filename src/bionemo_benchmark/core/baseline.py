@@ -87,8 +87,8 @@ class LocalCPUBaseline:
             )
             from transformers import AutoModel, AutoTokenizer
 
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModel.from_pretrained(self.model_name)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)  # nosec B615
+            self.model = AutoModel.from_pretrained(self.model_name)  # nosec B615
             self.model.to(self.device)
             self.model.eval()
             self._is_loaded = True

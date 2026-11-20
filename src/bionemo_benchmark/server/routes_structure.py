@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import re
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
@@ -90,32 +91,34 @@ async def api_fetch_target(request: Request) -> Any:
 @router.get("/api/target/pdb/{pdb_id}")
 def get_target_pdb(pdb_id: str) -> Response:
     """Fetches PDB structure text for the 3D WebGL viewer with strict anti-traversal & SSRF controls."""
-    clean_id = SafeSanitizer.sanitize_pdb_id(pdb_id)
-    if not clean_id or len(clean_id) != 4:
+    try:
+        clean_id = SafeSanitizer.validate_pdb_id(pdb_id)
+    except ValueError as exc:
         return JSONResponse(
             status_code=400,
-            content={"error": "Invalid 4-character alphanumeric PDB identifier."},
+            content={"error": "INVALID_PDB_ID", "message": str(exc)},
         )
 
-    target_dir = os.path.abspath(os.path.join(BASE_DIR, "data", "pdbs"))
-    file_path = os.path.abspath(os.path.join(target_dir, f"{clean_id}.pdb"))
-    if not file_path.startswith(target_dir):
+    target_dir = Path(BASE_DIR) / "data" / "pdbs"
+    try:
+        file_path = SafeSanitizer.validate_safe_path(f"{clean_id}.pdb", target_dir)
+    except ValueError as exc:
         return JSONResponse(
             status_code=403,
             content={
                 "error": "PATH_TRAVERSAL_DETECTED",
-                "message": "Disallowed path traversal attempt.",
+                "message": str(exc),
             },
         )
 
-    if os.path.exists(file_path):
+    if file_path.exists():
         with open(file_path, encoding="utf-8") as f:
             return Response(content=f.read(), media_type="chemical/x-pdb")
 
     try:
-        url = f"https://files.rcsb.org/download/{clean_id}.pdb"
+        url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
         req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
             if r.status == 200:
                 data = r.read(5 * 1024 * 1024).decode("utf-8", errors="replace")
                 return Response(content=data, media_type="chemical/x-pdb")

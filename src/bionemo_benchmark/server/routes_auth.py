@@ -43,6 +43,23 @@ def gate_run(request: Request, target: str) -> tuple[Response | None, tuple[str,
             None,
         )
     target = sanitize_target_query(target)
+
+    # Owner Access Bypass: verified owner on loopback bypasses all trial limits
+    from bionemo_benchmark.server.routes_owner import get_trial_policy
+
+    owner_policy = get_trial_policy(request)
+    if owner_policy.is_owner:
+        return None, (
+            target,
+            None,
+            {
+                "unlimited": True,
+                "role": "owner",
+                "owner_id": owner_policy.owner_id,
+                "runs_remaining": 999999,
+            },
+        )
+
     # In production/trial mode, require authenticated researcher account and 3:00 PM IST quota
     if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() not in ("true", "1", "yes"):
         user = get_authenticated_user(request)
@@ -90,6 +107,24 @@ def gate_run(request: Request, target: str) -> tuple[Response | None, tuple[str,
 @router.get("/api/trial-status")
 def get_trial_status(request: Request) -> Response:
     """Check remaining trial runs for caller across session, fingerprint, IP, and global daily ceiling."""
+    from bionemo_benchmark.server.routes_owner import get_trial_policy
+
+    owner_policy = get_trial_policy(request)
+    if owner_policy.is_owner:
+        return JSONResponse(
+            {
+                "allowed": True,
+                "runs_remaining": 999999,
+                "max_runs": 999999,
+                "is_owner": True,
+                "role": "owner",
+                "owner_id": owner_policy.owner_id,
+                "unlimited_trials": True,
+                "is_locked": False,
+                "reset_time": "Unlimited Workstation Mode",
+            }
+        )
+
     session_id, signed_token, fp_hash, cip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, cip)
 

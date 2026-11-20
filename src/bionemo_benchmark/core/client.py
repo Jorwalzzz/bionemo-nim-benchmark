@@ -21,7 +21,12 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
+
 logger = logging.getLogger(__name__)
+
+# Security & Model boundary limits
+MAX_PROTEIN_SEQUENCE_LENGTH = 10000
 
 # If NIM_BENCHMARK_STRICT=1, refuse to return simulated data when live API fails.
 # Set this in CI or benchmark contexts to prevent silent fallback masking real errors.
@@ -157,11 +162,20 @@ class NimBioClient:
     def validate_protein_sequence(sequence: str) -> str:
         """
         Validates and sanitizes a protein amino acid sequence.
-        Raises ValueError if empty or contains non-canonical amino acids.
+        Raises ValueError if empty, contains non-canonical amino acids, exceeds length cap,
+        or contains illegal control characters / null bytes.
         """
+        if not sequence or not isinstance(sequence, str):
+            raise ValueError("Protein sequence cannot be empty.")
+        if "\x00" in sequence or any(ord(c) < 32 and c not in "\r\n\t" for c in sequence):
+            raise ValueError("Protein sequence contains illegal control characters or null bytes.")
         clean_seq = re.sub(r"\s+", "", sequence.strip()).upper()
         if not clean_seq:
             raise ValueError("Protein sequence cannot be empty.")
+        if len(clean_seq) > MAX_PROTEIN_SEQUENCE_LENGTH:
+            raise ValueError(
+                f"Protein sequence length ({len(clean_seq)}) exceeds maximum permitted length of {MAX_PROTEIN_SEQUENCE_LENGTH} residues."
+            )
         invalid_residues = set(clean_seq) - CANONICAL_AMINO_ACIDS
         if invalid_residues:
             raise ValueError(
@@ -177,8 +191,9 @@ class NimBioClient:
     ) -> tuple[requests.Response, LatencyProfile]:
         """
         Executes HTTP request with explicit handling for HTTP 429 (Rate Limit)
-        using exponential backoff and jitter.
+        using exponential backoff and jitter. Enforces SSRF host validation and TLS verification.
         """
+        SafeSanitizer.validate_outbound_url(url)
         headers = self._get_headers()
         attempt = 0
         total_retry_delay = 0.0
@@ -192,6 +207,7 @@ class NimBioClient:
                     json=payload,
                     headers=headers,
                     timeout=self.timeout_seconds,
+                    verify=True,
                 )
                 t_end = time.perf_counter()
                 total_latency_ms = (t_end - t_start) * 1000.0

@@ -194,7 +194,7 @@ cp .env.example .env
 
 Edit `.env`:
 ```env
-NVIDIA_API_KEY=nvapi-your-nvidia-api-key-here
+NVIDIA_API_KEY=nvapi-your-key-here
 ```
 *(Obtain your free API credits and key from [NVIDIA build.nvidia.com](https://build.nvidia.com)).*
 

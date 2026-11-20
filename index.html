@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none';"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
@@ -37,8 +37,8 @@
   <script src="./js/theme.js"></script>
   <!-- Hero WebGL Canvas Ribbon -->
   <script src="./js/hero-webgl.js" defer></script>
-  <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback) -->
-  <script src="./vendor/3Dmol-min.js" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
+  <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback & SRI) -->
+  <script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
   <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
   <script src="./js/data-hydrator.js" defer></script>
   <script src="./js/race-scroll.js" defer></script>
@@ -201,7 +201,7 @@
       <!-- Item 4: Parity & Hermeticity -->
       <div class="ticker-item">
         <div class="ticker-label">Verification Suite</div>
-        <div class="ticker-num">145/145</div>
+        <div class="ticker-num">176/176</div>
         <div class="ticker-detail">Hermetic Pytest Tests Passed</div>
       </div>
     </div>
@@ -1042,7 +1042,7 @@
 
       <!-- Deliverables Strip -->
       <div class="deliverables-grid">
-        <a href="./blueprint.yaml" target="_blank" class="deliverable-card" title="View DGX Cloud and Docker Compose Deployment Spec">
+        <a href="./blueprint.yaml" target="_blank" rel="noopener noreferrer" class="deliverable-card" title="View DGX Cloud and Docker Compose Deployment Spec">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span class="badge-measured">DGX SPEC</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -1244,7 +1244,7 @@ def run(protocol: protocol_api.ProtocolContext):
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
             <span class="badge-measured">GNU AGPLv3 LICENSE</span>
-            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">145/145 HERMETIC TESTS PASSING</span>
+            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">176/176 HERMETIC TESTS PASSING</span>
             <span class="badge-measured">RELEASE v2.5</span>
           </div>
         </div>

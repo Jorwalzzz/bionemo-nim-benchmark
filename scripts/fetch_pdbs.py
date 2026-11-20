@@ -15,6 +15,10 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+# Add src to sys.path to access security sentinel
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PDBS_DIR = BASE_DIR / "data" / "pdbs"
 
@@ -76,11 +80,13 @@ def audit_pdbs(download_missing: bool = False) -> int:
             if download_missing:
                 print(f"{meta.pdb_id:<8} {meta.target_name:<28} {'MISSING':>9}     DOWNLOADING...", end="\r")
                 try:
-                    url = RCSB_URL_TEMPLATE.format(pdb_id=meta.pdb_id)
-                    urllib.request.urlretrieve(url, pdb_path)  # noqa: S310
-                    size_bytes = pdb_path.stat().st_size
+                    clean_id = SafeSanitizer.validate_pdb_id(meta.pdb_id)
+                    safe_path = SafeSanitizer.validate_safe_path(f"{clean_id}.pdb", DATA_PDBS_DIR)
+                    url = SafeSanitizer.validate_outbound_url(RCSB_URL_TEMPLATE.format(pdb_id=clean_id))
+                    urllib.request.urlretrieve(url, safe_path)  # nosec B310
+                    size_bytes = safe_path.stat().st_size
                     total_bytes += size_bytes
-                    sha_prefix = compute_sha256(pdb_path)[:12]
+                    sha_prefix = compute_sha256(safe_path)[:12]
                     print(f"{meta.pdb_id:<8} {meta.target_name:<28} {size_bytes / 1024:>9.1f} KB  FETCHED    {sha_prefix:<16}")
                 except Exception as exc:
                     print(f"{meta.pdb_id:<8} {meta.target_name:<28} {'FAILED':>9}     ERROR      {exc}")

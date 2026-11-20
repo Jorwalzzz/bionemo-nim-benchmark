@@ -13,6 +13,20 @@
 (function () {
   'use strict';
 
+  // Security & Upload DoS Guard limits
+  const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+  const MAX_ROWS = 5000;
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // Ground-truth dataset from results/screened_candidates_summary.csv & DOSSIER
   const DEFAULT_CANDIDATES = [
     {
@@ -208,6 +222,10 @@
       const color = c.isPareto ? 'var(--color-signal-green)' : '#F59E0B';
       const isHovered = hoveredCandidateId === c.id;
 
+      const safeId = escapeHtml(c.id);
+      const safeLabel = escapeHtml(`${c.id}: ${c.affinity} kcal/mol, QED ${c.qed}`);
+      const cleanShortId = escapeHtml(c.id.replace('NIM-LEAD-', ''));
+
       svgHtml += `
         <circle
           cx="${cx.toFixed(1)}"
@@ -215,13 +233,13 @@
           r="${isHovered ? 9 : r}"
           fill="${color}"
           class="pareto-point ${isHovered ? 'highlighted' : ''}"
-          data-id="${c.id}"
+          data-id="${safeId}"
           tabindex="0"
           role="button"
-          aria-label="${c.id}: ${c.affinity} kcal/mol, QED ${c.qed}"
+          aria-label="${safeLabel}"
         />
         <text x="${(cx + 8).toFixed(1)}" y="${(cy - 6).toFixed(1)}" font-family="var(--font-mono)" font-size="9" fill="${color}" font-weight="${c.isPareto ? '700' : '400'}">
-          ${c.id.replace('NIM-LEAD-', '')}
+          ${cleanShortId}
         </text>
       `;
     });
@@ -259,14 +277,17 @@
         ? `<span style="color:var(--color-signal-green);font-weight:600;">Pass (0)</span>`
         : `<span style="color:#F59E0B;font-weight:600;">${c.ro5Violations} Alerts</span>`;
 
+      const safeId = escapeHtml(c.id);
+      const safeSmiles = escapeHtml(c.smiles);
+
       html += `
-        <tr class="${isHovered ? 'highlighted' : ''}" data-id="${c.id}">
+        <tr class="${isHovered ? 'highlighted' : ''}" data-id="${safeId}">
           <td class="lead-id-cell">
-            ${c.id}
+            ${safeId}
           </td>
           <td style="max-width:180px;">
-            <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${c.smiles}">
-              ${c.smiles}
+            <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${safeSmiles}">
+              ${safeSmiles}
             </div>
           </td>
           <td class="lead-score-cell" style="color:var(--color-signal-green);">
@@ -326,6 +347,12 @@
    */
   function handleFile(file) {
     if (!file) return;
+
+    if (file.size > MAX_FILE_BYTES) {
+      alert(`File size (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed limit of 5 MB.`);
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = (e) => {
@@ -335,11 +362,33 @@
 
         if (file.name.endsWith('.json')) {
           const raw = JSON.parse(text);
-          parsed = Array.isArray(raw) ? raw : (raw.candidates || raw.leads || []);
+          let items = Array.isArray(raw) ? raw : (raw.candidates || raw.leads || []);
+          if (items.length > MAX_ROWS) {
+            alert(`File contains ${items.length} records. Limiting to first ${MAX_ROWS} candidates to prevent UI freezing.`);
+            items = items.slice(0, MAX_ROWS);
+          }
+          parsed = items.map((c, i) => ({
+            id: String(c.id || `LEAD-${i + 1}`).trim(),
+            smiles: String(c.smiles || 'C').trim(),
+            affinity: parseFloat(c.affinity) || -4.5,
+            mmgbsa: c.mmgbsa ? parseFloat(c.mmgbsa) : -10.0,
+            qed: c.qed != null ? parseFloat(c.qed) : 0.35,
+            mw: c.mw != null ? parseFloat(c.mw) : 500,
+            logp: c.logp != null ? parseFloat(c.logp) : 5.0,
+            sascore: c.sascore != null ? parseFloat(c.sascore) : 6.0,
+            pains: c.pains != null ? parseInt(c.pains, 10) : 0,
+            ro5Violations: c.ro5Violations != null ? parseInt(c.ro5Violations, 10) : 1,
+            verdict: String(c.verdict || 'CUSTOM UPLOAD').trim()
+          }));
         } else {
           // Parse CSV
-          const lines = text.trim().split(/\r?\n/);
+          let lines = text.trim().split(/\r?\n/);
           if (lines.length < 2) throw new Error("CSV has insufficient rows.");
+          const totalRows = lines.length - 1;
+          if (totalRows > MAX_ROWS) {
+            alert(`CSV contains ${totalRows} data rows. Limiting to first ${MAX_ROWS} candidates to prevent UI freezing.`);
+            lines = lines.slice(0, MAX_ROWS + 1);
+          }
           const headers = lines[0].split(',').map(h => h.trim());
 
           for (let i = 1; i < lines.length; i++) {
