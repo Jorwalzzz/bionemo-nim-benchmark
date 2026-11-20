@@ -54,8 +54,6 @@ docs/guides/*.html
 *.pdf
 
 # AI scaffolding and local dev files — not for public repo
-.agents/
-GEMINI.md
 scratch/
 Lenia/
 jidu6411_flash/

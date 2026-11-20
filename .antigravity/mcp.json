@@ -1,0 +1,58 @@
+{
+  "mcpServers": {
+    "bionemo-local": {
+      "command": "python",
+      "args": [
+        "tools/bionemo_mcp_server.py"
+      ],
+      "enabledTools": [
+        "bionemo_validate_sequence",
+        "bionemo_estimate_molecular_weight",
+        "bionemo_sanitize_smiles",
+        "bionemo_calculate_lipinski",
+        "bionemo_sanitize_pdb",
+        "bionemo_run_benchmark"
+      ],
+      "disabled": false
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "enabledTools": [
+        "sequentialthinking"
+      ],
+      "disabled": false
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "enabledTools": [
+        "fetch"
+      ],
+      "disabled": false
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "enabledTools": [
+        "search_code",
+        "get_file_contents",
+        "list_commits",
+        "create_or_update_file"
+      ],
+      "disabled": false
+    }
+  }
+}
