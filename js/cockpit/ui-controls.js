@@ -326,24 +326,49 @@ export function renderLeads() {
   const countEl = document.getElementById('leadCount');
   if (countEl) countEl.textContent = `${leads.length} candidates`;
 
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  container.innerHTML = leads.map((lead, i) => `
-    <div class="lead-card ${i === 0 ? 'selected' : ''}" onclick="selectLead(${i})">
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-2">
-          <span class="font-mono font-bold text-xs text-white">${esc(lead.id)}</span>
-          ${lead.pareto ? '<span class="badge-green">PARETO</span>' : ''}
+  if (leads.length === 0) {
+    container.innerHTML = `
+      <div id="emptyLeadsState" class="flex flex-col items-center justify-center p-8 text-center text-gray-500">
+        <span class="text-3xl mb-2">🧪</span>
+        <div class="text-xs font-semibold text-gray-400">No leads nominated yet</div>
+        <div class="text-[10px] text-gray-600 mt-1">Select a target and run autonomous discovery to nominate Pareto-optimal drug candidates.</div>
+      </div>
+    `;
+    const panel = document.getElementById('dossierPanel');
+    if (panel) {
+      panel.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-48 text-center text-gray-600 text-xs">
+          <span class="text-2xl mb-1 select-none">📋</span>
+          <span>No lead selected</span>
+          <span class="text-[10px] text-gray-700 mt-1">Nominated candidates will appear here</span>
         </div>
-        <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${esc(lead.verdict)}</span>
+      `;
+    }
+    return;
+  }
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  container.innerHTML = leads.map((lead, i) => {
+    const isSimulated = Boolean(lead.is_simulated || lead.provenance === 'SIMULATED');
+    return `
+      <div class="lead-card ${i === 0 ? 'selected' : ''}" onclick="selectLead(${i})">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="font-mono font-bold text-xs text-white">${esc(lead.id)}</span>
+            ${lead.pareto ? '<span class="badge-green">PARETO</span>' : ''}
+            ${isSimulated ? '<span class="badge-simulated px-1.5 py-0.5 text-[9px] rounded font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">SIMULATED</span>' : '<span class="badge-live px-1.5 py-0.5 text-[9px] rounded font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">NIM LIVE</span>'}
+          </div>
+          <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${esc(lead.verdict)}</span>
+        </div>
+        <div class="grid grid-cols-4 gap-2 text-[10px]">
+          <div><div class="text-gray-600">ΔG</div><div class="font-mono font-bold" style="color: var(--nvidia-green);">${esc(typeof lead.affinity === 'number' ? lead.affinity.toFixed(2) : lead.affinity)}</div></div>
+          <div><div class="text-gray-600">QED</div><div class="font-mono font-bold" style="color: var(--cyber-cyan);">${esc(typeof lead.qed === 'number' ? lead.qed.toFixed(3) : lead.qed)}</div></div>
+          <div><div class="text-gray-600">MW</div><div class="font-mono text-gray-300">${esc(typeof lead.mw === 'number' ? lead.mw.toFixed(1) : lead.mw)}</div></div>
+          <div><div class="text-gray-600">SAScore</div><div class="font-mono text-gray-300">${esc(typeof lead.sascore === 'number' ? lead.sascore.toFixed(2) : lead.sascore)}</div></div>
+        </div>
       </div>
-      <div class="grid grid-cols-4 gap-2 text-[10px]">
-        <div><div class="text-gray-600">ΔG</div><div class="font-mono font-bold" style="color: var(--nvidia-green);">${esc(lead.affinity)}</div></div>
-        <div><div class="text-gray-600">QED</div><div class="font-mono font-bold" style="color: var(--cyber-cyan);">${esc(lead.qed)}</div></div>
-        <div><div class="text-gray-600">MW</div><div class="font-mono text-gray-300">${esc(lead.mw)}</div></div>
-        <div><div class="text-gray-600">SAScore</div><div class="font-mono text-gray-300">${esc(lead.sascore)}</div></div>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
   if (leads.length > 0) selectLead(0);
 }
 
@@ -367,15 +392,17 @@ export function selectLead(i) {
   const panel = document.getElementById('dossierPanel');
   if (!panel) return;
 
+  const isSimulated = Boolean(lead.is_simulated || lead.provenance === 'SIMULATED');
   panel.innerHTML = `
     <div class="space-y-3 animate-fade-up">
       <div class="p-3 rounded-xl" style="background: rgba(118,185,0,0.06); border: 1px solid rgba(118,185,0,0.2);">
         <div class="flex items-center justify-between mb-1">
           <div class="font-mono font-bold text-sm text-white">${safeLeadId}</div>
-          <span class="text-[10px] font-mono text-gray-400">ΔG <strong class="text-nvidia-green">${lead.affinity.toFixed(2)}</strong></span>
+          <span class="text-[10px] font-mono text-gray-400">ΔG <strong class="text-nvidia-green">${typeof lead.affinity === 'number' ? lead.affinity.toFixed(2) : lead.affinity}</strong></span>
         </div>
         <div class="flex gap-1.5 flex-wrap">
           ${lead.pareto ? '<span class="badge-green">PARETO OPTIMAL</span>' : ''}
+          ${isSimulated ? '<span class="badge-simulated px-1.5 py-0.5 text-[9px] rounded font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">SIMULATED</span>' : '<span class="badge-live px-1.5 py-0.5 text-[9px] rounded font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">NIM LIVE</span>'}
           <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${safeVerdict}</span>
           <span class="badge-cyan">Round ${lead.round || 1}</span>
         </div>
@@ -546,4 +573,108 @@ export function showToast(msg) {
 
 export function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
+}
+
+let lastProvenanceReceipt = null;
+
+export function updateProvenanceBanner(provenance) {
+  lastProvenanceReceipt = provenance;
+  const banner = document.getElementById('provenanceBanner');
+  if (!banner) return;
+  const dot = document.getElementById('provenanceDot');
+  const badge = document.getElementById('provenanceBadge');
+  const detail = document.getElementById('provenanceDetail');
+
+  const isLive = provenance && provenance.mode === 'LIVE_NVIDIA_NIM';
+  if (isLive) {
+    banner.className = 'px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/30 flex items-center justify-between text-[11px] font-mono';
+    if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shrink-0';
+    if (badge) {
+      badge.className = 'font-bold text-emerald-400 shrink-0';
+      badge.textContent = 'LIVE · NVIDIA NIM BACKEND';
+    }
+    if (detail) {
+      const host = provenance.backend_host || '127.0.0.1';
+      const ms = provenance.elapsed_ms || 0;
+      const ts = provenance.timestamp_utc ? new Date(provenance.timestamp_utc).toLocaleTimeString() : '';
+      detail.textContent = `(${host} · ${ms}ms · ${ts})`;
+    }
+  } else {
+    banner.className = 'px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 flex items-center justify-between text-[11px] font-mono';
+    if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400 shrink-0';
+    if (badge) {
+      badge.className = 'font-bold text-amber-400 shrink-0';
+      badge.textContent = 'OFFLINE DEMO · CLIENT SIMULATION (NOT LIVE NIM)';
+    }
+    if (detail) {
+      detail.textContent = '(Local simulation; metrics illustrative. Run `python serve_cockpit.py` for live NIM)';
+    }
+  }
+}
+
+export function openRawReceiptModal() {
+  const modal = document.getElementById('rawReceiptModal');
+  const content = document.getElementById('rawReceiptContent');
+  if (!modal || !content) return;
+  const receipt = lastProvenanceReceipt || {
+    mode: 'OFFLINE_DEMO',
+    provenance: 'SIMULATED',
+    backend_host: window.location.hostname || 'localhost',
+    client_env: navigator.userAgent,
+    timestamp_utc: new Date().toISOString(),
+    notice: 'No live NIM backend response received yet. Running in offline client demo mode.'
+  };
+  content.textContent = JSON.stringify(receipt, null, 2);
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+export function closeRawReceiptModal() {
+  const modal = document.getElementById('rawReceiptModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+}
+
+export async function copyRawReceiptJson() {
+  const content = document.getElementById('rawReceiptContent');
+  const btnText = document.getElementById('copyReceiptBtnText');
+  if (!content) return;
+  try {
+    await navigator.clipboard.writeText(content.textContent || '');
+    if (btnText) {
+      btnText.textContent = 'Copied!';
+      setTimeout(() => { btnText.textContent = 'Copy JSON'; }, 2000);
+    }
+  } catch (err) {
+    console.warn('Clipboard write failed:', err);
+  }
+}
+
+export function exportActiveRunJson() {
+  const resultToExport = state.activeRunResult || {
+    status: 'completed',
+    target: state.currentTargetTab === 'presets' ? (document.getElementById('targetSelect')?.value || '7RPZ') : 'Target',
+    leads: state.currentLeads || [],
+    provenance: lastProvenanceReceipt || {
+      mode: 'OFFLINE_DEMO',
+      provenance: 'SIMULATED',
+      timestamp_utc: new Date().toISOString()
+    },
+    timestamp: new Date().toISOString()
+  };
+
+  const jsonStr = JSON.stringify(resultToExport, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const targetName = (resultToExport.pdbId || resultToExport.target || 'target').replace(/[^a-zA-Z0-9_-]/g, '_');
+  a.href = url;
+  a.download = `bionemo_${targetName}_discovery_run.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📥 Exported discovery run JSON');
 }

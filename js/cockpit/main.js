@@ -83,7 +83,12 @@ import {
   switchTab,
   copyCode,
   showToast,
-  sleep
+  sleep,
+  updateProvenanceBanner,
+  openRawReceiptModal,
+  closeRawReceiptModal,
+  copyRawReceiptJson,
+  exportActiveRunJson
 } from './ui-controls.js';
 
 import {
@@ -110,6 +115,8 @@ import {
   closeRobotModal,
   openResistanceModal,
   closeResistanceModal,
+  openStaticDemoModal,
+  closeStaticDemoModal,
   closeAllModals
 } from './modals.js';
 
@@ -166,7 +173,7 @@ Object.assign(window, {
   TARGETS,
   EMPIRICAL_TARGET_LEADS,
   TOUR_STEPS,
-  
+
   // 3D Visualizer & Biophysics
   pdbCache,
   loadPdb,
@@ -260,6 +267,14 @@ Object.assign(window, {
   generateLabCard,
   openRobotModal,
   closeRobotModal,
+  openRawReceiptModal,
+  closeRawReceiptModal,
+  copyRawReceiptJson,
+  updateProvenanceBanner,
+  exportActiveRunJson,
+  openStaticDemoModal,
+  closeStaticDemoModal,
+  updateHeaderAuthUI,
   downloadCurrentOT2Py,
   copyOT2Code,
   runResistanceStressTest,
@@ -314,35 +329,70 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 220);
 });
 
+// ─── Header Auth / Static Mode UI ─────────────────────────────────────────
+export function updateHeaderAuthUI(forceStatic = false) {
+  const isLoopback = !forceStatic && typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  const authHud = document.getElementById('authHudContainer');
+  const staticDemo = document.getElementById('staticDemoContainer');
+  const ownerAccess = document.getElementById('ownerAccessContainer');
+
+  if (!isLoopback) {
+    if (authHud) {
+      authHud.style.display = 'none';
+      authHud.classList.add('hidden');
+    }
+    if (staticDemo) {
+      staticDemo.style.display = 'flex';
+      staticDemo.classList.remove('hidden');
+    }
+    if (ownerAccess) {
+      ownerAccess.style.display = 'none';
+      ownerAccess.classList.add('hidden');
+    }
+  } else {
+    if (authHud) {
+      authHud.style.display = 'flex';
+      authHud.classList.remove('hidden');
+    }
+    if (staticDemo) {
+      staticDemo.style.display = 'none';
+      staticDemo.classList.add('hidden');
+    }
+  }
+}
+
 // ─── Cockpit Lifecycle Initialization ────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  updateHeaderAuthUI();
   initOwnerAccess();
   fetchTrialStatus();
 
   // Instant 3D Structure Render for Default Target via telemetry sync & PDB loader
   updateTargetInfo();
 
-  // Pre-load authentic empirical benchmark leads for instant interactive dashboard display
-  if (!state.currentLeads || state.currentLeads.length === 0) {
-    const defaultLeads = EMPIRICAL_TARGET_LEADS['KRAS G12D'] || [];
-    state.currentLeads = defaultLeads.slice(0, 5).map((lead, idx) => ({
-      ...lead,
-      round: idx < 3 ? 1 : 2
-    }));
-    renderLeads();
-    renderPareto();
-    const topLead = state.currentLeads[0];
-    if (topLead) {
-      const kpiAff = document.getElementById('kpiAffinity');
-      if (kpiAff) kpiAff.textContent = topLead.affinity.toFixed(2);
-      const kpiQed = document.getElementById('kpiQed');
-      if (kpiQed) kpiQed.textContent = topLead.qed.toFixed(3);
-      const kpiSc = document.getElementById('kpiScreened');
-      if (kpiSc) kpiSc.textContent = state.currentLeads.length;
-      const kpiPar = document.getElementById('kpiPareto');
-      if (kpiPar) kpiPar.textContent = state.currentLeads.filter(l => l.pareto).length;
-    }
-  }
+  // Clean Idle Launch State (zero fake preloaded leads, KPI metrics idle, empty Pareto)
+  state.currentLeads = [];
+  state.currentSelectedLead = null;
+  renderLeads();
+  renderPareto();
+  const kpiAff = document.getElementById('kpiAffinity');
+  if (kpiAff) kpiAff.textContent = '—';
+  const kpiQed = document.getElementById('kpiQed');
+  if (kpiQed) kpiQed.textContent = '—';
+  const kpiSc = document.getElementById('kpiScreened');
+  if (kpiSc) kpiSc.textContent = '—';
+  const kpiPar = document.getElementById('kpiPareto');
+  if (kpiPar) kpiPar.textContent = '—';
+
+  updateProvenanceBanner({
+    mode: 'OFFLINE_DEMO',
+    provenance: 'SIMULATED',
+    backend_host: window.location.hostname || 'localhost',
+    timestamp_utc: new Date().toISOString(),
+    notice: 'Idle standby mode. Select a target and run autonomous discovery to begin.'
+  });
 
   // Auto-launch Guide once for first-time visitors
   try {

@@ -15,8 +15,49 @@ export function renderPareto() {
     try { paretoChart.destroy(); } catch (e) { console.warn('Chart destroy warning:', e); }
   }
 
-  const pareto = currentLeads.filter(l => l.pareto);
-  const dominated = currentLeads.filter(l => !l.pareto);
+  const leads = state.currentLeads || [];
+  if (leads.length === 0) {
+    paretoChart = new Chart(ctx, {
+      type: 'scatter',
+      data: {
+        datasets: []
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          title: {
+            display: true,
+            text: 'Select a target and run discovery',
+            color: '#6b7280',
+            font: { size: 12, family: 'Inter' },
+            padding: { top: 70, bottom: 20 }
+          }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: 'Binding Affinity ΔG (kcal/mol)', color: '#6b7280', font: { size: 10 } },
+            ticks: { color: '#6b7280', font: { size: 10, family: 'JetBrains Mono' } },
+            grid: { color: 'rgba(33,38,45,0.8)' },
+            min: -14,
+            max: -6
+          },
+          y: {
+            title: { display: true, text: 'QED Score', color: '#6b7280', font: { size: 10 } },
+            ticks: { color: '#6b7280', font: { size: 10, family: 'JetBrains Mono' } },
+            grid: { color: 'rgba(33,38,45,0.8)' },
+            min: 0,
+            max: 1
+          }
+        }
+      }
+    });
+    return;
+  }
+
+  const pareto = leads.filter(l => l.pareto);
+  const dominated = leads.filter(l => !l.pareto);
 
   paretoChart = new Chart(ctx, {
     type: 'scatter',

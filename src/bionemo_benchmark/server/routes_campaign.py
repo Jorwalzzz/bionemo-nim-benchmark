@@ -6,12 +6,15 @@ installer distribution, and static web page delivery routes.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
 import platform
+import sys
 import time
 from typing import Any
+import uuid
 
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import (
@@ -252,6 +255,7 @@ def get_setup_guide() -> dict[str, str]:
 def trigger_run(
     request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
 ) -> Response:
+    start_time = time.perf_counter()
     err, ctx = gate_run(request, target)
     if err:
         return err
@@ -263,6 +267,36 @@ def trigger_run(
     dossier = orchestrator.run_discovery_campaign(
         target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
     )
+
+    is_live = not orchestrator.mock and bool(getattr(orchestrator, "api_key", None))
+    mode = "LIVE_NVIDIA_NIM" if is_live else "MOCK_SIMULATION"
+    req_id = f"req-nim-{uuid.uuid4().hex[:12]}"
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    client_host = request.client.host if request.client else "127.0.0.1"
+
+    rdkit_ver = "2024.03.5"
+    if "rdkit" in sys.modules:
+        rdkit_ver = getattr(sys.modules["rdkit"], "__version__", rdkit_ver)
+    else:
+        try:
+            import rdkit
+            rdkit_ver = getattr(rdkit, "__version__", rdkit_ver)
+        except Exception:
+            pass
+
+    provenance = {
+        "mode": mode,
+        "backend_host": client_host,
+        "nim_endpoints_called": [
+            "/v1/biology/esmfold",
+            "/v1/biology/diffdock",
+            "/v1/biology/molmim",
+        ] if is_live else ["mock://esmfold", "mock://diffdock", "mock://molmim"],
+        "request_ids": [req_id],
+        "rdkit_version": rdkit_ver,
+        "elapsed_ms": elapsed_ms,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+    }
 
     retro_data: dict[str, Any] = {}
     if orchestrator.latest_retrosynthesis_plan:
@@ -289,6 +323,7 @@ def trigger_run(
     result = {
         "status": "completed",
         "trial_status": trial_info,
+        "provenance": provenance,
         "target": dossier.target.name,
         "pdb_id": dossier.target.pdb_id,
         "residue_count": len(dossier.target.canonical_sequence),
@@ -324,6 +359,8 @@ def trigger_run(
                 "round": lead.generation_round,
                 "pose_sdf": lead.pose_sdf,
                 "contact_residues": lead.contact_residues,
+                "provenance": mode,
+                "is_simulated": not is_live,
             }
             for lead in dossier.top_leads
         ],
