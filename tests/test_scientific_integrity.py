@@ -31,7 +31,7 @@ class TestBackendProvenanceContract:
     """Verifies that the FastAPI discovery endpoint adheres to the scientific provenance contract."""
 
     def test_run_endpoint_returns_provenance_object(self, client):
-        res = client.post("/api/run?target=KRAS+G12D&candidates=3")
+        res = client.post("/api/run?target=KRAS+G12D&candidates=3", headers={"X-BioNeMo-CSRF": "1"})
         assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
         data = res.json()
 
@@ -60,7 +60,7 @@ class TestBackendProvenanceContract:
         assert "T" in prov["timestamp_utc"]
 
     def test_leads_are_stamped_with_provenance_and_simulation_flags(self, client):
-        res = client.post("/api/run?target=KRAS+G12D&candidates=3")
+        res = client.post("/api/run?target=KRAS+G12D&candidates=3", headers={"X-BioNeMo-CSRF": "1"})
         assert res.status_code == 200
         data = res.json()
 

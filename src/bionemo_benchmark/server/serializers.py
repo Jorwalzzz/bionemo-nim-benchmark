@@ -18,7 +18,9 @@ from bionemo_benchmark.infra.security_sentinel import (
     BiosecurityScreener,
     TokenBucketRateLimiter,
 )
-from bionemo_benchmark.infra.trial_limiter import TrialLimiter
+from bionemo_benchmark.infra.trial_limiter import TrialLimiter, extract_client_ip
+
+# ... keep path helpers intact; only replace client_ip & verify_request_origin cleanly below
 
 
 def find_repo_root() -> str:
@@ -71,22 +73,10 @@ auth_manager: AuthManager = AuthManager()
 
 
 def client_ip(request: Request) -> str:
-    """Proxy-aware client IP extraction, validating against trusted reverse proxies."""
+    """Rightmost untrusted-hop client IP extraction bounded by TRUSTED_PROXY_CIDRS."""
     peer_ip = request.client.host if request.client else "127.0.0.1"
-    if peer_ip in TRUSTED_PROXIES or os.environ.get("TRUST_ALL_PROXIES", "").lower() in ("1", "true", "yes"):
-        h = request.headers
-        for name in (
-            "cf-connecting-ip",
-            "CF-Connecting-IP",
-            "x-forwarded-for",
-            "X-Forwarded-For",
-            "x-real-ip",
-            "X-Real-IP",
-        ):
-            val = h.get(name)
-            if val:
-                return val.split(",")[0].strip()
-    return peer_ip
+    xff = request.headers.get("x-forwarded-for") or request.headers.get("X-Forwarded-For")
+    return extract_client_ip(peer_ip, xff)
 
 
 def sanitize_target_query(query: str) -> str:
@@ -111,47 +101,86 @@ def sanitize_target_query(query: str) -> str:
     return candidate
 
 
-def verify_request_origin(request: Request) -> bool:
-    """
-    Verifies that API mutation requests originate from a legitimate origin (anti-CSRF).
-    Enforces strict protocol and exact domain/port matching to prevent subdomain spoofing.
-    """
-    origin = request.headers.get("origin")
-    referer = request.headers.get("referer")
-    host = request.headers.get("host")
-    check_url = origin or referer or ""
-    if not check_url:
-        peer = request.client.host if request.client else "127.0.0.1"
-        if peer in TRUSTED_PROXIES or (host and host.split(":")[0].lower() in ("localhost", "127.0.0.1", "testserver")):
-            return True
-        if request.method in ("GET", "HEAD", "OPTIONS"):
-            return True
-        return False
+_EXACT_ALLOWED_HTTPS_HOSTS: frozenset[str] = frozenset(
+    {
+        "jorwalzzz.github.io",
+        "huggingface.co",
+        "jorwalzzz-bionemo-nim-benchmark.hf.space",
+    }
+)
 
+
+def _normalize_origin_tuple(raw_url: str) -> tuple[str, str, int | None] | None:
+    """Parse an Origin or Referer URL into canonical (scheme, host, port)."""
     try:
-        parsed = urlparse(check_url)
-        if parsed.scheme not in ("http", "https"):
-            return False
+        parsed = urlparse(raw_url.strip())
+    except ValueError:
+        return None
+    scheme = (parsed.scheme or "").lower()
+    host = (parsed.hostname or "").rstrip(".").lower()
+    if scheme not in ("http", "https") or not host:
+        return None
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+    default_port = 443 if scheme == "https" else 80
+    effective_port = port if port and port != default_port else None
+    return scheme, host, effective_port
 
-        hostname = (parsed.hostname or "").lower()
-        if host:
-            host_header_name = host.split(":")[0].lower()
-            if hostname == host_header_name:
+
+def _is_origin_allowlisted(raw_url: str) -> bool:
+    """Check parsed origin strictly against exact allowlisted origins (zero wildcards)."""
+    norm = _normalize_origin_tuple(raw_url)
+    if norm is None:
+        return False
+    scheme, hostname, port = norm
+
+    # Permit configured exact origins from environment
+    for entry in os.environ.get("BIONEMO_ALLOWED_ORIGINS", "").split(","):
+        if entry.strip():
+            allowed_norm = _normalize_origin_tuple(entry)
+            if allowed_norm is not None and norm == allowed_norm:
                 return True
 
-        if hostname in ("localhost", "127.0.0.1", "testserver"):
-            return True
-        if (
-            hostname == "huggingface.co"
-            or hostname.endswith(".hf.space")
-            or hostname.endswith(".huggingface.co")
-            or hostname == "jorwalzzz.github.io"
-        ):
-            return True
-    except Exception:
-        return False
+    # Permit local workstation loopback origins on any port
+    if hostname in ("localhost", "127.0.0.1", "testserver"):
+        return True
+
+    # Permit exact verified HTTPS deployment origins on standard HTTPS port only
+    if scheme == "https" and port is None and hostname in _EXACT_ALLOWED_HTTPS_HOSTS:
+        return True
 
     return False
+
+
+def verify_request_origin(request: Request) -> bool:
+    """
+    Enforces strict anti-CSRF checks on mutating endpoints without Host/proxy bypasses:
+    1. Rejects Sec-Fetch-Site: cross-site headers unconditionally.
+    2. Requires Content-Type: application/json OR X-BioNeMo-CSRF: 1 on mutating verbs.
+    3. Validates Origin/Referer strictly against an exact origin allowlist when supplied.
+    """
+    method = (request.method or "GET").upper()
+    if method in ("GET", "HEAD", "OPTIONS"):
+        return True
+
+    sec_fetch_site = (request.headers.get("sec-fetch-site") or "").strip().lower()
+    if sec_fetch_site == "cross-site":
+        return False
+
+    raw_ct = (request.headers.get("content-type") or "").split(";")[0].strip().lower()
+    csrf_hdr = (request.headers.get("x-bionemo-csrf") or "").strip()
+    if raw_ct != "application/json" and csrf_hdr != "1":
+        return False
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    check_url = origin or referer or ""
+    if check_url:
+        return _is_origin_allowlisted(check_url)
+
+    return True
 
 
 def get_authenticated_user(request: Request) -> dict[str, Any] | None:

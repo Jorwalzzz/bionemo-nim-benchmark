@@ -1008,6 +1008,10 @@
         <label for="ownerPasswordInput" class="block text-[11px] font-mono text-gray-400 uppercase mb-1">Password</label>
         <input type="password" id="ownerPasswordInput" autocomplete="current-password" placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-[#0d1117] border border-gray-700 text-white text-xs font-mono focus:border-nvidia-green focus:outline-none" onkeydown="if(event.key==='Enter')submitOwnerLogin()">
       </div>
+      <div>
+        <label for="ownerBootTokenInput" class="block text-[11px] font-mono text-gray-400 uppercase mb-1">Per-Boot Token</label>
+        <input type="password" id="ownerBootTokenInput" autocomplete="off" placeholder="From data/.owner_boot_token" class="w-full px-3 py-2 rounded-lg bg-[#0d1117] border border-gray-700 text-white text-xs font-mono focus:border-nvidia-green focus:outline-none" onkeydown="if(event.key==='Enter')submitOwnerLogin()">
+      </div>
       <div class="flex items-center justify-end gap-2 pt-2">
         <button type="button" onclick="closeOwnerModal()" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">Cancel</button>
         <button type="button" id="ownerLoginBtn" onclick="submitOwnerLogin()" class="px-4 py-1.5 rounded-lg bg-nvidia-green hover:brightness-110 text-black text-xs font-bold transition-all shadow-md">Authenticate</button>

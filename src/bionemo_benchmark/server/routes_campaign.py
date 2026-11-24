@@ -41,8 +41,10 @@ from bionemo_benchmark.server.serializers import (
     LANDING_PATH,
     RESULTS_DIR,
     ROOT_ASSETS_DIR,
+    auth_manager,
     get_client_identifiers,
     trial_limiter,
+    verify_request_origin,
     with_cookie,
 )
 
@@ -261,12 +263,21 @@ def trigger_run(
         return err
     assert ctx is not None
     target_clean, signed_token, trial_info = ctx
+    reservation_id = getattr(request.state, "quota_reservation_id", None)
     safe_candidates = min(max(candidates, 1), 10)
 
     orchestrator = make_orchestrator()
-    dossier = orchestrator.run_discovery_campaign(
-        target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
-    )
+    try:
+        dossier = orchestrator.run_discovery_campaign(
+            target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
+        )
+    except Exception:
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
+        raise
+    else:
+        if reservation_id:
+            auth_manager.commit_run(reservation_id)
 
     is_live = not orchestrator.mock and bool(getattr(orchestrator, "api_key", None))
     mode = "LIVE_NVIDIA_NIM" if is_live else "MOCK_SIMULATION"
@@ -370,25 +381,49 @@ def trigger_run(
     return JSONResponse(result)
 
 
-@router.get("/api/stream")
+@router.api_route("/api/stream", methods=["GET", "POST"])
 async def stream_council_run(
     request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(6)
 ) -> Response:
     """
     Live Asynchronous Server-Sent Events (SSE) Stream:
     Streams each council agent's thoughts, debates, vetoes, and docking scores
-    in real time directly into the browser at 60 FPS.
+    in real time with zero proxy/middleware buffering and atomic quota refund on failure.
     """
-    err, ctx = gate_run(request, target)
+    target_val = target
+    candidates_val = candidates
+    if request.method == "POST":
+        if not verify_request_origin(request):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "CSRF_ORIGIN_REJECTED",
+                    "message": "Cross-origin execution blocked for security.",
+                },
+            )
+        try:
+            raw_body = await request.body()
+            if raw_body:
+                parsed = json.loads(raw_body.decode("utf-8"))
+                if isinstance(parsed, dict):
+                    target_val = str(parsed.get("target", target_val))
+                    if "candidates" in parsed:
+                        candidates_val = int(parsed["candidates"])
+        except Exception:
+            pass
+
+    err, ctx = gate_run(request, target_val)
     if err:
         return err
     assert ctx is not None
     target_clean, _, _ = ctx
-    safe_candidates = min(max(candidates, 1), 10)
+    reservation_id = getattr(request.state, "quota_reservation_id", None)
+    safe_candidates = min(max(int(candidates_val), 1), 10)
 
     async def event_generator():
         queue: asyncio.Queue = asyncio.Queue()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
+        committed = False
 
         def on_council_dialogue(msg: CouncilMessage):
             loop.call_soon_threadsafe(
@@ -416,15 +451,19 @@ async def stream_council_run(
             ),
         )
 
-        while not future.done() or not queue.empty():
-            try:
-                item = await asyncio.wait_for(queue.get(), timeout=0.2)
-                yield f"data: {json.dumps(item)}\n\n"
-            except TimeoutError:
-                yield ": keep-alive\n\n"
-
         try:
+            yield f"data: {json.dumps({'event': 'stream_ready', 'target': target_clean})}\n\n"
+            while not future.done() or not queue.empty():
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=0.2)
+                    yield f"data: {json.dumps(item)}\n\n"
+                except TimeoutError:
+                    yield ": keep-alive\n\n"
+
             dossier = future.result()
+            if reservation_id:
+                auth_manager.commit_run(reservation_id)
+                committed = True
             done_payload = {
                 "event": "campaign_complete",
                 "target": dossier.target.name,
@@ -440,6 +479,9 @@ async def stream_council_run(
             }
             yield f"data: {json.dumps(done_payload)}\n\n"
         except Exception as exc:
+            if reservation_id and not committed:
+                auth_manager.refund_run(reservation_id)
+                committed = True
             safe_msg = SecretScrubber.scrub(str(exc))
             err_payload = {
                 "event": "campaign_error",
@@ -447,8 +489,15 @@ async def stream_council_run(
                 "message": safe_msg,
             }
             yield f"data: {json.dumps(err_payload)}\n\n"
+        finally:
+            if reservation_id and not committed:
+                auth_manager.refund_run(reservation_id)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # -------------------------------------------------------------------------

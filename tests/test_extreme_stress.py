@@ -56,7 +56,10 @@ class TestExtremeLoop1APIEndpointsAndBoundaryConditions:
 
         # 2. With valid admin key, reset succeeds
         admin_key = os.environ.get("ADMIN_RESET_KEY", "bionemo-admin-prod-9821")
-        r3_auth = client.post("/api/reset-trial", headers={"X-Admin-Key": admin_key})
+        r3_auth = client.post(
+            "/api/reset-trial",
+            headers={"X-Admin-Key": admin_key, "X-BioNeMo-CSRF": "1"},
+        )
         assert r3_auth.status_code == 200
         assert r3_auth.json()["success"] is True
 

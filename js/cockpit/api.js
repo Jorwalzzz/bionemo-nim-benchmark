@@ -101,7 +101,7 @@ const COMMON_DOMAIN_TYPOS = {
   'protonmial.com': 'protonmail.com'
 };
 
-const EMAIL_STRICT_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+const EMAIL_STRICT_REGEX = /^[a-zA-Z0-9.!#$%&*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 export function validateEmailDetailed(email) {
   if (!email || typeof email !== 'string') {
@@ -167,7 +167,7 @@ export function handleEmailInputValidation(inputEl, feedbackId) {
 
   const value = inputEl.value.trim();
   if (!value) {
-    feedbackEl.innerHTML = '';
+    feedbackEl.replaceChildren();
     feedbackEl.classList.add('hidden');
     inputEl.style.borderColor = '';
     return;
@@ -178,30 +178,48 @@ export function handleEmailInputValidation(inputEl, feedbackId) {
 
   if (result.type === 'typo' && result.suggestion) {
     inputEl.style.borderColor = '#f59e0b';
-    feedbackEl.innerHTML = `
-      <div class="p-2 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 flex items-center justify-between">
-        <span>⚠️ ${escapeHtml(result.message)}</span>
-        <button type="button" onclick="fixEmailTypo('${escapeHtml(inputEl.id)}', '${escapeHtml(result.suggestion)}', '${escapeHtml(feedbackId)}')" class="ml-2 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-white font-bold border border-amber-500/40 text-[10px]">
-          Click to Fix
-        </button>
-      </div>
-    `;
+    const wrap = document.createElement('div');
+    wrap.className = 'p-2 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 flex items-center justify-between';
+
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = `⚠️ ${result.message}`;
+    wrap.appendChild(msgSpan);
+
+    const fixBtn = document.createElement('button');
+    fixBtn.type = 'button';
+    fixBtn.className = 'ml-2 px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-white font-bold border border-amber-500/40 text-[10px]';
+    fixBtn.textContent = 'Click to Fix';
+    fixBtn.addEventListener('click', () => fixEmailTypo(inputEl.id, result.suggestion, feedbackId));
+    wrap.appendChild(fixBtn);
+
+    feedbackEl.replaceChildren(wrap);
   } else if (!result.valid) {
     inputEl.style.borderColor = '#ef4444';
-    feedbackEl.innerHTML = `
-      <div class="p-1.5 rounded bg-red-950/40 border border-red-500/40 text-red-300 flex items-center gap-1.5">
-        <span>❌</span>
-        <span>${escapeHtml(result.message)}</span>
-      </div>
-    `;
+    const wrap = document.createElement('div');
+    wrap.className = 'p-1.5 rounded bg-red-950/40 border border-red-500/40 text-red-300 flex items-center gap-1.5';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = '❌';
+    wrap.appendChild(iconSpan);
+
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = result.message;
+    wrap.appendChild(msgSpan);
+
+    feedbackEl.replaceChildren(wrap);
   } else {
     inputEl.style.borderColor = '#10b981';
-    const pillClass = result.type === 'academic' ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300' : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300';
-    feedbackEl.innerHTML = `
-      <div class="p-1.5 rounded border ${pillClass} flex items-center gap-1.5">
-        <span>${escapeHtml(result.message)}</span>
-      </div>
-    `;
+    const pillClass = result.type === 'academic'
+      ? 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300'
+      : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300';
+    const wrap = document.createElement('div');
+    wrap.className = `p-1.5 rounded border ${pillClass} flex items-center gap-1.5`;
+
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = result.message;
+    wrap.appendChild(msgSpan);
+
+    feedbackEl.replaceChildren(wrap);
   }
 }
 
@@ -366,7 +384,7 @@ export class ClientAuthManager {
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
           body: JSON.stringify({ email, password })
         });
         if (res.ok) {
@@ -415,7 +433,10 @@ export class ClientAuthManager {
   async demoLogin() {
     if (!this.isStaticHost) {
       try {
-        const res = await fetch('/api/auth/demo-login', { method: 'POST' });
+        const res = await fetch('/api/auth/demo-login', {
+          method: 'POST',
+          headers: { 'X-BioNeMo-CSRF': '1' }
+        });
         if (res.ok) {
           const data = await res.json();
           this.user = data.user;
@@ -458,7 +479,7 @@ export class ClientAuthManager {
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
           body: JSON.stringify({ full_name: fullName, organization, email, password })
         });
         if (res.ok) {
@@ -507,7 +528,10 @@ export class ClientAuthManager {
 
   logout() {
     if (!this.isStaticHost) {
-      fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'X-BioNeMo-CSRF': '1' }
+      }).catch(() => {});
     }
     this.user = null;
     this.token = null;
@@ -525,7 +549,7 @@ export class ClientAuthManager {
 
     if (!this.isStaticHost) {
       try {
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' };
         if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
         const res = await fetch('/api/feedback', {
           method: 'POST',
@@ -688,7 +712,10 @@ export const clientAuth = new ClientAuthManager();
 
 export async function resetTrialQuota() {
   try {
-    const res = await fetch('/api/reset-trial', { method: 'POST', headers: { 'X-Client-Fingerprint': CLIENT_FP } });
+    const res = await fetch('/api/reset-trial', {
+      method: 'POST',
+      headers: { 'X-Client-Fingerprint': CLIENT_FP, 'X-BioNeMo-CSRF': '1' }
+    });
     if (res.ok) {
       showToast('✅ Demo quota reset! You can now test trial workflows.');
       fetchTrialStatus();
@@ -768,7 +795,8 @@ export async function runDiscovery() {
     const res = isStaticHost ? { ok: false, status: 0 } : await fetch(`/api/run?target=${encodeURIComponent(target)}&candidates=${candidates}`, {
       method: 'POST',
       headers: {
-        'X-Client-Fingerprint': CLIENT_FP
+        'X-Client-Fingerprint': CLIENT_FP,
+        'X-BioNeMo-CSRF': '1'
       }
     });
 

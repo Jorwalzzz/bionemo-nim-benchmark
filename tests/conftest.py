@@ -89,6 +89,8 @@ def isolate_workspace_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(serializers_mod, "auth_manager", fresh_auth)
     monkeypatch.setattr(routes_auth_mod, "auth_manager", fresh_auth)
+    monkeypatch.setattr(routes_campaign_mod, "auth_manager", fresh_auth)
+    monkeypatch.setattr(routes_structure_mod, "auth_manager", fresh_auth)
 
     monkeypatch.setattr(serializers_mod, "trial_limiter", fresh_limiter)
     monkeypatch.setattr(routes_auth_mod, "trial_limiter", fresh_limiter)

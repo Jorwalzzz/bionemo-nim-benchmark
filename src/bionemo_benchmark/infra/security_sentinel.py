@@ -11,13 +11,17 @@ Designed to satisfy NVIDIA Inception, GxP, and HIPAA zero-trust guidelines:
 4. SafeSanitizer: Linear-time, ReDoS-safe input sanitization for SMILES, PDB IDs, and Python AST parameters.
 """
 
+import ipaddress
 import os
 import re
+import socket
 import threading
 import time
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+import requests
 
 # ==============================================================================
 # 1. BIOSECURITY & DUAL-USE TOXIN SCREENING
@@ -233,11 +237,50 @@ class SafeSanitizer:
             raise ValueError(f"Invalid PDB ID format: '{pdb_id}'. Must strictly match ^[1-9][A-Za-z0-9]{{3}}$.")
         return clean
 
+    CLOUD_METADATA_NETWORKS = (
+        ipaddress.ip_network("169.254.169.254/32"),
+        ipaddress.ip_network("fd00:ec2::254/128"),
+    )
+
+    @classmethod
+    def _effective_allowed_hosts(cls) -> frozenset[str]:
+        hosts = set(cls.ALLOWED_OUTBOUND_HOSTS)
+        extra = os.environ.get("NIM_ALLOWED_HOSTS", "").strip()
+        if extra:
+            for item in extra.split(","):
+                clean = item.strip().rstrip(".").lower()
+                if clean and "*" not in clean:
+                    hosts.add(clean)
+        return frozenset(hosts)
+
+    @classmethod
+    def _validate_resolved_ip(cls, ip_obj: ipaddress.IPv4Address | ipaddress.IPv6Address, allow_private: bool) -> None:
+        if isinstance(ip_obj, ipaddress.IPv6Address) and ip_obj.ipv4_mapped is not None:
+            cls._validate_resolved_ip(ip_obj.ipv4_mapped, allow_private=allow_private)
+            return
+        for meta_net in cls.CLOUD_METADATA_NETWORKS:
+            if ip_obj in meta_net:
+                raise ValueError(f"Unconditionally blocked cloud metadata endpoint IP: {ip_obj}")
+        if not allow_private and (
+            ip_obj.is_private
+            or ip_obj.is_loopback
+            or ip_obj.is_link_local
+            or ip_obj.is_reserved
+            or ip_obj.is_multicast
+            or ip_obj.is_unspecified
+        ):
+            raise ValueError(
+                f"Outbound connection to non-public IP '{ip_obj}' is forbidden unless NIM_ALLOW_PRIVATE_HOSTS=true."
+            )
+
     @classmethod
     def validate_outbound_url(cls, url: str) -> str:
         """
-        Validates outbound HTTP requests against CWE-918 (SSRF).
-        Enforces HTTPS, allowed host whitelist, and prohibits embedded userinfo.
+        Validates outbound HTTP requests against CWE-918 (SSRF):
+        - Enforces HTTPS only and prohibits embedded userinfo.
+        - Enforces exact host allowlist (RCSB/NVIDIA NIM + NIM_ALLOWED_HOSTS).
+        - Validates literal IPs and DNS resolutions against private/loopback/link-local/reserved IPs
+          (unless NIM_ALLOW_PRIVATE_HOSTS=true) and unconditionally blocks cloud metadata CIDRs.
         """
         if not url or not isinstance(url, str):
             raise ValueError("URL must be a non-empty string.")
@@ -246,14 +289,67 @@ class SafeSanitizer:
         parsed = urlparse(url.strip())
         if parsed.scheme.lower() != "https":
             raise ValueError(f"Disallowed URL scheme '{parsed.scheme}'. Only HTTPS is permitted.")
-        host = (parsed.hostname or "").lower()
-        if host not in cls.ALLOWED_OUTBOUND_HOSTS:
-            raise ValueError(
-                f"Outbound host '{host}' is not in allowed hosts whitelist: {sorted(cls.ALLOWED_OUTBOUND_HOSTS)}"
-            )
         if parsed.username or parsed.password:
             raise ValueError("Embedded credentials in outbound URL are forbidden.")
+
+        host = (parsed.hostname or "").rstrip(".").lower()
+        if not host:
+            raise ValueError("Outbound URL must contain a valid hostname.")
+
+        allowed_hosts = cls._effective_allowed_hosts()
+        if host not in allowed_hosts:
+            raise ValueError(
+                f"Outbound host '{host}' is not in allowed hosts whitelist: {sorted(allowed_hosts)}"
+            )
+
+        allow_private = os.environ.get("NIM_ALLOW_PRIVATE_HOSTS", "").lower() in ("true", "1", "yes")
+        try:
+            literal_ip = ipaddress.ip_address(host)
+        except ValueError:
+            literal_ip = None
+
+        if literal_ip is not None:
+            cls._validate_resolved_ip(literal_ip, allow_private=allow_private)
+            return url
+
+        port = parsed.port or 443
+        try:
+            infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except socket.gaierror as exc:
+            if host in cls.ALLOWED_OUTBOUND_HOSTS:
+                return url
+            raise ValueError(f"DNS resolution failed for outbound host '{host}': {exc}") from exc
+
+        for _, _, _, _, sockaddr in infos:
+            ip_raw = sockaddr[0].split("%")[0]
+            ip_obj = ipaddress.ip_address(ip_raw)
+            cls._validate_resolved_ip(ip_obj, allow_private=allow_private)
+
         return url
+
+    @classmethod
+    def safe_http_request(
+        cls,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        json_payload: dict[str, Any] | None = None,
+        data: bytes | str | None = None,
+        timeout: float = 15.0,
+    ) -> requests.Response:
+        """Execute an SSRF-validated HTTPS request with redirects strictly disabled."""
+        validated_url = cls.validate_outbound_url(url)
+        return requests.request(
+            method=method.upper(),
+            url=validated_url,
+            headers=headers,
+            json=json_payload,
+            data=data,
+            timeout=timeout,
+            verify=True,
+            allow_redirects=False,
+        )
 
     @staticmethod
     def validate_safe_path(path: str | Path, base_dir: str | Path) -> Path:

@@ -20,7 +20,9 @@ pytest.importorskip("mcp")
 from bionemo_mcp_server import (
     bionemo_compare_known_inhibitors,
     bionemo_fetch_rcsb_pdb,
+    bionemo_query_diffdock,
     bionemo_query_esmfold,
+    bionemo_run_benchmark,
     bionemo_sanitize_smiles,
     bionemo_validate_sequence,
 )
@@ -78,3 +80,23 @@ class TestBionemoMcpTools:
         assert callable(pkg_val)
         assert callable(pkg_main)
         assert pkg_mcp is not None
+
+    def test_query_diffdock_mock(self):
+        res = bionemo_query_diffdock(
+            protein_sequence="MTEYKLVVVGAGGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQ",
+            ligand_smiles="CCO",
+            mock=True,
+        )
+        assert "error" not in res
+        assert res["model"] == "nvidia/diffdock"
+        assert res["is_mock"] is True
+        assert res["num_poses"] >= 1
+        assert isinstance(res["top_affinity_kcal_mol"], float)
+
+    def test_run_benchmark_mock(self):
+        res = bionemo_run_benchmark(mock=True)
+        assert res["status"] == "success"
+        assert res["num_complexes_evaluated"] >= 1
+        assert res["results"][0]["speedup"] > 0.0
+        assert "diffdock_top_affinity_kcal_mol" in res["results"][0]
+
