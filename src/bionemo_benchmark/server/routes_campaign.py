@@ -126,17 +126,17 @@ def get_root_asset(request: Request) -> Response:
     return JSONResponse(status_code=404, content={"error": f"Asset {name} not found"})
 
 
-@router.get("/cockpit.html", response_class=HTMLResponse)
+@router.api_route("/cockpit.html", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_cockpit_html_page(request: Request) -> Response:
     return get_cockpit(request)
 
 
-@router.get("/index.html", response_class=HTMLResponse)
+@router.api_route("/index.html", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_index_html_page(request: Request) -> Response:
     return get_landing(request)
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_landing(request: Request) -> Response:
     """Serves high-impact executive showcase landing portal."""
     if os.path.exists(LANDING_PATH):
@@ -145,7 +145,7 @@ def get_landing(request: Request) -> Response:
     return get_cockpit(request)
 
 
-@router.get("/cockpit", response_class=HTMLResponse)
+@router.api_route("/cockpit", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_cockpit(request: Request) -> Response:
     """Serves full interactive Autonomous Drug Discovery Cockpit with 3Dmol viewer."""
     _, signed_token, _, _, _ = get_client_identifiers(request)
@@ -293,41 +293,14 @@ def get_setup_guide() -> dict[str, str]:
 # -------------------------------------------------------------------------
 
 
-@router.post("/api/run")
-def trigger_run(
-    request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
-) -> Response:
-    start_time = time.perf_counter()
-    err, ctx = gate_run(request, target)
-    if err:
-        return err
-    assert ctx is not None
-    target_clean, signed_token, trial_info = ctx
-    reservation_id = getattr(request.state, "quota_reservation_id", None)
-    safe_candidates = min(max(candidates, 1), 10)
-
-    orchestrator = make_orchestrator()
-    try:
-        dossier = orchestrator.run_discovery_campaign(
-            target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
-        )
-    except Exception:
-        if reservation_id:
-            auth_manager.refund_run(reservation_id)
-        raise
-    else:
-        if reservation_id:
-            auth_manager.commit_run(reservation_id)
-
-    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
-    client_host = request.client.host if request.client else "127.0.0.1"
-    rdkit_ver = _detect_rdkit_version()
-    provenance = _build_campaign_provenance(
-        orchestrator=orchestrator,
-        client_host=client_host,
-        rdkit_ver=rdkit_ver,
-        elapsed_ms=elapsed_ms,
-    )
+def _serialize_campaign_payload(
+    *,
+    orchestrator: AgenticScientistOrchestrator,
+    dossier: Any,
+    provenance: dict[str, Any],
+    trial_info: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build the unified campaign JSON envelope shared by `/api/run` and `/api/stream`."""
     mode = str(provenance["overall_mode"])
     is_sim = bool(provenance["is_simulated"])
 
@@ -353,7 +326,7 @@ def trigger_run(
 
     council_summary = orchestrator.bus.get_council_summary()
 
-    result = {
+    return {
         "status": "completed",
         "trial_status": trial_info,
         "provenance": provenance,
@@ -398,6 +371,49 @@ def trigger_run(
             for lead in dossier.top_leads
         ],
     }
+
+
+@router.post("/api/run")
+def trigger_run(
+    request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
+) -> Response:
+    start_time = time.perf_counter()
+    err, ctx = gate_run(request, target)
+    if err:
+        return err
+    assert ctx is not None
+    target_clean, signed_token, trial_info = ctx
+    reservation_id = getattr(request.state, "quota_reservation_id", None)
+    safe_candidates = min(max(candidates, 1), 10)
+
+    orchestrator = make_orchestrator()
+    try:
+        dossier = orchestrator.run_discovery_campaign(
+            target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
+        )
+    except Exception:
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
+        raise
+    else:
+        if reservation_id:
+            auth_manager.commit_run(reservation_id)
+
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    client_host = request.client.host if request.client else "127.0.0.1"
+    rdkit_ver = _detect_rdkit_version()
+    provenance = _build_campaign_provenance(
+        orchestrator=orchestrator,
+        client_host=client_host,
+        rdkit_ver=rdkit_ver,
+        elapsed_ms=elapsed_ms,
+    )
+    result = _serialize_campaign_payload(
+        orchestrator=orchestrator,
+        dossier=dossier,
+        provenance=provenance,
+        trial_info=trial_info,
+    )
     if signed_token:
         return with_cookie(JSONResponse(result), signed_token)
     return JSONResponse(result)
@@ -494,17 +510,12 @@ async def stream_council_run(
             )
             done_payload = {
                 "event": "campaign_complete",
-                "target": dossier.target.name,
-                "pdb_id": dossier.target.pdb_id,
-                "nominated_lead": dossier.top_leads[0].id
-                if dossier.top_leads
-                else "None",
-                "binding_affinity": dossier.top_leads[0].binding_affinity
-                if dossier.top_leads
-                else 0.0,
-                "pareto_count": dossier.pareto_leads_count,
-                "screened": dossier.screened_count,
-                "provenance": stream_prov,
+                **_serialize_campaign_payload(
+                    orchestrator=orch,
+                    dossier=dossier,
+                    provenance=stream_prov,
+                    trial_info=ctx[2],
+                ),
             }
             yield f"data: {json.dumps(done_payload)}\n\n"
         except Exception as exc:

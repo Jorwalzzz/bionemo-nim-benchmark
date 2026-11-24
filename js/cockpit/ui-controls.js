@@ -4,7 +4,7 @@
  */
 
 import { state, TARGETS, ESMFOLD_PRESETS, PRESET_INHIBITORS } from './state.js';
-import { loadPdb, render3DComplex, updateLead3DView } from './viewer3d.js';
+import { loadPdb, render3DComplex, updateLead3DView, evaluateClientRedock } from './viewer3d.js';
 import { escapeHtml } from './api.js';
 
 let wbDebounceTimer = null;
@@ -98,16 +98,21 @@ export function onWorkbenchInput(val) {
     } else {
       if (badge) badge.innerHTML = '<span class="badge-valence-valid">✓ Valid Chemical Graph</span>';
     }
+    const metrics = evaluateClientRedock(smiles);
     const mwEl = document.getElementById('wbLiveMw');
-    if (mwEl) {
-      const approxMw = Math.round(smiles.length * 13.5);
-      mwEl.textContent = approxMw;
-    }
+    if (mwEl) mwEl.textContent = metrics.mw ? metrics.mw.toFixed(1) : '—';
+    const affEl = document.getElementById('wbLiveAffinity');
+    if (affEl) affEl.textContent = `${metrics.binding_affinity_kcal_mol.toFixed(2)} kcal/mol`;
+    const qedEl = document.getElementById('wbLiveQed');
+    if (qedEl) qedEl.textContent = metrics.qed.toFixed(3);
+    const sasEl = document.getElementById('wbLiveSas');
+    if (sasEl) sasEl.textContent = metrics.sascore.toFixed(2);
   }, 120);
 }
 
 export function loadWorkbenchPreset(key) {
-  const smiles = PRESET_INHIBITORS[key];
+  const preset = PRESET_INHIBITORS[key];
+  const smiles = typeof preset === 'string' ? preset : preset?.smiles;
   if (!smiles) return;
   const input = document.getElementById('workbenchSmilesInput');
   if (input) {
@@ -296,7 +301,8 @@ export function logEntry(icon, agent, role, text, color) {
   // Allow only safe inline tags (strong, span) with styling; strip scripts, handlers, and other tags
   const safeText = String(text ?? '')
     .replace(/<\/?(?!strong\b|span\b|\/strong|\/span)[a-z0-9-]+(?:\s+[^>]*)?>/gi, '')
-    .replace(/\b(?:on\w+|javascript:|data:)\b/gi, 'data-blocked=');
+    .replace(/\s+on[a-z]+\s*=/gi, ' data-blocked=')
+    .replace(/\b(?:javascript|vbscript|data):/gi, 'blocked:');
 
   const el = document.createElement('div');
   el.className = 'animate-fade-up';
@@ -351,7 +357,7 @@ export function renderLeads() {
   container.innerHTML = leads.map((lead, i) => {
     const isSimulated = Boolean(lead.is_simulated || lead.provenance === 'SIMULATED');
     return `
-      <div class="lead-card ${i === 0 ? 'selected' : ''}" onclick="selectLead(${i})">
+      <div class="lead-card ${i === 0 ? 'selected' : ''}" data-action="select-lead" data-lead-index="${i}" role="button" tabindex="0">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <span class="font-mono font-bold text-xs text-white">${esc(lead.id)}</span>
@@ -416,10 +422,10 @@ export function selectLead(i) {
             <span class="text-[10px] font-bold font-mono text-cyan-300">3D Docked Complex</span>
           </div>
           <div class="flex items-center gap-1">
-            <button type="button" onclick="toggle3DSpin()" id="btnSpin" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">🔄 Spin</button>
-            <button type="button" onclick="toggle3DSurface()" id="btnSurface" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">🎨 Surface</button>
-            <button type="button" onclick="reset3DView()" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">🔍</button>
-            <button type="button" onclick="open3DModal()" class="px-1.5 py-0.5 text-[9px] rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 transition-colors font-bold">⛶</button>
+            <button type="button" data-action="toggle-3d-spin" id="btnSpin" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">Spin</button>
+            <button type="button" data-action="toggle-3d-surface" id="btnSurface" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">Surface</button>
+            <button type="button" data-action="reset-3d-view" aria-label="Recenter 3D view" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">Reset</button>
+            <button type="button" data-action="open-3d-modal" aria-label="Expand 3D viewer" class="px-1.5 py-0.5 text-[9px] rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 transition-colors font-bold">Expand</button>
           </div>
         </div>
         <div id="molViewer3D" style="width: 100%; height: 210px; position: relative;"></div>
@@ -459,13 +465,13 @@ export function selectLead(i) {
 
         <!-- 1-Click Reference Presets -->
         <div class="flex items-center gap-1 mb-2 overflow-x-auto py-0.5">
-          <button type="button" onclick="loadWorkbenchPreset('kras')" class="wb-preset-pill">MRTX1133 (KRAS)</button>
-          <button type="button" onclick="loadWorkbenchPreset('egfr')" class="wb-preset-pill">Osimertinib (EGFR)</button>
-          <button type="button" onclick="loadWorkbenchPreset('mpro')" class="wb-preset-pill">Nirmatrelvir (Mpro)</button>
-          <button type="button" onclick="loadWorkbenchPreset('her2')" class="wb-preset-pill">Tucatinib (HER2)</button>
+          <button type="button" data-action="load-wb-preset" data-arg="kras" class="wb-preset-pill">MRTX1133 (KRAS)</button>
+          <button type="button" data-action="load-wb-preset" data-arg="egfr" class="wb-preset-pill">Osimertinib (EGFR)</button>
+          <button type="button" data-action="load-wb-preset" data-arg="mpro" class="wb-preset-pill">Nirmatrelvir (Mpro)</button>
+          <button type="button" data-action="load-wb-preset" data-arg="her2" class="wb-preset-pill">Tucatinib (HER2)</button>
         </div>
 
-        <input type="text" id="workbenchSmilesInput" oninput="onWorkbenchInput(this.value)" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
+        <input type="text" id="workbenchSmilesInput" data-input-action="workbench-input" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
         
         <!-- Live Biophysical Metric Tile Readout -->
         <div id="workbenchLiveMetrics" class="grid grid-cols-4 gap-1 text-[10px] font-mono text-center p-1.5 rounded bg-black/40 border border-white/5 mb-2">
@@ -476,12 +482,12 @@ export function selectLead(i) {
         </div>
 
         <div class="grid grid-cols-3 gap-1 mb-2">
-          <button type="button" onclick="tweakSmiles('fluorine')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+F Fluorine</button>
-          <button type="button" onclick="tweakSmiles('methyl')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+Me Methyl</button>
-          <button type="button" onclick="tweakSmiles('pyridine')" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Swap Pyridine</button>
+          <button type="button" data-action="tweak-smiles" data-arg="fluorine" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+F Fluorine</button>
+          <button type="button" data-action="tweak-smiles" data-arg="methyl" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+Me Methyl</button>
+          <button type="button" data-action="tweak-smiles" data-arg="pyridine" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Swap Pyridine</button>
         </div>
 
-        <button type="button" onclick="triggerRedockFromWorkbench()" class="w-full py-1.5 btn-cta text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5">
+        <button type="button" data-action="trigger-redock" class="w-full py-1.5 btn-cta text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5">
           <span>⚡ Instant Re-Dock Modified Lead</span>
         </button>
         <div id="redockAffinityDisplay" class="mt-1.5 text-center text-xs"></div>
@@ -501,10 +507,10 @@ export function selectLead(i) {
           <div class="text-gray-400"><strong>Commercial Precursors:</strong> Aryl Boronic Acid + Substituted Amine</div>
         </div>
         <div class="pt-2 border-t border-amber-500/20 flex gap-1.5">
-          <button type="button" onclick="generateRobotProtocol()" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 flex items-center justify-center gap-1 transition-all">
+          <button type="button" data-action="robot-protocol" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 flex items-center justify-center gap-1 transition-all">
             <span>🤖 Opentrons OT-2 Code</span>
           </button>
-          <button type="button" onclick="generateLabCard()" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-1 transition-all">
+          <button type="button" data-action="lab-card" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-1 transition-all">
             <span>📋 Wet-Lab SOP</span>
           </button>
         </div>
@@ -520,21 +526,21 @@ export function selectLead(i) {
           <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/30">ESM-2 / MolMIM</span>
         </div>
         <p class="text-[10px] text-gray-400 mb-2">Simulate target point mutation clash & auto-evolve escape scaffold via MolMIM latent steering.</p>
-        <button type="button" onclick="runResistanceStressTest()" class="w-full py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-red-600/30 to-purple-600/30 hover:from-red-600/50 hover:to-purple-600/50 text-red-200 border border-red-500/40 flex items-center justify-center gap-1.5 transition-all">
+        <button type="button" data-action="resistance-test" class="w-full py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-red-600/30 to-purple-600/30 hover:from-red-600/50 hover:to-purple-600/50 text-red-200 border border-red-500/40 flex items-center justify-center gap-1.5 transition-all">
           <span>⚡ Run Resistance Stress-Test</span>
         </button>
       </div>
 
       <!-- Export Buttons -->
       <div class="space-y-1.5 pt-1">
-        <button onclick="generateINDPdf()" class="w-full py-2.5 text-xs font-bold text-white rounded-lg flex items-center justify-center gap-1.5 transition-all hover:scale-102 glow-green shadow-lg" style="background: linear-gradient(135deg, #1e40af, #2563eb); border: 1px solid rgba(59, 130, 246, 0.6);">
+        <button type="button" data-action="generate-ind-pdf" class="w-full py-2.5 text-xs font-bold text-white rounded-lg flex items-center justify-center gap-1.5 transition-all hover:scale-102 glow-green shadow-lg" style="background: linear-gradient(135deg, #1e40af, #2563eb); border: 1px solid rgba(59, 130, 246, 0.6);">
           <span>📄 Download Pre-Clinical Summary (PDF)</span>
           <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/20 text-white font-bold">CMC Template</span>
         </button>
-        <button onclick="downloadDossier()" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">
+        <button type="button" data-action="download-dossier" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">
           Export Dossier (.md)
         </button>
-        <button onclick="downloadSDF()" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5" style="border-color: rgba(0,241,253,0.3); color: #00f1fd;">
+        <button type="button" data-action="download-sdf" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5" style="border-color: rgba(0,241,253,0.3); color: #00f1fd;">
           Export Poses (.sdf)
         </button>
       </div>

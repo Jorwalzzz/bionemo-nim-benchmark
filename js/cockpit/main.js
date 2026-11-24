@@ -261,7 +261,7 @@ Object.assign(window, {
   closeOwnerModal,
   submitOwnerLogin,
   handleOwnerLogout,
-  isOwner,
+  checkIsOwner: isOwner,
   generateINDPdf,
   generateRobotProtocol,
   generateLabCard,
@@ -407,9 +407,132 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ─── Universal Escape Key Listener ───────────────────────────────────────────
+if (typeof window !== 'undefined' && typeof window.isOwner !== 'boolean') {
+  window.isOwner = false;
+}
+
+// ─── CSP-Compliant Delegated UI Event Dispatcher ─────────────────────────────
+function dispatchAction(action, el, event) {
+  switch (action) {
+    case 'start-tour': return startInteractiveTour();
+    case 'close-tour': return closeInteractiveTour();
+    case 'tour-prev': return prevTourStep();
+    case 'tour-action': return executeTourAction();
+    case 'tour-next': return nextTourStep();
+    case 'open-benchmark-modal': return openBenchmarkModal();
+    case 'close-benchmark-modal': return closeBenchmarkModalDirect();
+    case 'run-live-benchmark': return runLiveBenchmark();
+    case 'open-feedback-modal': return openFeedbackModal();
+    case 'close-feedback-modal': return closeFeedbackModal();
+    case 'open-static-demo-modal': return openStaticDemoModal();
+    case 'close-static-demo-modal': return closeStaticDemoModal();
+    case 'open-auth-modal': return openAuthModal(el.dataset.arg || undefined);
+    case 'close-auth-modal': return closeAuthModal();
+    case 'switch-auth-tab': return switchAuthTab(el.dataset.arg);
+    case 'demo-login': return handleDemoLogin();
+    case 'logout': return handleLogout();
+    case 'open-install-modal': return openInstallModal();
+    case 'close-install-modal': return closeInstallModal();
+    case 'open-quota-and-install':
+      closeQuotaModal();
+      return openInstallModal();
+    case 'close-quota-modal': return closeQuotaModal();
+    case 'open-owner-modal': return openOwnerModal();
+    case 'close-owner-modal': return closeOwnerModal();
+    case 'submit-owner-login': return submitOwnerLogin();
+    case 'switch-target-tab': return switchTargetTab(el.dataset.arg);
+    case 'fetch-custom-target': return fetchCustomTarget();
+    case 'load-esm-preset': return loadEsmPreset(el.dataset.arg);
+    case 'fold-denovo': return foldDeNovoSequence();
+    case 'set-rounds': return setRounds(parseInt(el.dataset.arg || '2', 10));
+    case 'run-discovery': return runDiscovery();
+    case 'open-raw-receipt': return openRawReceiptModal();
+    case 'close-raw-receipt': return closeRawReceiptModal();
+    case 'copy-raw-receipt': return copyRawReceiptJson();
+    case 'export-run-json': return exportActiveRunJson();
+    case 'open-3d-modal': return open3DModal();
+    case 'close-3d-modal': return close3DModalDirect();
+    case 'toggle-3d-spin': return toggle3DSpin();
+    case 'toggle-3d-surface': return toggle3DSurface();
+    case 'reset-3d-view': return reset3DView();
+    case 'close-resistance-modal': return closeResistanceModal();
+    case 'copy-evolved-smiles': return copyEvolvedSmiles();
+    case 'adopt-evolved-scaffold': return adoptEvolvedScaffold();
+    case 'close-robot-modal': return closeRobotModal();
+    case 'copy-ot2-code': return copyOT2Code();
+    case 'download-ot2-py': return downloadCurrentOT2Py();
+    case 'lab-card': return generateLabCard();
+    case 'robot-protocol': return generateRobotProtocol();
+    case 'resistance-test': return runResistanceStressTest();
+    case 'generate-ind-pdf': return generateINDPdf();
+    case 'download-dossier': return downloadDossier();
+    case 'download-sdf': return downloadSDF();
+    case 'select-lead': return selectLead(parseInt(el.dataset.leadIndex || '0', 10));
+    case 'load-wb-preset': return loadWorkbenchPreset(el.dataset.arg);
+    case 'tweak-smiles': return tweakSmiles(el.dataset.arg);
+    case 'trigger-redock': return triggerRedockFromWorkbench();
+    default: return undefined;
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-backdrop-close')) {
+    dispatchAction(e.target.getAttribute('data-backdrop-close'), e.target, e);
+    return;
+  }
+  const trigger = e.target?.closest ? e.target.closest('[data-action]') : null;
+  if (trigger) {
+    dispatchAction(trigger.getAttribute('data-action'), trigger, e);
+  }
+});
+
+document.addEventListener('change', (e) => {
+  const trigger = e.target?.closest ? e.target.closest('[data-change-action]') : null;
+  if (!trigger) return;
+  if (trigger.getAttribute('data-change-action') === 'update-target-info') {
+    updateTargetInfo();
+  }
+});
+
+document.addEventListener('input', (e) => {
+  const el = e.target?.closest ? e.target.closest('[data-input-action]') : null;
+  if (!el) return;
+  const act = el.getAttribute('data-input-action');
+  if (act === 'custom-target-input') {
+    onCustomTargetInput(el.value);
+  } else if (act === 'update-seq-count') {
+    updateSeqCount();
+  } else if (act === 'candidate-slider') {
+    const numEl = document.getElementById('candidateNum');
+    if (numEl) numEl.textContent = el.value;
+  } else if (act === 'email-validation') {
+    handleEmailInputValidation(el, el.getAttribute('data-feedback-id') || '');
+  } else if (act === 'workbench-input') {
+    onWorkbenchInput(el.value);
+  }
+});
+
+document.addEventListener('submit', (e) => {
+  const form = e.target;
+  if (!form || !form.getAttribute) return;
+  const act = form.getAttribute('data-submit-action');
+  if (act === 'auth-login') handleAuthLogin(e);
+  else if (act === 'auth-register') handleAuthRegister(e);
+  else if (act === 'feedback-submit') handleFeedbackSubmit(e);
+});
+
+// ─── Universal Keyboard Listeners (Escape & Non-Native Card Triggers) ────────
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' || e.key === 'Esc') {
     closeAllModals();
+    return;
+  }
+  if (e.key === 'Enter' && e.target?.getAttribute?.('data-enter-action') === 'submit-owner-login') {
+    submitOwnerLogin();
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target?.getAttribute?.('data-action') === 'select-lead') {
+    e.preventDefault();
+    selectLead(parseInt(e.target.getAttribute('data-lead-index') || '0', 10));
   }
 });

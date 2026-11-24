@@ -2,10 +2,11 @@
 """
 Release Audit & Scientific Parity Validator for bionemo-nim-benchmark.
 
-Validates HTML entrypoints (index.html, cockpit.html) against:
-1. GitHub Pages subpath safety (forbids root-relative `/...` asset paths; checks `./...` targets exist).
-2. WCAG 2.2 AA structural baseline (missing `alt` on `<img>`, unlabeled `<input>`/`<button>`/`<svg>`, missing `lang`).
-3. Mathematical & scientific parity between `results/benchmark_summary.json` and rendered HTML metrics.
+Validates HTML entrypoints (index.html, cockpit.html), backend headers, and docs against:
+1. GitHub Pages subpath safety (forbids root-relative `/...` asset paths; checks `./...` targets exist; rejects dead `web/` paths).
+2. WCAG 2.2 AA & HTML5 structural baseline (valid tag balance, explicit `<label for>` on controls, `alt` on `<img>`, `<svg>` labels, `lang`).
+3. Strict CSP hygiene (forbids `'unsafe-inline'` in `script-src`, inline `<script>` without `src=`, and inline `on*=` attributes).
+4. Mathematical & scientific parity between `results/benchmark_summary.json`, `pyproject.toml`, HTML pages, and `README.md`.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import json
 import math
 import re
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
@@ -24,7 +26,7 @@ from urllib.parse import urlparse
 @dataclass
 class AuditIssue:
     severity: str  # "ERROR" | "WARN"
-    category: str  # "PATH" | "A11Y" | "PARITY"
+    category: str  # "PATH" | "A11Y" | "PARITY" | "CSP" | "HTML"
     file: str
     line: int
     message: str
@@ -38,12 +40,33 @@ class HTMLAuditState:
     anchor_ids: set[str] = field(default_factory=set)
     internal_hashes: list[tuple[int, str]] = field(default_factory=list)
     label_fors: set[str] = field(default_factory=set)
+    form_controls: list[tuple[int, str, str]] = field(default_factory=list)
     text_chunks: list[str] = field(default_factory=list)
     issues: list[AuditIssue] = field(default_factory=list)
 
 
+VOID_HTML_TAGS: frozenset[str] = frozenset(
+    {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
+)
+
+
 class ReleaseHTMLParser(HTMLParser):
-    """Single-pass HTML5 parser auditing asset paths, ARIA/alt rules, and text content."""
+    """Single-pass HTML5 parser auditing asset paths, ARIA/label rules, CSP hygiene, and tag structure."""
 
     PATH_ATTRS: frozenset[str] = frozenset({"src", "href", "poster", "data-src", "data-json", "data-csv"})
     SKIP_SCHEMES: frozenset[str] = frozenset({"http", "https", "mailto", "tel", "data", "blob", "javascript"})
@@ -53,13 +76,55 @@ class ReleaseHTMLParser(HTMLParser):
         self.state = state
         self._in_script_or_style = False
         self._button_stack: list[dict[str, Any]] = []
+        self._tag_stack: list[tuple[str, int]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         line, _ = self.getpos()
         attr_map: dict[str, str] = {k.lower(): (v if v is not None else "") for k, v in attrs}
 
+        if tag not in VOID_HTML_TAGS:
+            self._tag_stack.append((tag, line))
+
         if tag in {"script", "style"}:
             self._in_script_or_style = True
+
+        # Security / CSP checks: forbid inline <script> without src and any inline on*= handlers
+        if tag == "script" and "src" not in attr_map:
+            self.state.issues.append(
+                AuditIssue(
+                    severity="ERROR",
+                    category="CSP",
+                    file=self.state.file_path.name,
+                    line=line,
+                    message="Inline <script> without external `src` violates strict script-src CSP.",
+                )
+            )
+
+        for raw_attr, _ in attrs:
+            if raw_attr.lower().startswith("on"):
+                self.state.issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="CSP",
+                        file=self.state.file_path.name,
+                        line=line,
+                        message=f"Inline event handler `{raw_attr}` violates strict non-'unsafe-inline' CSP.",
+                    )
+                )
+
+        if tag == "meta" and attr_map.get("http-equiv", "").lower() == "content-security-policy":
+            csp_val = attr_map.get("content", "")
+            script_src_match = re.search(r"script-src\s+([^;]+)", csp_val, re.I)
+            if script_src_match and "'unsafe-inline'" in script_src_match.group(1):
+                self.state.issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="CSP",
+                        file=self.state.file_path.name,
+                        line=line,
+                        message="Meta CSP `script-src` must not contain `'unsafe-inline'`.",
+                    )
+                )
 
         if "id" in attr_map and attr_map["id"].strip():
             self.state.anchor_ids.add(attr_map["id"].strip())
@@ -98,18 +163,19 @@ class ReleaseHTMLParser(HTMLParser):
                 )
             )
 
-        if tag == "input" and attr_map.get("type", "text").lower() != "hidden":
+        if tag in {"input", "select", "textarea"} and attr_map.get("type", "text").lower() != "hidden":
+            control_id = attr_map.get("id", "").strip()
+            self.state.form_controls.append((line, tag, control_id))
             has_aria = bool(attr_map.get("aria-label", "").strip() or attr_map.get("aria-labelledby", "").strip())
             has_title = bool(attr_map.get("title", "").strip())
-            input_id = attr_map.get("id", "").strip()
-            if not (has_aria or has_title or input_id):
+            if not (has_aria or has_title or control_id):
                 self.state.issues.append(
                     AuditIssue(
                         severity="ERROR",
                         category="A11Y",
                         file=self.state.file_path.name,
                         line=line,
-                        message="<input> lacks `id` (for <label>), `aria-label`, or `aria-labelledby`.",
+                        message=f"<{tag}> lacks `id` (for <label>), `aria-label`, or `aria-labelledby`.",
                     )
                 )
 
@@ -133,6 +199,21 @@ class ReleaseHTMLParser(HTMLParser):
             self._button_stack.append({"line": line, "has_aria": has_aria, "text": ""})
 
     def handle_endtag(self, tag: str) -> None:
+        line, _ = self.getpos()
+        if tag not in VOID_HTML_TAGS:
+            if self._tag_stack and self._tag_stack[-1][0] == tag:
+                self._tag_stack.pop()
+            else:
+                expected = self._tag_stack[-1][0] if self._tag_stack else "none"
+                self.state.issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="HTML",
+                        file=self.state.file_path.name,
+                        line=line,
+                        message=f"Mismatched closing tag `</{tag}>` (expected `</{expected}>`).",
+                    )
+                )
         if tag in {"script", "style"}:
             self._in_script_or_style = False
         if tag == "button" and self._button_stack:
@@ -156,7 +237,7 @@ class ReleaseHTMLParser(HTMLParser):
 
 
 def validate_html_file(html_path: Path, repo_root: Path) -> HTMLAuditState:
-    """Parse an HTML file and validate paths, fragments, and accessibility attributes."""
+    """Parse an HTML file and validate paths, fragments, CSP hygiene, and accessibility attributes."""
     state = HTMLAuditState(file_path=html_path)
     if not html_path.exists():
         state.issues.append(
@@ -173,6 +254,18 @@ def validate_html_file(html_path: Path, repo_root: Path) -> HTMLAuditState:
         state.issues.append(
             AuditIssue("ERROR", "A11Y", html_path.name, 1, "<html> root tag missing `lang` attribute.")
         )
+
+    for line, tag, control_id in state.form_controls:
+        if not control_id or control_id not in state.label_fors:
+            state.issues.append(
+                AuditIssue(
+                    severity="ERROR",
+                    category="A11Y",
+                    file=html_path.name,
+                    line=line,
+                    message=f"Form control `<{tag} id=\"{control_id}\">` lacks matching `<label for=\"{control_id}\">`.",
+                )
+            )
 
     for line, attr, raw_url in state.asset_refs:
         clean_path = raw_url.split("#")[0].split("?")[0]
@@ -254,8 +347,8 @@ def audit_json_parity(json_path: Path, index_state: HTMLAuditState) -> list[Audi
     for idx, rec in enumerate(records, start=1):
         cpu_s = rec.get("cpu_time_s") or rec.get("cpu_s") or rec.get("cpu_latency_s")
         gpu_s = rec.get("gpu_time_s") or rec.get("h100_s") or rec.get("gpu_latency_s")
-        recorded_speedup = rec.get("speedup") or rec.get("speedup_x")
-        name = str(rec.get("model") or rec.get("nim") or rec.get("target") or f"row_{idx}")
+        recorded_speedup = rec.get("speedup") or rec.get("speedup_x") or rec.get("speedup_multiplier")
+        name = str(rec.get("model") or rec.get("nim_service") or rec.get("nim") or rec.get("target_complex") or f"row_{idx}")
 
         if isinstance(cpu_s, (int, float)) and isinstance(gpu_s, (int, float)) and gpu_s > 0:
             computed = cpu_s / gpu_s
@@ -313,6 +406,114 @@ def audit_json_parity(json_path: Path, index_state: HTMLAuditState) -> list[Audi
     return issues
 
 
+def audit_repo_parity(
+    repo_root: Path,
+    json_path: Path,
+    index_state: HTMLAuditState,
+    cockpit_state: HTMLAuditState,
+) -> list[AuditIssue]:
+    """Verify cross-document parity (package version, dead `web/` paths, backend CSP, and test counts)."""
+    issues: list[AuditIssue] = []
+
+    pyproject_path = repo_root / "pyproject.toml"
+    pkg_version = ""
+    if pyproject_path.exists():
+        pkg_data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+        pkg_version = str(pkg_data.get("project", {}).get("version", ""))
+
+    if pkg_version and json_path.exists():
+        raw_json = json.loads(json_path.read_text(encoding="utf-8"))
+        json_version = str(raw_json.get("benchmark_metadata", {}).get("version", ""))
+        if json_version and json_version != pkg_version:
+            issues.append(
+                AuditIssue(
+                    severity="ERROR",
+                    category="PARITY",
+                    file=json_path.name,
+                    line=4,
+                    message=f"Version mismatch: benchmark_summary.json `{json_version}` != pyproject.toml `{pkg_version}`.",
+                )
+            )
+
+    # Reject stale v2.5 labels in HTML chrome when package version is canonical
+    if pkg_version:
+        for html_state in (index_state, cockpit_state):
+            if html_state.file_path.exists():
+                html_raw = html_state.file_path.read_text(encoding="utf-8")
+                if re.search(r"\bv2\.5\b", html_raw) and pkg_version != "2.5":
+                    issues.append(
+                        AuditIssue(
+                            severity="ERROR",
+                            category="PARITY",
+                            file=html_state.file_path.name,
+                            line=0,
+                            message=f"Conflicting `v2.5` version reference found; canonical version is `v{pkg_version}`.",
+                        )
+                    )
+
+    # Verify backend CSP header in server/app.py also omits 'unsafe-inline' in script-src
+    app_py = repo_root / "src" / "bionemo_benchmark" / "server" / "app.py"
+    if app_py.exists():
+        app_text = app_py.read_text(encoding="utf-8")
+        m_csp = re.search(r"script-src[^;\"]+", app_text)
+        if m_csp and "'unsafe-inline'" in m_csp.group(0):
+            issues.append(
+                AuditIssue(
+                    severity="ERROR",
+                    category="CSP",
+                    file="app.py",
+                    line=0,
+                    message="Backend `script-src` header in app.py must not include `'unsafe-inline'`.",
+                )
+            )
+
+    # Forbid dead `web/` path references in README.md and HTML pages
+    readme_path = repo_root / "README.md"
+    for doc_path in (readme_path, index_state.file_path, cockpit_state.file_path):
+        if not doc_path.exists():
+            continue
+        for idx, line_text in enumerate(doc_path.read_text(encoding="utf-8").splitlines(), start=1):
+            if re.search(r"(?:^|[\s`(/\'\"|])web/", line_text):
+                issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="PATH",
+                        file=doc_path.name,
+                        line=idx,
+                        message="Dead `web/` path reference detected (web assets live at repository root).",
+                    )
+                )
+
+    # Verify hermetic test count strings match across README.md, index.html, and cockpit.html
+    observed_counts: dict[str, set[int]] = {}
+    for target_file in (readme_path, index_state.file_path, cockpit_state.file_path):
+        if not target_file.exists():
+            continue
+        text = target_file.read_text(encoding="utf-8")
+        matches: set[int] = set()
+        matches.update(int(m.group(1)) for m in re.finditer(r"(\d+)/\1\s*HERMETIC TESTS", text, re.I))
+        matches.update(int(m.group(1)) for m in re.finditer(r"pytest-(\d+)%20hermetic", text, re.I))
+        matches.update(int(m.group(1)) for m in re.finditer(r"\b(\d+)\s+automated\s+pytest\s+tests", text, re.I))
+        matches.update(int(m.group(1)) for m in re.finditer(r"\((\d+)\s+tests\)", text, re.I))
+        matches.update(int(m.group(1)) for m in re.finditer(r'<div class="ticker-num">(\d+)/\1</div>', text))
+        if matches:
+            observed_counts[target_file.name] = matches
+
+    all_nums = {n for nums in observed_counts.values() for n in nums}
+    if len(all_nums) > 1:
+        issues.append(
+            AuditIssue(
+                severity="ERROR",
+                category="PARITY",
+                file="README.md",
+                line=0,
+                message=f"Inconsistent test count claims across docs/HTML: {observed_counts}.",
+            )
+        )
+
+    return issues
+
+
 def find_repo_root() -> Path:
     """Resolve repository root directory reliably from current script location."""
     for p in Path(__file__).resolve().parents:
@@ -330,8 +531,9 @@ def main() -> int:
     index_state = validate_html_file(index_path, repo_root)
     cockpit_state = validate_html_file(cockpit_path, repo_root)
     parity_issues = audit_json_parity(json_path, index_state)
+    repo_issues = audit_repo_parity(repo_root, json_path, index_state, cockpit_state)
 
-    all_issues = index_state.issues + cockpit_state.issues + parity_issues
+    all_issues = index_state.issues + cockpit_state.issues + parity_issues + repo_issues
     errors = [i for i in all_issues if i.severity == "ERROR"]
     warnings = [i for i in all_issues if i.severity == "WARN"]
 
@@ -341,7 +543,7 @@ def main() -> int:
     print("=" * 76)
 
     if not all_issues:
-        print("[PASS] Zero broken paths, zero WCAG attribute errors, and full JSON parity verified.")
+        print("[PASS] Zero broken paths, zero CSP/HTML/WCAG errors, and full parity verified.")
         return 0
 
     for issue in all_issues:
@@ -349,8 +551,9 @@ def main() -> int:
         print(f"[{issue.severity:<5}] [{issue.category:<6}] {loc:<22} -> {issue.message}")
 
     print("-" * 76)
-    return 1 if errors else 0
+    return 1 if errors or warnings else 0
 
 
 if __name__ == "__main__":
     sys.exit(main())
+

@@ -63,6 +63,7 @@ ALLOWED_CORS_ORIGINS = [
 ]
 
 SECURITY_RESPONSE_HEADERS: tuple[tuple[str, str], ...] = (
+    ("X-BioNeMo-Backend", "fastapi"),
     ("X-Content-Type-Options", "nosniff"),
     ("X-Frame-Options", "DENY"),
     ("X-XSS-Protection", "1; mode=block"),
@@ -71,11 +72,15 @@ SECURITY_RESPONSE_HEADERS: tuple[tuple[str, str], ...] = (
     (
         "Content-Security-Policy",
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://3Dmol.org https://cdnjs.cloudflare.com; "
+        "script-src 'self' https://cdn.jsdelivr.net https://3dmol.org https://3Dmol.org https://cdnjs.cloudflare.com blob:; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https://health.api.nvidia.com https://integrate.api.nvidia.com https://files.rcsb.org https://raw.githubusercontent.com;",
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "img-src 'self' data: blob: https:; "
+        "worker-src 'self' blob:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "connect-src 'self' https://health.api.nvidia.com https://integrate.api.nvidia.com https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com;",
     ),
 )
 

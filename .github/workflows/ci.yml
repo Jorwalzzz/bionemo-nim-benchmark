@@ -38,6 +38,23 @@ jobs:
         run: |
           ruff check src tests scripts
 
+      - name: Run Bandit Security Gate
+        run: |
+          bandit -r src tools scripts -ll -q
+
+      - name: Run Pip Dependency Audit
+        run: |
+          pip-audit
+
+      - name: Set up Node.js & Verify Client JS Syntax
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check JS Module Syntax
+        run: |
+          python -c "import pathlib, subprocess, sys; errs=[subprocess.run(['node', '--input-type=' + ('module' if ('import ' in p.read_text(encoding='utf-8') or 'export ' in p.read_text(encoding='utf-8')) else 'commonjs'), '--check'], input=p.read_text(encoding='utf-8'), text=True, check=False).returncode for p in pathlib.Path('js').rglob('*.js')]; sys.exit(1 if any(errs) else 0)"
+
       - name: Verify Package Imports & Syntax
         run: |
           python -c "import bionemo_benchmark; import bionemo_benchmark.core; import bionemo_benchmark.domain; import bionemo_benchmark.server; import bionemo_benchmark.mcp"
@@ -46,6 +63,10 @@ jobs:
       - name: Prepare Working Directories
         run: |
           mkdir -p results data/pdbs
+
+      - name: Install Playwright Chromium for Browser Gate
+        run: |
+          pip install playwright && playwright install --with-deps chromium
 
       - name: Run Pytest Test Suite
         env:

@@ -37,16 +37,16 @@ export const TOUR_STEPS = [
     title: '3/10: Target Ingestion & ESMFold',
     techBadge: 'ESMFold & RCSB PDB',
     whatIs: '• Pick an oncology target, enter a PDB code, or paste a raw amino acid sequence\n• ESMFold predicts atomic 3D structures in seconds',
-    whatToDo: 'Click "⚡ Try This Step" to auto-select KRAS G12D (PDB: 4OBE) with pocket druggability 0.84.',
+    whatToDo: 'Click "Try This Step" to auto-select KRAS G12D (PDB: 7RPZ · MRTX1133, 1.30 Å) with Switch-II pocket coordinates.',
     action: () => {
       const select = document.getElementById('targetSelect');
       if (select) {
-        select.value = 'KRAS G12D';
+        select.value = '7RPZ';
         updateTargetInfo();
       }
       const aside = document.querySelector('aside');
       if (aside) aside.scrollTo({ top: 0, behavior: 'smooth' });
-      showToast('🎯 Target set to KRAS G12D (PDB: 4OBE, Druggability: 0.84)');
+      showToast('Target set to KRAS G12D (PDB: 7RPZ · MRTX1133, 1.30 Å)');
     }
   },
   {
