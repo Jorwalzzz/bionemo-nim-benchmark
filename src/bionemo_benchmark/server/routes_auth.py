@@ -4,8 +4,8 @@ Authentication, session management, quota tracking, and feedback API routes.
 
 from __future__ import annotations
 
+import hmac
 import os
-import secrets
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
@@ -29,8 +29,10 @@ from bionemo_benchmark.server.serializers import (
 router: APIRouter = APIRouter()
 
 
-def gate_run(request: Request, target: str) -> tuple[Response | None, tuple[str, str | None, dict[str, Any]] | None]:
-    """Origin check, sanitize, and consume a trial run. Returns (error_response, ctx)."""
+def gate_run(
+    request: Request, target: str
+) -> tuple[Response | None, tuple[str, str | None, dict[str, Any]] | None]:
+    """Origin check, sanitize, and atomically reserve a trial run. Returns (error_response, ctx)."""
     if not verify_request_origin(request):
         return (
             JSONResponse(
@@ -43,8 +45,9 @@ def gate_run(request: Request, target: str) -> tuple[Response | None, tuple[str,
             None,
         )
     target = sanitize_target_query(target)
+    request.state.quota_reservation_id = None
 
-    # Owner Access Bypass: verified owner on loopback bypasses all trial limits
+    # Owner Access Bypass: verified direct-loopback owner bypasses all trial limits
     from bionemo_benchmark.server.routes_owner import get_trial_policy
 
     owner_policy = get_trial_policy(request)
@@ -75,20 +78,22 @@ def gate_run(request: Request, target: str) -> tuple[Response | None, tuple[str,
                 ),
                 None,
             )
-        allowed, quota_info = auth_manager.consume_run(user["id"])
-        if not allowed:
+        decision = auth_manager.consume_run(user["id"])
+        if not decision.allowed:
             return (
                 JSONResponse(
                     status_code=429,
                     content={
                         "error": "DAILY_QUOTA_EXCEEDED",
-                        "message": "Daily trial quota of 5 runs reached. Quota refreshes automatically at 3:00 PM IST (09:30 UTC).",
-                        "quota": quota_info,
+                        "message": decision.message
+                        or "Daily trial quota of 5 runs reached. Quota refreshes automatically at 3:00 PM IST (09:30 UTC).",
+                        "quota": decision.quota_info,
                     },
                 ),
                 None,
             )
-        return None, (target, None, quota_info)
+        request.state.quota_reservation_id = decision.reservation_id
+        return None, (target, None, decision.quota_info)
 
     session_id, token, fp_hash, ip, ua = get_client_identifiers(request)
     allowed, info = trial_limiter.consume_trial_run(
@@ -146,23 +151,28 @@ def get_trial_status(request: Request) -> Response:
     return resp
 
 
-@router.api_route("/api/reset-trial", methods=["GET", "POST"])
+@router.post("/api/reset-trial")
 def reset_trial(request: Request) -> Response:
     """
     Administrative Quota Reset Endpoint:
-    Strictly protected by ADMIN_RESET_KEY to prevent unauthorized quota resets.
+    Requires constant-time ADMIN_RESET_KEY verification plus strict anti-CSRF origin checks.
     """
     admin_key = os.environ.get("ADMIN_RESET_KEY", "").strip()
-    provided_key = (
-        request.headers.get("X-Admin-Key", "").strip()
-        or request.query_params.get("key", "").strip()
-    )
-    if not admin_key or not secrets.compare_digest(provided_key, admin_key):
+    provided_key = (request.headers.get("X-Admin-Key") or "").strip()
+    if not admin_key or not hmac.compare_digest(provided_key, admin_key):
         return JSONResponse(
             status_code=403,
             content={
                 "error": "UNAUTHORIZED_ADMIN_KEY",
                 "message": "Access denied. Valid administrator key required to reset quota.",
+            },
+        )
+    if not verify_request_origin(request):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin administrative action rejected.",
             },
         )
 
@@ -199,20 +209,30 @@ def reset_trial(request: Request) -> Response:
 
 
 @router.post("/api/auth/validate-email")
-async def api_validate_email(request: Request) -> dict[str, Any]:
+async def api_validate_email(request: Request) -> Response:
     """Validates email format, domain existence checks, typo suggestions, and disposable address detection."""
+    if not verify_request_origin(request):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin request rejected.",
+            },
+        )
     try:
         body = await request.json()
         raw_email = str(body.get("email", "")).strip()
     except Exception:
         raw_email = ""
     is_valid, msg, typo, classification = validate_email_address(raw_email)
-    return {
-        "valid": is_valid,
-        "message": msg,
-        "suggestion": typo,
-        "classification": classification,
-    }
+    return JSONResponse(
+        {
+            "valid": is_valid,
+            "message": msg,
+            "suggestion": typo,
+            "classification": classification,
+        }
+    )
 
 
 @router.post("/api/auth/register")
@@ -221,7 +241,10 @@ async def api_register(request: Request) -> Response:
     if not verify_request_origin(request):
         return JSONResponse(
             status_code=403,
-            content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin request rejected."},
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin request rejected.",
+            },
         )
     try:
         body = await request.json()
@@ -268,7 +291,10 @@ async def api_login(request: Request) -> Response:
     if not verify_request_origin(request):
         return JSONResponse(
             status_code=403,
-            content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin request rejected."},
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin request rejected.",
+            },
         )
     try:
         body = await request.json()
@@ -285,7 +311,10 @@ async def api_login(request: Request) -> Response:
     if not success:
         return JSONResponse(
             status_code=401,
-            content={"error": "AUTH_FAILED", "message": err_msg or "Invalid credentials."},
+            content={
+                "error": "AUTH_FAILED",
+                "message": err_msg or "Invalid credentials.",
+            },
         )
 
     resp = JSONResponse(
@@ -305,7 +334,10 @@ def api_demo_login(request: Request) -> Response:
     if not verify_request_origin(request):
         return JSONResponse(
             status_code=403,
-            content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin request rejected."},
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin request rejected.",
+            },
         )
     success, auth_data, err_msg = auth_manager.authenticate_user(
         "evaluator@bionemo.org", "DemoResearcher2026!"
@@ -313,7 +345,10 @@ def api_demo_login(request: Request) -> Response:
     if not success:
         return JSONResponse(
             status_code=500,
-            content={"error": "DEMO_ACCOUNT_ERROR", "message": err_msg or "Demo account unavailable."},
+            content={
+                "error": "DEMO_ACCOUNT_ERROR",
+                "message": err_msg or "Demo account unavailable.",
+            },
         )
 
     resp = JSONResponse(
@@ -334,7 +369,10 @@ def api_logout(request: Request) -> Response:
     if not verify_request_origin(request):
         return JSONResponse(
             status_code=403,
-            content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin request rejected."},
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin request rejected.",
+            },
         )
 
     token = None
@@ -371,7 +409,10 @@ async def api_submit_feedback(request: Request) -> Response:
     if not verify_request_origin(request):
         return JSONResponse(
             status_code=403,
-            content={"error": "CSRF_ORIGIN_REJECTED", "message": "Cross-origin request rejected."},
+            content={
+                "error": "CSRF_ORIGIN_REJECTED",
+                "message": "Cross-origin request rejected.",
+            },
         )
     user = get_authenticated_user(request)
     if not user:
@@ -402,7 +443,10 @@ async def api_submit_feedback(request: Request) -> Response:
     if not comments:
         return JSONResponse(
             status_code=400,
-            content={"error": "EMPTY_COMMENTS", "message": "Feedback comments cannot be empty."},
+            content={
+                "error": "EMPTY_COMMENTS",
+                "message": "Feedback comments cannot be empty.",
+            },
         )
 
     success, fb_entry, err_msg = auth_manager.submit_feedback(
@@ -435,7 +479,10 @@ def api_get_feedback(request: Request) -> Response:
     if not user:
         return JSONResponse(
             status_code=401,
-            content={"error": "AUTHENTICATION_REQUIRED", "message": "Sign in required to view feedback history."},
+            content={
+                "error": "AUTHENTICATION_REQUIRED",
+                "message": "Sign in required to view feedback history.",
+            },
         )
     items = auth_manager.get_feedback_for_user(user["id"])
     return JSONResponse({"feedback": items})

@@ -12,8 +12,6 @@ import logging
 import os
 import re
 
-import requests
-
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger(__name__)
@@ -86,7 +84,7 @@ def fetch_rcsb_pdb(
     logger.info("Fetching PDB %s from RCSB (%s)...", clean_id, download_url)
 
     try:
-        response = requests.get(download_url, timeout=timeout, verify=True)
+        response = SafeSanitizer.safe_http_request("GET", download_url, timeout=timeout)
         if response.status_code != 200:
             raise RuntimeError(
                 f"RCSB PDB returned status {response.status_code} for ID '{clean_id}'"

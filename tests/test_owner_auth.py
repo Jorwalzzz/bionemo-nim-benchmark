@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 
 from bionemo_benchmark.infra.owner_security import (
     OWNER_COOKIE_NAME,
+    OWNER_TOKEN_HEADER,
     apply_strict_file_acls,
     hash_password,
     owner_security_manager,
@@ -49,8 +50,11 @@ def owner_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     apply_strict_file_acls(auth_file)
 
+    boot_token = secrets.token_urlsafe(32)
     monkeypatch.setenv("BIONEMO_MACHINE_GUID", TEST_MACHINE_GUID)
     monkeypatch.setenv("BIONEMO_OWNER_AUTH_PATH", str(auth_file))
+    monkeypatch.setenv("BIONEMO_OWNER_BOOT_TOKEN", boot_token)
+    owner_security_manager.rotate_boot_token()
 
     # Reset in-memory rate limiter state
     owner_security_manager.rate_limiter._failures.clear()
@@ -61,6 +65,7 @@ def owner_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         "guid": TEST_MACHINE_GUID,
         "guid_hash": guid_hash,
         "signing_key": signing_key,
+        "boot_token": boot_token,
         "owner_id": TEST_OWNER_ID,
         "password": TEST_OWNER_PASS,
     }
@@ -88,10 +93,11 @@ def test_owner_status_non_loopback(owner_env):
 
 
 def test_owner_login_success(owner_env):
-    """Valid loopback login sets HttpOnly cookie and activates unlimited trials."""
+    """Valid direct-loopback login with boot token sets HttpOnly cookie and activates unlimited trials."""
     client = TestClient(app, client=("127.0.0.1", 54321))
     login_resp = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
     assert login_resp.status_code == 200
@@ -110,10 +116,11 @@ def test_owner_login_success(owner_env):
 
 
 def test_owner_login_wrong_password(owner_env):
-    """Wrong password returns 401 Unauthorized."""
+    """Wrong password with valid boot token returns 401 Unauthorized."""
     client = TestClient(app, client=("127.0.0.1", 54321))
     resp = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": "WrongPassword999!"},
     )
     assert resp.status_code == 401
@@ -127,6 +134,7 @@ def test_owner_lockout_after_5_failures(owner_env):
     for i in range(4):
         resp = client.post(
             "/api/owner/login",
+            headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
             json={"owner_id": TEST_OWNER_ID, "password": f"BadPassword{i}"},
         )
         assert resp.status_code == 401
@@ -134,6 +142,7 @@ def test_owner_lockout_after_5_failures(owner_env):
     # 5th attempt triggers lockout
     resp5 = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": "BadPassword5"},
     )
     assert resp5.status_code == 429
@@ -143,6 +152,7 @@ def test_owner_lockout_after_5_failures(owner_env):
     # Even correct password is now blocked during lockout window
     resp_locked = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
     assert resp_locked.status_code == 429
@@ -154,6 +164,7 @@ def test_owner_login_non_loopback_rejected(owner_env):
     client = TestClient(app, client=("192.168.1.50", 54321))
     resp = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
     assert resp.status_code == 403
@@ -168,6 +179,7 @@ def test_owner_mismatched_machine_guid_rejected(owner_env, monkeypatch: pytest.M
     client = TestClient(app, client=("127.0.0.1", 54321))
     resp = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
     assert resp.status_code == 403
@@ -176,12 +188,15 @@ def test_owner_mismatched_machine_guid_rejected(owner_env, monkeypatch: pytest.M
 
 def test_owner_missing_auth_file_fails_closed(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     """Missing auth file fails closed with 403 Forbidden on login."""
+    boot_token = secrets.token_urlsafe(32)
     monkeypatch.setenv("BIONEMO_OWNER_AUTH_PATH", str(tmp_path / "non_existent.json"))
     monkeypatch.setenv("BIONEMO_MACHINE_GUID", TEST_MACHINE_GUID)
+    monkeypatch.setenv("BIONEMO_OWNER_BOOT_TOKEN", boot_token)
 
     client = TestClient(app, client=("127.0.0.1", 54321))
     resp = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: boot_token},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
     assert resp.status_code == 403
@@ -193,10 +208,11 @@ def test_owner_logout(owner_env):
     client = TestClient(app, client=("127.0.0.1", 54321))
     client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
 
-    logout_resp = client.post("/api/owner/logout")
+    logout_resp = client.post("/api/owner/logout", headers={"X-BioNeMo-CSRF": "1"})
     assert logout_resp.status_code == 200
     assert logout_resp.json()["success"] is True
 
@@ -218,6 +234,7 @@ def test_owner_trial_bypass_in_gate_run(owner_env):
     # Log in as owner
     login_resp = client.post(
         "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
         json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
     )
     assert login_resp.status_code == 200
@@ -255,3 +272,71 @@ def test_setup_owner_access_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert len(record["signing_key_hex"]) == 64  # 32 bytes hex
     expected_guid = hashlib.sha256(b"cli-test-guid-8888").hexdigest()
     assert record["machine_guid_hash"] == expected_guid
+
+
+def test_owner_forwarding_headers_rejected(owner_env):
+    """Even from 127.0.0.1, any proxy forwarding header revokes/blocks Owner Access Mode."""
+    client = TestClient(app, client=("127.0.0.1", 54321))
+
+    # Log in cleanly first
+    login_resp = client.post(
+        "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
+        json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
+    )
+    assert login_resp.status_code == 200
+
+    for hdr in (
+        {"X-Forwarded-For": "203.0.113.5"},
+        {"Forwarded": "for=203.0.113.5"},
+        {"X-Real-IP": "198.51.100.2"},
+        {"CF-Connecting-IP": "198.51.100.3"},
+    ):
+        r_stat = client.get("/api/owner/status", headers=hdr)
+        assert r_stat.status_code == 403
+        assert r_stat.json()["error"] == "FORWARDED_OWNER_REJECTED"
+
+        r_log = client.post(
+            "/api/owner/login",
+            headers={**hdr, OWNER_TOKEN_HEADER: owner_env["boot_token"]},
+            json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
+        )
+        assert r_log.status_code == 403
+        assert r_log.json()["error"] == "FORWARDED_OWNER_REJECTED"
+
+        r_trial = client.get("/api/trial-status", headers=hdr)
+        assert r_trial.status_code == 200
+        assert r_trial.json().get("is_owner") is not True
+
+
+def test_owner_boot_token_required_and_rotation(owner_env, monkeypatch: pytest.MonkeyPatch):
+    """Missing/invalid per-boot token returns 403, and token rotation invalidates prior cookies."""
+    client = TestClient(app, client=("127.0.0.1", 54321))
+
+    missing = client.post(
+        "/api/owner/login",
+        json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
+    )
+    assert missing.status_code == 403
+    assert missing.json()["error"] == "OWNER_TOKEN_REQUIRED"
+
+    wrong = client.post(
+        "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: "wrong-boot-token-value"},
+        json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
+    )
+    assert wrong.status_code == 403
+    assert wrong.json()["error"] == "OWNER_TOKEN_REQUIRED"
+
+    ok = client.post(
+        "/api/owner/login",
+        headers={OWNER_TOKEN_HEADER: owner_env["boot_token"]},
+        json={"owner_id": TEST_OWNER_ID, "password": TEST_OWNER_PASS},
+    )
+    assert ok.status_code == 200
+    assert client.get("/api/owner/status").json()["authenticated"] is True
+
+    # Rotating boot token immediately invalidates active owner cookies
+    monkeypatch.setenv("BIONEMO_OWNER_BOOT_TOKEN", secrets.token_urlsafe(32))
+    assert client.get("/api/owner/status").json()["authenticated"] is False
+

@@ -1,14 +1,12 @@
 """
 Agentic BioNeMo - Machine-Bound Localhost Owner Security Engine
 
-Enforces hardware-locked, loopback-only authentication for workstation owners:
-1. Zero repo secrets: Configuration stored strictly in %LOCALAPPDATA%\\bionemo-nim\\owner_auth.json
-   (fallback: ~/.config/bionemo-nim/owner_auth.json on non-Windows).
-2. Hardware lock: Bound to the SHA-256 hash of the machine's Windows MachineGuid.
-3. Strict user ACLs: Permissions restricted to the active Windows user via icacls (or 0600 on POSIX).
-4. Strict loopback gate: Gated to localhost / 127.0.0.1 / ::1 callers.
-5. Standard library cryptography: hashlib.scrypt, secrets.token_hex(32), hmac.compare_digest.
-6. Rate limiting: 5 failed attempts trigger a 60-second lockout.
+Enforces hardware-locked, three-factor loopback authentication for workstation owners:
+1. Raw socket peer IP strictly on loopback (127.0.0.1 / ::1 / localhost / testclient).
+2. Zero proxy forwarding headers (X-Forwarded-For, Forwarded, X-Real-IP, CF-Connecting-IP).
+3. Constant-time verified per-boot cryptographic owner token (secrets.token_urlsafe(32)),
+   persisted with 0600 permissions outside repo or injected via BIONEMO_OWNER_BOOT_TOKEN.
+4. MachineGuid SHA-256 hardware fingerprint lock and hashlib.scrypt credentials.
 """
 
 from __future__ import annotations
@@ -24,19 +22,28 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, NamedTuple
 
 logger = logging.getLogger("OwnerSecurity")
 
 OWNER_COOKIE_NAME = "bionemo_owner_session"
+OWNER_TOKEN_HEADER = "X-Owner-Token"
 LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+FORWARDING_HEADERS = frozenset(
+    {
+        "x-forwarded-for",
+        "forwarded",
+        "x-real-ip",
+        "cf-connecting-ip",
+    }
+)
 
 
 def get_machine_guid_fingerprint() -> str:
     """
-    Retrieves the machine's hardware GUID and computes its SHA-256 fingerprint.
-    On Windows, reads HKLM\\SOFTWARE\\Microsoft\\Cryptography\\MachineGuid via winreg.
+    Retrieve the machine's hardware GUID and compute its SHA-256 fingerprint.
     Supports BIONEMO_MACHINE_GUID environment override for hermetic testing.
     """
     env_guid = os.environ.get("BIONEMO_MACHINE_GUID")
@@ -57,7 +64,7 @@ def get_machine_guid_fingerprint() -> str:
                 if guid:
                     return hashlib.sha256(str(guid).strip().encode("utf-8")).hexdigest()
         except Exception as exc:
-            logger.warning(f"Unable to read Windows MachineGuid: {exc}")
+            logger.warning("Unable to read Windows MachineGuid: %s", exc)
     elif sys.platform.startswith("linux"):
         for mid_path in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
             if os.path.isfile(mid_path):
@@ -67,36 +74,33 @@ def get_machine_guid_fingerprint() -> str:
                         if content:
                             return hashlib.sha256(content.encode("utf-8")).hexdigest()
                 except Exception as exc:
-                    logger.debug(f"Unable to read Linux machine-id at {mid_path}: {exc}")
+                    logger.debug("Unable to read Linux machine-id at %s: %s", mid_path, exc)
     return ""
 
 
 def get_owner_auth_path() -> Path:
-    """
-    Resolves the external path for owner_auth.json.
-    Windows: %LOCALAPPDATA%\\bionemo-nim\\owner_auth.json
-    Non-Windows: ~/.config/bionemo-nim/owner_auth.json
-    Supports BIONEMO_OWNER_AUTH_PATH override for hermetic testing.
-    """
+    """Resolve external path for owner_auth.json."""
     override = os.environ.get("BIONEMO_OWNER_AUTH_PATH")
     if override:
         return Path(override).resolve()
 
     if sys.platform == "win32":
-        local_app_data = os.environ.get("LOCALAPPDATA")
-        if not local_app_data:
-            local_app_data = os.path.expanduser(r"~\AppData\Local")
+        local_app_data = os.environ.get("LOCALAPPDATA") or os.path.expanduser(r"~\AppData\Local")
         return (Path(local_app_data) / "bionemo-nim" / "owner_auth.json").resolve()
 
     return Path(os.path.expanduser("~/.config/bionemo-nim/owner_auth.json")).resolve()
 
 
+def get_owner_boot_token_path() -> Path:
+    """Resolve external path for the per-boot owner cryptographic token file."""
+    override = os.environ.get("BIONEMO_OWNER_BOOT_TOKEN_PATH")
+    if override:
+        return Path(override).resolve()
+    return get_owner_auth_path().parent / "owner_boot_token"
+
+
 def apply_strict_file_acls(path: Path) -> None:
-    """
-    Locks file permissions strictly to the active user.
-    On Windows: icacls <file> /inheritance:r /grant:r "%USERNAME%:(R,W)"
-    On POSIX: chmod 0600
-    """
+    """Lock file permissions strictly to the active user (chmod 0600 on POSIX, icacls on Windows)."""
     if not path.is_file():
         return
 
@@ -117,16 +121,16 @@ def apply_strict_file_acls(path: Path) -> None:
                     shell=False,
                 )
             except Exception as exc:
-                logger.warning(f"Failed to apply Windows icacls to {path}: {exc}")
+                logger.warning("Failed to apply Windows icacls to %s: %s", path, exc)
     else:
         try:
             os.chmod(path, 0o600)
         except Exception as exc:
-            logger.warning(f"Failed to apply chmod 0600 to {path}: {exc}")
+            logger.warning("Failed to apply chmod 0600 to %s: %s", path, exc)
 
 
 def hash_password(password: str) -> tuple[str, str]:
-    """Hashes a password with hashlib.scrypt using a 16-byte random salt."""
+    """Hash a password with hashlib.scrypt using a 16-byte random salt."""
     salt = secrets.token_bytes(16)
     dk = hashlib.scrypt(
         password.encode("utf-8"),
@@ -141,7 +145,7 @@ def hash_password(password: str) -> tuple[str, str]:
 
 
 def verify_password(password: str, salt_hex: str, hash_hex: str) -> bool:
-    """Verifies a password against stored scrypt salt and hash using hmac.compare_digest."""
+    """Verify a password against stored scrypt salt and hash using hmac.compare_digest."""
     try:
         salt = bytes.fromhex(salt_hex)
         expected = bytes.fromhex(hash_hex)
@@ -159,15 +163,26 @@ def verify_password(password: str, salt_hex: str, hash_hex: str) -> bool:
         return False
 
 
-def sign_session_token(owner_id: str, signing_key_hex: str, ttl_seconds: int = 86400) -> str:
-    """Signs an owner session token with HMAC-SHA256."""
+def _boot_token_digest(boot_token: str) -> str:
+    return hashlib.sha256(boot_token.encode("utf-8")).hexdigest()[:24]
+
+
+def sign_session_token(
+    owner_id: str,
+    signing_key_hex: str,
+    ttl_seconds: int = 86400,
+    boot_token: str | None = None,
+) -> str:
+    """Sign an owner session token bound to owner_id and optional per-boot token digest."""
     exp = int(time.time()) + ttl_seconds
-    payload_dict = {
+    payload_dict: dict[str, Any] = {
         "owner_id": owner_id,
         "exp": exp,
         "role": "owner",
         "unlimited_trials": True,
     }
+    if boot_token:
+        payload_dict["boot"] = _boot_token_digest(boot_token)
     raw_payload = json.dumps(payload_dict, separators=(",", ":")).encode("utf-8")
     payload_b64 = base64.urlsafe_b64encode(raw_payload).decode("ascii").rstrip("=")
     key_bytes = bytes.fromhex(signing_key_hex)
@@ -175,14 +190,18 @@ def sign_session_token(owner_id: str, signing_key_hex: str, ttl_seconds: int = 8
     return f"{payload_b64}.{sig}"
 
 
-def verify_session_token(token: str, signing_key_hex: str) -> tuple[bool, str | None]:
-    """Verifies HMAC signature and expiration of an owner session token."""
+def verify_session_token(
+    token: str, signing_key_hex: str, expected_boot_token: str | None = None
+) -> tuple[bool, str | None]:
+    """Verify HMAC signature, expiration, and current-boot binding of an owner session token."""
     try:
         if not token or "." not in token:
             return False, None
         payload_b64, sig = token.split(".", 1)
         key_bytes = bytes.fromhex(signing_key_hex)
-        expected_sig = hmac.new(key_bytes, payload_b64.encode("ascii"), hashlib.sha256).hexdigest()
+        expected_sig = hmac.new(
+            key_bytes, payload_b64.encode("ascii"), hashlib.sha256
+        ).hexdigest()
         if not hmac.compare_digest(sig, expected_sig):
             return False, None
 
@@ -192,13 +211,18 @@ def verify_session_token(token: str, signing_key_hex: str) -> tuple[bool, str | 
 
         if data.get("exp", 0) < time.time():
             return False, None
+        if expected_boot_token:
+            token_boot = str(data.get("boot", ""))
+            expected_boot = _boot_token_digest(expected_boot_token)
+            if not token_boot or not hmac.compare_digest(token_boot, expected_boot):
+                return False, None
         return True, data.get("owner_id")
     except Exception:
         return False, None
 
 
 class OwnerRateLimiter:
-    """In-memory rate limiter enforcing a 60-second lockout after 5 consecutive failed attempts."""
+    """In-memory rate limiter enforcing a 60-second lockout after 5 consecutive failures."""
 
     def __init__(self, max_attempts: int = 5, lockout_seconds: int = 60):
         self.max_attempts = max_attempts
@@ -243,21 +267,76 @@ class OwnerPolicy(NamedTuple):
 
 
 class OwnerSecurityManager:
-    """Coordinates hardware validation, credential lookup, and owner session policy."""
+    """Coordinate loopback, zero-forwarding, per-boot token, and hardware validation."""
 
     def __init__(self) -> None:
         self.rate_limiter = OwnerRateLimiter()
+        self._boot_lock = threading.Lock()
+        self._boot_token = self._generate_and_persist_boot_token()
 
-    def is_loopback(self, client_host: str | None) -> bool:
+    def _generate_and_persist_boot_token(self) -> str:
+        token = secrets.token_urlsafe(32)
+        env_override = os.environ.get("BIONEMO_OWNER_BOOT_TOKEN", "").strip()
+        if env_override and len(env_override) >= 32:
+            token = env_override
+        try:
+            token_path = get_owner_boot_token_path()
+            token_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = token_path.with_suffix(".tmp")
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                f.write(token)
+            tmp_path.replace(token_path)
+            if os.name != "nt":
+                os.chmod(token_path, 0o600)
+            else:
+                apply_strict_file_acls(token_path)
+        except Exception as exc:
+            logger.debug("Could not persist owner boot token to disk: %s", exc)
+        return token
+
+    def get_boot_token(self) -> str:
+        """Return active per-boot owner token (honoring non-empty >=32 char env override)."""
+        env_override = os.environ.get("BIONEMO_OWNER_BOOT_TOKEN", "").strip()
+        if env_override and len(env_override) >= 32:
+            return env_override
+        return self._boot_token
+
+    def rotate_boot_token(self) -> str:
+        """Rotate per-boot owner token (invalidates all prior owner cookies immediately)."""
+        with self._boot_lock:
+            self._boot_token = self._generate_and_persist_boot_token()
+            return self._boot_token
+
+    def verify_boot_token(self, provided_token: str | None) -> bool:
+        """Verify provided per-boot token using constant-time hmac.compare_digest."""
+        if not provided_token or not isinstance(provided_token, str):
+            return False
+        expected = self.get_boot_token()
+        return hmac.compare_digest(provided_token.strip(), expected)
+
+    @staticmethod
+    def is_loopback(client_host: str | None) -> bool:
         if not client_host:
             return False
         return client_host in LOOPBACK_HOSTS
 
+    @staticmethod
+    def has_forwarding_headers(headers: Mapping[str, str] | None) -> bool:
+        """Detect any proxy forwarding header indicating non-direct socket origin."""
+        if not headers:
+            return False
+        return any(k.lower() in FORWARDING_HEADERS and str(v).strip() for k, v in headers.items())
+
+    def is_direct_loopback(
+        self, client_host: str | None, headers: Mapping[str, str] | None = None
+    ) -> bool:
+        """Require raw socket loopback AND complete absence of forwarding headers."""
+        return self.is_loopback(client_host) and not self.has_forwarding_headers(headers)
+
     def load_owner_config(self) -> tuple[dict[str, Any] | None, bool]:
         """
-        Loads owner_auth.json and validates MachineGuid fingerprint.
-        Returns (config_dict, is_machine_match).
-        Fails closed if file is missing, corrupt, or hardware hash mismatches.
+        Load owner_auth.json and validate MachineGuid fingerprint.
+        Returns (config_dict, is_machine_match). Fails closed on missing or mismatched state.
         """
         path = get_owner_auth_path()
         if not path.is_file():
@@ -278,7 +357,7 @@ class OwnerSecurityManager:
 
             return data, True
         except Exception as exc:
-            logger.warning(f"Failed to load or verify owner configuration from {path}: {exc}")
+            logger.warning("Failed to load or verify owner configuration from %s: %s", path, exc)
             return None, False
 
     def authenticate_owner(
@@ -286,69 +365,134 @@ class OwnerSecurityManager:
         client_host: str | None,
         owner_id: str,
         password: str,
+        headers: Mapping[str, str] | None = None,
+        provided_boot_token: str | None = None,
     ) -> tuple[int, dict[str, Any], str | None]:
         """
-        Attempts owner login.
-        Returns (http_status, response_body, session_cookie_or_none).
+        Authenticate workstation owner requiring:
+        (a) direct loopback socket IP,
+        (b) zero proxy forwarding headers,
+        (c) valid per-boot cryptographic token verified in constant time, and
+        (d) hardware-locked scrypt credential verification.
         """
-        # 1. Strict loopback gate
         if not self.is_loopback(client_host):
-            return 403, {"error": "LOOPBACK_REQUIRED", "message": "Owner Access Mode is strictly localhost only."}, None
+            return (
+                403,
+                {
+                    "error": "LOOPBACK_REQUIRED",
+                    "message": "Owner Access Mode is strictly localhost only.",
+                },
+                None,
+            )
 
-        # 2. Rate limit check
+        if self.has_forwarding_headers(headers):
+            return (
+                403,
+                {
+                    "error": "FORWARDED_OWNER_REJECTED",
+                    "message": "Owner Access Mode rejects proxied or forwarded requests.",
+                },
+                None,
+            )
+
         rate_key = f"{client_host}:{owner_id}"
         is_locked, remaining_sec = self.rate_limiter.is_locked(rate_key)
         if is_locked:
-            return 429, {
-                "error": "OWNER_LOCKOUT",
-                "message": f"Too many failed login attempts. Locked out for {remaining_sec} seconds.",
-                "retry_after": remaining_sec,
-            }, None
+            return (
+                429,
+                {
+                    "error": "OWNER_LOCKOUT",
+                    "message": f"Too many failed login attempts. Locked out for {remaining_sec} seconds.",
+                    "retry_after": remaining_sec,
+                },
+                None,
+            )
 
-        # 3. Hardware-locked config validation
+        if not self.verify_boot_token(provided_boot_token):
+            locked, lockout_sec = self.rate_limiter.record_failure(rate_key)
+            if locked:
+                return (
+                    429,
+                    {
+                        "error": "OWNER_LOCKOUT",
+                        "message": f"Too many failed attempts. Locked out for {lockout_sec} seconds.",
+                        "retry_after": lockout_sec,
+                    },
+                    None,
+                )
+            return (
+                403,
+                {
+                    "error": "OWNER_TOKEN_REQUIRED",
+                    "message": "Valid per-boot cryptographic owner token required.",
+                },
+                None,
+            )
+
         config, machine_match = self.load_owner_config()
         if not config or not machine_match:
-            return 403, {
-                "error": "OWNER_CONFIG_INVALID",
-                "message": "Owner authentication record missing or hardware MachineGuid mismatch.",
-            }, None
+            return (
+                403,
+                {
+                    "error": "OWNER_CONFIG_INVALID",
+                    "message": "Owner authentication record missing or hardware MachineGuid mismatch.",
+                },
+                None,
+            )
 
         expected_owner_id = config.get("owner_id", "")
         salt_hex = config.get("salt_hex", "")
         hash_hex = config.get("scrypt_hash_hex", "")
         signing_key_hex = config.get("signing_key_hex", "")
 
-        # 4. Identity and password verification
         id_match = hmac.compare_digest(owner_id.strip(), expected_owner_id.strip())
         pwd_match = verify_password(password, salt_hex, hash_hex)
 
         if not id_match or not pwd_match:
             locked, lockout_sec = self.rate_limiter.record_failure(rate_key)
             if locked:
-                return 429, {
-                    "error": "OWNER_LOCKOUT",
-                    "message": f"Too many failed attempts. Locked out for {lockout_sec} seconds.",
-                    "retry_after": lockout_sec,
-                }, None
-            return 401, {"error": "INVALID_CREDENTIALS", "message": "Invalid Owner ID or password."}, None
+                return (
+                    429,
+                    {
+                        "error": "OWNER_LOCKOUT",
+                        "message": f"Too many failed attempts. Locked out for {lockout_sec} seconds.",
+                        "retry_after": lockout_sec,
+                    },
+                    None,
+                )
+            return (
+                401,
+                {"error": "INVALID_CREDENTIALS", "message": "Invalid Owner ID or password."},
+                None,
+            )
 
-        # 5. Success
         self.rate_limiter.record_success(rate_key)
-        cookie = sign_session_token(expected_owner_id, signing_key_hex)
-        return 200, {
-            "success": True,
-            "role": "owner",
-            "owner_id": expected_owner_id,
-            "unlimited_trials": True,
-            "message": "Owner authentication successful. Unlimited trials activated.",
-        }, cookie
+        cookie = sign_session_token(
+            expected_owner_id, signing_key_hex, boot_token=self.get_boot_token()
+        )
+        return (
+            200,
+            {
+                "success": True,
+                "role": "owner",
+                "owner_id": expected_owner_id,
+                "unlimited_trials": True,
+                "message": "Owner authentication successful. Unlimited trials activated.",
+            },
+            cookie,
+        )
 
-    def evaluate_request_policy(self, client_host: str | None, cookie_value: str | None) -> OwnerPolicy:
+    def evaluate_request_policy(
+        self,
+        client_host: str | None,
+        cookie_value: str | None,
+        headers: Mapping[str, str] | None = None,
+    ) -> OwnerPolicy:
         """
-        Evaluates the caller's request to determine if it possesses active owner privileges.
-        Fails closed on any non-loopback host, missing config, mismatched hardware, or invalid cookie.
+        Evaluate active owner privileges. Fails closed on non-loopback sockets,
+        forwarding headers, missing config, mismatched hardware, or stale-boot cookies.
         """
-        if not self.is_loopback(client_host):
+        if not self.is_direct_loopback(client_host, headers):
             return OwnerPolicy(
                 is_owner=False,
                 owner_id=None,
@@ -386,7 +530,9 @@ class OwnerSecurityManager:
             )
 
         signing_key_hex = config.get("signing_key_hex", "")
-        valid, owner_id = verify_session_token(cookie_value, signing_key_hex)
+        valid, owner_id = verify_session_token(
+            cookie_value, signing_key_hex, expected_boot_token=self.get_boot_token()
+        )
         if valid and owner_id:
             return OwnerPolicy(
                 is_owner=True,

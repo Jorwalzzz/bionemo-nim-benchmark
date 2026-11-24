@@ -8,9 +8,8 @@ import logging
 import os
 import time
 
-import requests
-
 from bionemo_benchmark.core.models import AgentMessage, MoleculeCandidate
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger("GenerativeChemist")
 
@@ -54,8 +53,12 @@ class GenerativeChemistAgent:
                     "algorithm": "cma-es",
                     "property_name": "QED",
                 }
-                resp = requests.post(
-                    MOLMIM_NIM_URL, json=payload, headers=headers, timeout=25
+                resp = SafeSanitizer.safe_http_request(
+                    "POST",
+                    MOLMIM_NIM_URL,
+                    json_payload=payload,
+                    headers=headers,
+                    timeout=25.0,
                 )
                 if resp.status_code == 200:
                     data = resp.json()

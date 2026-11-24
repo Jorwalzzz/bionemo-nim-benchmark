@@ -208,6 +208,7 @@ class NimBioClient:
                     headers=headers,
                     timeout=self.timeout_seconds,
                     verify=True,
+                    allow_redirects=False,
                 )
                 t_end = time.perf_counter()
                 total_latency_ms = (t_end - t_start) * 1000.0

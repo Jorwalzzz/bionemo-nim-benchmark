@@ -101,6 +101,6 @@ def test_pytest_isolation_redirects_results_and_data_writes():
     assert not os.path.abspath(trial_limiter_mod.LEDGER_PATH).startswith(repo_data)
 
     client = TestClient(app)
-    run_res = client.post("/api/run?target=KRAS+G12D&candidates=2")
+    run_res = client.post("/api/run?target=KRAS+G12D&candidates=2", headers={"X-BioNeMo-CSRF": "1"})
     assert run_res.status_code == 200
     assert (Path(routes_campaign_mod.RESULTS_DIR) / "CANDIDATE_SELECTION_DOSSIER.md").is_file()

@@ -162,7 +162,11 @@ def bionemo_query_diffdock(
     
     client = NimBioClient(mock=mock)
     pdb_str = pdb_content or generate_synthetic_backbone(clean_seq)
-    resp = client.run_diffdock(pdb_str, chem_res.canonical_smiles)
+    resp = client.dock_complex(
+        protein_sequence=clean_seq,
+        ligand_smiles=chem_res.canonical_smiles,
+        protein_pdb=pdb_str,
+    )
     
     poses_summary = [
         {
@@ -251,8 +255,6 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> dict[str, Any]:
     Returns:
         Dictionary with status, clean PDB atom count, residue count, and extracted sequence.
     """
-    import urllib.request
-
     try:
         clean_id = SafeSanitizer.validate_pdb_id(pdb_id)
     except ValueError:
@@ -260,9 +262,15 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> dict[str, Any]:
 
     url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Antigravity/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:  # nosec B310
-            raw_pdb = response.read().decode("utf-8", errors="replace")
+        response = SafeSanitizer.safe_http_request(
+            "GET",
+            url,
+            headers={"User-Agent": "BioNeMo-Antigravity/1.0"},
+            timeout=10.0,
+        )
+        if response.status_code != 200:
+            return {"valid": False, "error": f"Failed to download PDB {clean_id} from RCSB: HTTP {response.status_code}"}
+        raw_pdb = response.text
     except Exception as exc:
         return {"valid": False, "error": f"Failed to download PDB {clean_id} from RCSB: {str(exc)}"}
         
@@ -317,30 +325,33 @@ def bionemo_query_esmfold(sequence: str, mock: bool = True) -> dict[str, Any]:
             "pdb_preview": "\n".join(synthetic_pdb.splitlines()[:10]),
         }
         
-    # Live NIM ESMFold call
-    import urllib.request
-    api_key = os.getenv("NVIDIA_API_KEY", "")
+    api_key = os.getenv("NVIDIA_API_KEY", "").strip()
     if not api_key:
         return {"valid": False, "error": "NVIDIA_API_KEY not configured in environment"}
-        
+
     url = SafeSanitizer.validate_outbound_url("https://health.api.nvidia.com/v1/biology/meta/esmfold")
-    payload = json.dumps({"sequence": clean_seq}).encode("utf-8")
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
-    
+
     try:
-        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310
-            data = json.loads(resp.read().decode("utf-8"))
-            return {
-                "model": "meta/esmfold",
-                "is_mock": False,
-                "sequence_length": len(clean_seq),
-                "data": data,
-            }
+        resp = SafeSanitizer.safe_http_request(
+            "POST",
+            url,
+            headers=headers,
+            json_payload={"sequence": clean_seq},
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "model": "meta/esmfold",
+            "is_mock": False,
+            "sequence_length": len(clean_seq),
+            "data": data,
+        }
     except Exception as exc:
         return {"valid": False, "error": f"NIM ESMFold call failed: {str(exc)}"}
 

@@ -44,12 +44,14 @@ export function closeOwnerModal() {
 export async function submitOwnerLogin() {
   const idInput = document.getElementById('ownerIdInput');
   const pwdInput = document.getElementById('ownerPasswordInput');
+  const tokenInput = document.getElementById('ownerBootTokenInput');
   const msg = document.getElementById('ownerStatusMessage');
   const submitBtn = document.getElementById('ownerLoginBtn');
 
   if (!idInput || !pwdInput) return;
   const ownerId = idInput.value.trim();
   const password = pwdInput.value;
+  const bootToken = tokenInput ? tokenInput.value.trim() : '';
 
   if (!ownerId || !password) {
     if (msg) {
@@ -67,10 +69,14 @@ export async function submitOwnerLogin() {
   }
 
   try {
+    const headers = { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' };
+    if (bootToken) {
+      headers['X-Owner-Token'] = bootToken;
+    }
     const res = await fetch('/api/owner/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner_id: ownerId, password: password })
+      headers,
+      body: JSON.stringify({ owner_id: ownerId, password: password, boot_token: bootToken || null })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -79,6 +85,7 @@ export async function submitOwnerLogin() {
       window.isOwner = true;
       closeOwnerModal();
       pwdInput.value = '';
+      if (tokenInput) tokenInput.value = '';
       showToast('⚡ Owner Verified: Unlimited Discovery & Benchmarks Activated');
       renderOwnerHUD(data.owner_id);
       if (window.clientAuth) {
@@ -109,7 +116,10 @@ export async function submitOwnerLogin() {
 
 export async function handleOwnerLogout() {
   try {
-    const res = await fetch('/api/owner/logout', { method: 'POST' });
+    const res = await fetch('/api/owner/logout', {
+      method: 'POST',
+      headers: { 'X-BioNeMo-CSRF': '1' }
+    });
     if (res.ok) {
       isOwnerActive = false;
       window.isOwner = false;

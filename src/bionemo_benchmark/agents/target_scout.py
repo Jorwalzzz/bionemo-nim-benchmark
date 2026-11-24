@@ -15,6 +15,7 @@ from bionemo_benchmark.domain.pdb_utils import (
     fetch_pdb_online_or_mock,
     validate_sequence,
 )
+from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger("TargetScout")
 
@@ -199,8 +200,6 @@ class TargetScoutAgent:
         # 1. Live NVIDIA NIM ESMFold Inference
         if not self.mock and self.api_key:
             try:
-                import requests
-
                 url = "https://health.api.nvidia.com/v1/biology/meta/esmfold"
                 headers = {
                     "Authorization": f"Bearer {self.api_key}",
@@ -208,7 +207,9 @@ class TargetScoutAgent:
                     "Accept": "application/json",
                 }
                 payload = {"sequence": clean_seq[:1000]}
-                resp = requests.post(url, json=payload, headers=headers, timeout=30)
+                resp = SafeSanitizer.safe_http_request(
+                    "POST", url, json_payload=payload, headers=headers, timeout=30.0
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     pdb_content = (
@@ -320,18 +321,17 @@ class TargetScoutAgent:
         clean_query = query.strip().upper()
         if not matched_key and len(clean_query) == 4 and clean_query.isalnum():
             # Universal RCSB PDB Ingestion
-            import urllib.request
-
-            from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
-
             try:
                 clean_id = SafeSanitizer.validate_pdb_id(clean_query)
                 url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
-                req = urllib.request.Request(
-                    url, headers={"User-Agent": "BioNeMo-Scout/1.0"}
+                resp = SafeSanitizer.safe_http_request(
+                    "GET",
+                    url,
+                    headers={"User-Agent": "BioNeMo-Scout/1.0"},
+                    timeout=10.0,
                 )
-                with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
-                    raw_pdb = r.read().decode("utf-8", errors="replace")
+                resp.raise_for_status()
+                raw_pdb = resp.text
                 cleaned_pdb = clean_pdb_structure(raw_pdb)
                 extracted_seq = extract_sequence_from_pdb(cleaned_pdb)
                 if not extracted_seq:

@@ -78,17 +78,19 @@ class TestAuthManager:
 
         # Consume 5 runs
         for run_idx in range(1, 6):
-            allowed, quota, msg = auth_mgr.consume_run(uid)
-            assert allowed is True
-            assert quota["runs_used"] == run_idx
-            assert quota["runs_remaining"] == 5 - run_idx
+            decision = auth_mgr.consume_run(uid)
+            assert decision.allowed is True
+            assert decision.reservation_id
+            assert decision.quota_info["runs_used"] == run_idx
+            assert decision.quota_info["runs_remaining"] == 5 - run_idx
 
         # 6th run must be denied
-        allowed, quota, msg = auth_mgr.consume_run(uid)
-        assert allowed is False
-        assert quota["runs_remaining"] == 0
-        assert "Daily free quota reached" in msg
-        assert "3:00 PM IST" in msg
+        decision = auth_mgr.consume_run(uid)
+        assert decision.allowed is False
+        assert decision.reservation_id is None
+        assert decision.quota_info["runs_remaining"] == 0
+        assert "Daily free quota reached" in decision.message
+        assert "3:00 PM IST" in decision.message
 
     def test_synchronized_3pm_ist_rollover(self, auth_mgr):
         """
@@ -103,8 +105,8 @@ class TestAuthManager:
         
         # Exhaust quota before reset
         for _ in range(5):
-            allowed, _, _ = auth_mgr.consume_run(uid, timestamp=t_before)
-            assert allowed is True
+            decision = auth_mgr.consume_run(uid, timestamp=t_before)
+            assert decision.allowed is True
 
         # Check exhausted
         q_exhausted = auth_mgr.get_user_quota(uid, timestamp=t_before)
@@ -119,10 +121,10 @@ class TestAuthManager:
         assert q_refreshed["runs_used"] == 0
 
         # Can consume run in new cycle
-        allowed, q_new, _ = auth_mgr.consume_run(uid, timestamp=t_after)
-        assert allowed is True
-        assert q_new["runs_used"] == 1
-        assert q_new["runs_remaining"] == 4
+        d_new = auth_mgr.consume_run(uid, timestamp=t_after)
+        assert d_new.allowed is True
+        assert d_new.quota_info["runs_used"] == 1
+        assert d_new.quota_info["runs_remaining"] == 4
 
 
 def test_api_auth_and_feedback_flow():
@@ -149,7 +151,7 @@ def test_api_auth_and_feedback_flow():
     assert unauth_fb.status_code == 401
 
     # 3. Demo evaluator login
-    login_resp = client.post("/api/auth/demo-login")
+    login_resp = client.post("/api/auth/demo-login", headers={"X-BioNeMo-CSRF": "1"})
     assert login_resp.status_code == 200
     login_data = login_resp.json()
     assert login_data["success"] is True
@@ -184,7 +186,7 @@ def test_api_auth_and_feedback_flow():
     assert any(item["comments"] == "Excellent docking poses." for item in items)
 
     # 7. Logout clears session
-    logout_resp = client.post("/api/auth/logout")
+    logout_resp = client.post("/api/auth/logout", headers={"X-BioNeMo-CSRF": "1"})
     assert logout_resp.status_code == 200
 
 
@@ -311,4 +313,123 @@ def test_brute_force_account_lockout(auth_mgr):
     ok, _, msg = auth_mgr.authenticate_user(email, "SecretPassword123!")
     assert ok is False
     assert "temporarily locked" in msg.lower()
+
+
+def test_gmail_canonicalization_and_scrypt_and_token_version(tmp_path):
+    """Verify Gmail alias canonicalization, scrypt hashing, and token_version session revocation."""
+    mgr = AuthManager(
+        ledger_path=str(tmp_path / "auth.db"),
+        feedback_path=str(tmp_path / "fb.db"),
+        daily_limit=5,
+    )
+    ok, u1, _ = mgr.register_user("a.lice+work@googlemail.com", "StrongPass999!")
+    assert ok is True
+    assert u1["hash_algo"] == "scrypt"
+
+    # Canonical Gmail duplicate must be rejected (prevents free-tier alias farming)
+    ok2, _, msg2 = mgr.register_user("alice+spam@gmail.com", "StrongPass999!")
+    assert ok2 is False
+    assert "already exists" in msg2.lower()
+
+    token1 = u1["token"]
+    assert mgr.verify_token(token1) == u1["user_id"]
+
+    # Password change bumps token_version, invalidating existing tokens immediately
+    assert mgr.change_password(u1["user_id"], "NewStrongPass888!") is True
+    assert mgr.verify_token(token1) is None
+
+    ok_login, login_res, _ = mgr.authenticate_user("a.lice+work@googlemail.com", "NewStrongPass888!")
+    assert ok_login is True
+    token2 = login_res["token"]
+    assert mgr.verify_token(token2) == u1["user_id"]
+
+    # Role change also bumps token_version
+    assert mgr.update_role(u1["user_id"], "reviewer") is True
+    assert mgr.verify_token(token2) is None
+
+
+def test_fail_closed_short_auth_secret(tmp_path, monkeypatch):
+    """AuthManager refuses to start if AUTH_SECRET_KEY has fewer than 32 bytes."""
+    monkeypatch.setenv("AUTH_SECRET_KEY", "too-short-secret")
+    with pytest.raises(RuntimeError, match="at least 32 bytes"):
+        AuthManager(
+            ledger_path=str(tmp_path / "auth_short.db"),
+            feedback_path=str(tmp_path / "fb_short.db"),
+        )
+
+
+def test_parallel_consume_run_race_safety(tmp_path):
+    """Concurrent consume_run calls under SQLite WAL cannot exceed daily quota."""
+    import concurrent.futures
+
+    mgr = AuthManager(
+        ledger_path=str(tmp_path / "race.db"),
+        feedback_path=str(tmp_path / "fb.db"),
+        daily_limit=5,
+    )
+    ok, u, _ = mgr.register_user("racer@stanford.edu", "RacePass123!")
+    assert ok is True
+    uid = u["user_id"]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+        decisions = list(pool.map(lambda _: mgr.consume_run(uid), range(12)))
+
+    allowed_count = sum(1 for d in decisions if d.allowed)
+    denied_count = sum(1 for d in decisions if not d.allowed)
+    assert allowed_count == 5
+    assert denied_count == 7
+
+
+def test_api_quota_enforcement_and_refund_on_upstream_5xx(monkeypatch):
+    """With DISABLE_TRIAL_LIMIT=false, /api/run enforces quota and refunds slots on upstream failures."""
+    from starlette.testclient import TestClient
+
+    import bionemo_benchmark.server.routes_campaign as routes_campaign_mod
+    from serve_cockpit import app
+
+    monkeypatch.setenv("DISABLE_TRIAL_LIMIT", "false")
+    client = TestClient(app, raise_server_exceptions=False)
+
+    # Unauthenticated run blocked
+    unauth = client.post(
+        "/api/run?target=KRAS+G12D&candidates=2",
+        headers={"X-BioNeMo-CSRF": "1"},
+    )
+    assert unauth.status_code == 401
+
+    reg = client.post(
+        "/api/auth/register",
+        json={"email": "quota_tester@mit.edu", "password": "StrongPassword123!"},
+    )
+    assert reg.status_code == 200
+    token = reg.json()["token"]
+    hdrs = {"Authorization": f"Bearer {token}", "X-BioNeMo-CSRF": "1"}
+
+    # Simulate upstream 5xx / runtime error inside orchestrator -> reservation MUST refund cleanly
+    class FailingOrchestrator:
+        mock = False
+        api_key = "nvapi-test"
+
+        def run_discovery_campaign(self, **kwargs):
+            raise RuntimeError("Upstream NIM 503 Service Unavailable")
+
+    with monkeypatch.context() as ctx:
+        ctx.setattr(routes_campaign_mod, "make_orchestrator", lambda **kw: FailingOrchestrator())
+        failed = client.post("/api/run?target=KRAS+G12D&candidates=2", headers=hdrs)
+        assert failed.status_code == 500
+
+    # Verify quota was refunded (still 5 runs remaining)
+    me_after_fail = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me_after_fail.status_code == 200
+    assert me_after_fail.json()["quota"]["runs_remaining"] == 5
+
+    # Consume all 5 valid runs -> 6th returns 429
+    for idx in range(5):
+        ok_run = client.post("/api/run?target=KRAS+G12D&candidates=2", headers=hdrs)
+        assert ok_run.status_code == 200, f"Run {idx + 1} failed: {ok_run.text}"
+
+    blocked = client.post("/api/run?target=KRAS+G12D&candidates=2", headers=hdrs)
+    assert blocked.status_code == 429
+    assert blocked.json()["error"] == "DAILY_QUOTA_EXCEEDED"
+
 
