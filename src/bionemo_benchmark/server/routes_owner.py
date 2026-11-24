@@ -5,7 +5,6 @@ FastAPI route handlers and dependency injection for Machine-Bound Localhost Owne
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse

@@ -255,7 +255,7 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> dict[str, Any]:
 
     try:
         clean_id = SafeSanitizer.validate_pdb_id(pdb_id)
-    except ValueError as val_err:
+    except ValueError:
         return {"valid": False, "error": f"Invalid PDB ID format: '{pdb_id}'. Must strictly match ^[1-9][A-Za-z0-9]{{3}}$."}
 
     url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
