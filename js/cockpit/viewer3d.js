@@ -3,7 +3,7 @@
  * de novo folding coordinate generation, and client-side redocking evaluator.
  */
 
-import { state, isStaticHost, TARGETS } from './state.js';
+import { state, isStaticHost, probeBackendHealth, TARGETS } from './state.js';
 
 // In-Memory PDB Text Cache (eliminates 636KB eager pdb_data.js bundle)
 export const pdbCache = new Map();
@@ -182,6 +182,103 @@ export function init3DViewer() {
   return primaryViewer;
 }
 
+const NON_DRUG_HETATMS = new Set([
+  'HOH', 'WAT', 'DOD', 'SO4', 'PO4', 'GOL', 'EDO', 'DMS', 'PEG', 'PGE', '1PE',
+  'MPD', 'ACT', 'TRS', 'FMT', 'CL', 'NA', 'MG', 'ZN', 'CA', 'K', 'MN', 'FE',
+  'CU', 'NI', 'CO', 'BR', 'I', 'CIT', 'TLA', 'EPE', 'MES', 'HEPES'
+]);
+
+const COFACTOR_NUCLEOTIDES = new Set(['GDP', 'GTP', 'ADP', 'ATP', 'ANP', 'ACP', 'GNP', 'GCP', 'NAD', 'FAD']);
+
+export function computeBindingPocketCentroid(pdbText, pocketResidues, fallbackCoords = null) {
+  if (pdbText && typeof pdbText === 'string') {
+    const lines = pdbText.split(/\r?\n/);
+    const drugGroups = new Map();
+    const cofactorGroups = new Map();
+
+    for (const line of lines) {
+      if (!line.startsWith('HETATM') || line.length < 54) continue;
+      const resName = line.slice(17, 20).trim().toUpperCase();
+      if (!resName || NON_DRUG_HETATMS.has(resName)) continue;
+      const elem = line.length >= 78 ? line.slice(76, 78).trim().toUpperCase() : '';
+      const atomName = line.slice(12, 16).trim().toUpperCase();
+      if (elem === 'H' || atomName.startsWith('H')) continue;
+
+      const x = parseFloat(line.slice(30, 38));
+      const y = parseFloat(line.slice(38, 46));
+      const z = parseFloat(line.slice(46, 54));
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+
+      const key = `${resName}:${line[21] || '_'}:${line.slice(22, 26).trim()}`;
+      const bucket = COFACTOR_NUCLEOTIDES.has(resName) ? cofactorGroups : drugGroups;
+      if (!bucket.has(key)) bucket.set(key, []);
+      bucket.get(key).push({ x, y, z });
+    }
+
+    const pickLargestGroup = (groups) => {
+      let best = null;
+      for (const pts of groups.values()) {
+        if (!best || pts.length > best.length) best = pts;
+      }
+      return best;
+    };
+
+    const selectedGroup = pickLargestGroup(drugGroups) || pickLargestGroup(cofactorGroups);
+    if (selectedGroup && selectedGroup.length > 0) {
+      const sum = selectedGroup.reduce(
+        (acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y, z: acc.z + p.z }),
+        { x: 0, y: 0, z: 0 }
+      );
+      return {
+        x: sum.x / selectedGroup.length,
+        y: sum.y / selectedGroup.length,
+        z: sum.z / selectedGroup.length
+      };
+    }
+
+    const resNums = (pocketResidues || [])
+      .map(r => (typeof r === 'number' ? r : parseInt((String(r).match(/\d+/) || [])[0], 10)))
+      .filter(n => Number.isFinite(n));
+    if (resNums.length > 0) {
+      const targetSet = new Set(resNums);
+      const pocketPts = [];
+      for (const line of lines) {
+        if (!line.startsWith('ATOM  ') || line.length < 54) continue;
+        if (line.slice(12, 16).trim() !== 'CA') continue;
+        const resSeq = parseInt(line.slice(22, 26).trim(), 10);
+        if (!targetSet.has(resSeq)) continue;
+        const x = parseFloat(line.slice(30, 38));
+        const y = parseFloat(line.slice(38, 46));
+        const z = parseFloat(line.slice(46, 54));
+        if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+          pocketPts.push({ x, y, z });
+        }
+      }
+      if (pocketPts.length > 0) {
+        const sum = pocketPts.reduce(
+          (acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y, z: acc.z + p.z }),
+          { x: 0, y: 0, z: 0 }
+        );
+        return {
+          x: sum.x / pocketPts.length,
+          y: sum.y / pocketPts.length,
+          z: sum.z / pocketPts.length
+        };
+      }
+    }
+  }
+
+  if (
+    fallbackCoords &&
+    Number.isFinite(fallbackCoords.x) &&
+    Number.isFinite(fallbackCoords.y) &&
+    Number.isFinite(fallbackCoords.z)
+  ) {
+    return { x: fallbackCoords.x, y: fallbackCoords.y, z: fallbackCoords.z };
+  }
+  return null;
+}
+
 export function render3DComplex(pdbText, sdfText, pocketResidues, isEsmfold, plddt) {
   const container = document.getElementById('molViewer3D');
   if (!container || typeof $3Dmol === 'undefined') return;
@@ -244,32 +341,40 @@ export function render3DComplex(pdbText, sdfText, pocketResidues, isEsmfold, pld
 
     // Draw active-site interaction cylinders (Hydrogen Bond Vectors: 2.8Å - 3.2Å)
     try {
-      const pocketCenter = { x: 12.4, y: -4.2, z: 18.9 };
-      // Render representative key active-site H-bond interaction lines
-      const hbondTarget1 = { x: pocketCenter.x + 1.2, y: pocketCenter.y - 0.8, z: pocketCenter.z + 1.1 };
-      const hbondTarget2 = { x: pocketCenter.x - 1.5, y: pocketCenter.y + 1.2, z: pocketCenter.z - 0.9 };
-      
-      primaryViewer.addCylinder({
-        start: pocketCenter,
-        end: hbondTarget1,
-        radius: 0.08,
-        color: '#facc15', // Yellow dashed H-bond
-        dashed: true
-      });
-      primaryViewer.addCylinder({
-        start: pocketCenter,
-        end: hbondTarget2,
-        radius: 0.08,
-        color: '#5CE1FF', // Cyan salt bridge
-        dashed: true
-      });
-      primaryViewer.addLabel("H-Bond (2.84Å)", {
-        position: hbondTarget1,
-        backgroundColor: "rgba(15,23,42,0.85)",
-        fontColor: "#facc15",
-        fontSize: 10,
-        showBackground: true
-      });
+      const selTargetVal = document.getElementById('targetSelect')?.value || '7RPZ';
+      const targetMeta = (typeof TARGETS !== 'undefined') ? (TARGETS[selTargetVal] || TARGETS['7RPZ']) : null;
+      const pocketCenter = computeBindingPocketCentroid(
+        pdbText,
+        resiNums,
+        targetMeta?.pocketCoords || state.currentTargetPocketCoords || null
+      );
+      if (pocketCenter) {
+        // Render representative key active-site H-bond interaction lines
+        const hbondTarget1 = { x: pocketCenter.x + 1.2, y: pocketCenter.y - 0.8, z: pocketCenter.z + 1.1 };
+        const hbondTarget2 = { x: pocketCenter.x - 1.5, y: pocketCenter.y + 1.2, z: pocketCenter.z - 0.9 };
+
+        primaryViewer.addCylinder({
+          start: pocketCenter,
+          end: hbondTarget1,
+          radius: 0.08,
+          color: '#facc15', // Yellow dashed H-bond
+          dashed: true
+        });
+        primaryViewer.addCylinder({
+          start: pocketCenter,
+          end: hbondTarget2,
+          radius: 0.08,
+          color: '#5CE1FF', // Cyan salt bridge
+          dashed: true
+        });
+        primaryViewer.addLabel("H-Bond (2.84Å)", {
+          position: hbondTarget1,
+          backgroundColor: "rgba(15,23,42,0.85)",
+          fontColor: "#facc15",
+          fontSize: 10,
+          showBackground: true
+        });
+      }
     } catch (e) {
       console.warn("Contact vector calculation non-critical:", e);
     }
@@ -429,7 +534,8 @@ export async function updateLead3DView(lead) {
     const targetInfo = (typeof TARGETS !== 'undefined') ? (TARGETS[targetSelectVal] || TARGETS['7RPZ']) : null;
     const pdbIdToLoad = targetInfo ? (targetInfo.pdbId || targetInfo.pdb) : targetSelectVal;
 
-    if (isStaticHost) {
+    const backendUp = await probeBackendHealth();
+    if (!backendUp) {
       const loadedPdb = await loadPdb(pdbIdToLoad);
       if (loadedPdb) {
         currentTargetPdbText = loadedPdb;
@@ -444,9 +550,9 @@ export async function updateLead3DView(lead) {
       }
 
       try {
-        const res = await fetch('/api/target/fetch', {
+        const res = await fetch('./api/target/fetch', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
           body: JSON.stringify({ target: target })
         });
         if (res.ok) {
@@ -780,15 +886,18 @@ export async function redockModifiedLead(smiles, targetName) {
   let data = null;
 
   try {
-    const res = await fetch('/api/redock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ smiles: smiles, target: targetName })
-    });
-    if (res.ok) {
-      const contentType = res.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        data = await res.json();
+    const backendUp = await probeBackendHealth();
+    if (backendUp) {
+      const res = await fetch('./api/redock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
+        body: JSON.stringify({ smiles: smiles, target: targetName })
+      });
+      if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await res.json();
+        }
       }
     }
   } catch (e) {

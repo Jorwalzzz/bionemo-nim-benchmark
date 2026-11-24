@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
-  <script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.innerHTML=''}}</script>
+  <script src="./js/frame-guard.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NVIDIA BioNeMo & NIM Inference Benchmark — Time Collapsing Discovery Studio</title>
   <meta name="description" content="Publication-grade empirical benchmark comparing NVIDIA BioNeMo NIM microservices (H100 SXM5) against CPU compute baselines. 54.8x mean acceleration."/>
@@ -38,7 +38,7 @@
   <!-- Hero WebGL Canvas Ribbon -->
   <script src="./js/hero-webgl.js" defer></script>
   <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback & SRI) -->
-  <script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
+  <script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" data-fallback-src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
   <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
   <script src="./js/data-hydrator.js" defer></script>
   <script src="./js/race-scroll.js" defer></script>
@@ -100,7 +100,7 @@
         <!-- GitHub Release Link -->
         <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="btn-nav-github" title="View Source & Releases on GitHub">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-          <span>v2.5</span>
+          <span>v2.2.0</span>
         </a>
 
         <!-- Launch Cockpit Action Button -->
@@ -166,7 +166,7 @@
       </div>
 
       <!-- Tactile Terminal Pill -->
-      <div class="hero-terminal-pill" onclick="copyHeroTerminal(this)" role="button" tabindex="0" title="Click to copy repository clone command" aria-label="Terminal command: git clone repository">
+      <div class="hero-terminal-pill" data-action="copy-hero-terminal" role="button" tabindex="0" title="Click to copy repository clone command" aria-label="Terminal command: git clone repository">
         <span class="text-slate-500">$</span>
         <span class="hero-terminal-cmd">git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git</span>
         <svg class="hero-terminal-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
@@ -201,7 +201,7 @@
       <!-- Item 4: Parity & Hermeticity -->
       <div class="ticker-item">
         <div class="ticker-label">Verification Suite</div>
-        <div class="ticker-num">186/186</div>
+        <div class="ticker-num">223/223</div>
         <div class="ticker-detail">Hermetic Pytest Tests Passed</div>
       </div>
     </div>
@@ -281,6 +281,7 @@
                   <span>TIMELINE SCRUBBER</span>
                   <span style="color:var(--color-signal-green);font-weight:700;">H100 FLASH AT 1.68%</span>
                 </div>
+                <label for="race-scrub-input" class="sr-only">Race timeline scrub control</label>
                 <input id="race-scrub-input" type="range" min="0" max="100" value="100" class="scrub-range-input" aria-label="Race timeline scrub control"/>
                 <div class="scrub-markers">
                   <span>0.0s (Launch)</span>
@@ -398,6 +399,7 @@
               <!-- Search Box (Strict 2.5rem padding prevents icon collision) -->
               <div class="table-search-wrap">
                 <svg class="table-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <label for="table-search-input" class="sr-only">Search benchmark matrix table</label>
                 <input id="table-search-input" type="text" placeholder="Filter by target, PDB, UniProt..." class="table-search-input" aria-label="Search benchmark matrix table"/>
               </div>
 
@@ -454,7 +456,7 @@
           <!-- Slider Control Group -->
           <div class="calc-control-group">
             <div class="calc-control-label">
-              <span>SCREENING LIBRARY SIZE:</span>
+              <label for="calc-slider">SCREENING LIBRARY SIZE:</label>
               <span id="calc-count-display" style="color:var(--color-signal-green);font-weight:700;">10,000 Complexes</span>
             </div>
             <div class="calc-slider-wrap">
@@ -471,7 +473,7 @@
           <!-- Workload Selector -->
           <div class="calc-control-group">
             <div class="calc-control-label">
-              <span>ACTIVE DISCOVERY WORKLOAD:</span>
+              <label for="calc-workload-select">ACTIVE DISCOVERY WORKLOAD:</label>
             </div>
             <select id="calc-workload-select" class="calc-control-select" aria-label="Select active discovery workload">
               <option value="cycle" selected>End-to-End Discovery Cycle (32.40s vs 0.55s, 58.9x)</option>
@@ -774,6 +776,7 @@
 
       <!-- Full-Width Drag-and-Drop CSV / JSON Loader -->
       <div id="lead-dropzone" class="lead-dropzone">
+        <label for="lead-file-input" class="sr-only">Upload custom benchmark or candidate file</label>
         <input id="lead-file-input" type="file" accept=".csv,.json" class="dropzone-input-file" aria-label="Upload custom benchmark or candidate file"/>
         <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;pointer-events:none;">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--color-signal-green);"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
@@ -949,7 +952,7 @@
           <div class="calc-control-group">
             <label for="cli-target" class="calc-control-label">TARGET PDB COMPLEX:</label>
             <select id="cli-target" class="calc-control-select">
-              <option value="8AZV" selected>KRAS G12D (PDB: 8AZV, Switch-II Pocket)</option>
+              <option value="7RPZ" selected>KRAS G12D (PDB: 7RPZ, Switch-II Pocket)</option>
               <option value="4MNE">BRAF V600E (PDB: 4MNE, Kinase Domain)</option>
               <option value="7BQY">SARS-CoV-2 Mpro (PDB: 7BQY, Catalytic Dyad)</option>
               <option value="ALL_TARGETS">All Benchmark Complexes (1UBQ, 1DHF, 2HYY, 1M17, 7BV2)</option>
@@ -959,7 +962,7 @@
           <!-- Poses Slider -->
           <div class="calc-control-group">
             <div class="calc-control-label">
-              <span>DIFFDOCK POSES:</span>
+              <label for="cli-poses">DIFFDOCK POSES:</label>
               <span id="cli-poses-display" style="color:var(--color-signal-green);font-weight:700;">5 Poses</span>
             </div>
             <input id="cli-poses" type="range" min="1" max="20" value="5" class="calc-slider" aria-label="Number of poses slider"/>
@@ -988,11 +991,11 @@
 
           <!-- Toggles -->
           <div style="display:flex;gap:1.5rem;align-items:center;padding-top:0.25rem;">
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-ink-primary);">
+            <label for="cli-admet" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-ink-primary);">
               <input id="cli-admet" type="checkbox" checked style="accent-color:var(--color-signal-green);"/>
               <span>--admet-filter</span>
             </label>
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-signal-green);">
+            <label for="cli-mock" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-signal-green);">
               <input id="cli-mock" type="checkbox" checked style="accent-color:var(--color-signal-green);"/>
               <span>--mock (Zero-Credit Testing)</span>
             </label>
@@ -1009,7 +1012,7 @@
                 <span class="mac-dot dot-green"></span>
               </div>
               <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);">
-                bash — bionemo-cli // v2.5
+                bash — bionemo-cli // v2.2.0
               </span>
             </div>
             <div style="margin-top:1.25rem;">
@@ -1244,8 +1247,8 @@ def run(protocol: protocol_api.ProtocolContext):
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
             <span class="badge-measured">GNU AGPLv3 LICENSE</span>
-            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">186/186 HERMETIC TESTS PASSING</span>
-            <span class="badge-measured">RELEASE v2.5</span>
+            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">223/223 HERMETIC TESTS PASSING</span>
+            <span class="badge-measured">RELEASE v2.2.0</span>
           </div>
         </div>
       </div>
@@ -1284,7 +1287,7 @@ def run(protocol: protocol_api.ProtocolContext):
         <div style="display:flex;gap:1.5rem;">
           <a href="./index.html" style="color:var(--color-ink-secondary);text-decoration:none;">Studio Home</a>
           <a href="./cockpit.html" style="color:var(--color-ink-secondary);text-decoration:none;">Cockpit Workstation</a>
-          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-secondary);text-decoration:none;">GitHub v2.5</a>
+          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-secondary);text-decoration:none;">GitHub v2.2.0</a>
         </div>
       </div>
     </div>

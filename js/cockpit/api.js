@@ -3,7 +3,7 @@
  * anti-bypass authentication, and synchronized IST daily quota enforcement.
  */
 
-import { isStaticHost, state, TARGETS, EMPIRICAL_TARGET_LEADS } from './state.js';
+import { isStaticHost, isBackendAvailable, probeBackendHealth, state, TARGETS, EMPIRICAL_TARGET_LEADS } from './state.js';
 import { TARGET_PRESETS } from '../data/target-presets.js';
 import { renderLeads, setAgent, resetAgents, logEntry, showToast, sleep, updateProvenanceBanner } from './ui-controls.js';
 import { renderPareto } from './charts.js';
@@ -284,10 +284,12 @@ export class ClientAuthManager {
       console.warn('Failed to parse cached auth session:', e);
     }
 
-    if (!this.isStaticHost && this.token) {
+    const backendUp = await probeBackendHealth();
+    this.isStaticHost = !backendUp;
+    if (backendUp && this.token) {
       try {
         const headers = this.token ? { 'Authorization': `Bearer ${this.token}` } : {};
-        const res = await fetch('/api/auth/me', { headers });
+        const res = await fetch('./api/auth/me', { headers });
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated && data.user) {
@@ -380,9 +382,11 @@ export class ClientAuthManager {
     email = (email || '').trim().toLowerCase();
     password = (password || '').trim();
 
-    if (!this.isStaticHost) {
+    const backendUp = await probeBackendHealth();
+    this.isStaticHost = !backendUp;
+    if (backendUp) {
       try {
-        const res = await fetch('/api/auth/login', {
+        const res = await fetch('./api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
           body: JSON.stringify({ email, password })
@@ -431,9 +435,11 @@ export class ClientAuthManager {
   }
 
   async demoLogin() {
-    if (!this.isStaticHost) {
+    const backendUp = await probeBackendHealth();
+    this.isStaticHost = !backendUp;
+    if (backendUp) {
       try {
-        const res = await fetch('/api/auth/demo-login', {
+        const res = await fetch('./api/auth/demo-login', {
           method: 'POST',
           headers: { 'X-BioNeMo-CSRF': '1' }
         });
@@ -475,9 +481,11 @@ export class ClientAuthManager {
       return { success: false, message: 'Password must be at least 6 characters.' };
     }
 
-    if (!this.isStaticHost) {
+    const backendUp = await probeBackendHealth();
+    this.isStaticHost = !backendUp;
+    if (backendUp) {
       try {
-        const res = await fetch('/api/auth/register', {
+        const res = await fetch('./api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
           body: JSON.stringify({ full_name: fullName, organization, email, password })
@@ -527,10 +535,13 @@ export class ClientAuthManager {
   }
 
   logout() {
-    if (!this.isStaticHost) {
-      fetch('/api/auth/logout', {
+    if (state.isBackendAvailable) {
+      fetch('./api/auth/logout', {
         method: 'POST',
-        headers: { 'X-BioNeMo-CSRF': '1' }
+        headers: {
+          'X-BioNeMo-CSRF': '1',
+          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {})
+        }
       }).catch(() => {});
     }
     this.user = null;
@@ -547,27 +558,34 @@ export class ClientAuthManager {
       return { success: false, message: 'Authentication required to submit feedback.' };
     }
 
-    if (!this.isStaticHost) {
+    const backendUp = await probeBackendHealth();
+    this.isStaticHost = !backendUp;
+    if (backendUp) {
       try {
         const headers = { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' };
         if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
-        const res = await fetch('/api/feedback', {
+        const res = await fetch('./api/feedback', {
           method: 'POST',
           headers,
           body: JSON.stringify(payload)
         });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          const data = await res.json();
           this.recordLocalFeedback(payload);
           return { success: true, message: data.message || 'Feedback submitted.' };
         }
+        return {
+          success: false,
+          message: data.message || data.detail || `Feedback rejected (HTTP ${res.status}).`
+        };
       } catch (e) {
-        console.warn('Backend feedback error; storing locally:', e);
+        console.warn('Backend feedback error:', e);
+        return { success: false, message: 'Failed to submit feedback to server.' };
       }
     }
 
     this.recordLocalFeedback(payload);
-    return { success: true, message: 'Scientific feedback recorded successfully.' };
+    return { success: true, message: 'Scientific feedback recorded locally (offline demo).' };
   }
 
   recordLocalFeedback(payload) {
@@ -630,8 +648,8 @@ export class ClientAuthManager {
 
     if (!this.user) {
       container.innerHTML = `
-        <button id="authBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
-          <span>🔑 Sign In</span>
+        <button id="authBtn" data-action="open-auth-modal" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
+          <span>Sign In</span>
           <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/40 border border-white/20">5 Runs/Day</span>
         </button>
       `;
@@ -647,24 +665,25 @@ export class ClientAuthManager {
           </div>
 
           <div class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold ${pillColor}" title="Synchronized refresh at 3:00 PM IST">
-            <span>⚡ ${quota.runs_remaining}/${quota.max_runs}</span>
+            <span>Runs ${quota.runs_remaining}/${quota.max_runs}</span>
           </div>
 
           <div id="hudCountdownText" class="hidden md:inline-flex text-[11px] font-mono text-amber-300/90 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20" title="Universal synchronized reset at 3:00 PM IST (09:30 UTC)">
-            ⏳ ${quota.countdown} (3:00 PM IST)
+            ${quota.countdown} (3:00 PM IST)
           </div>
 
-          <button onclick="handleLogout()" title="Sign Out" class="px-2 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
-            ✕
+          <button type="button" data-action="logout" aria-label="Sign Out" title="Sign Out" class="px-2 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
+            &times;
           </button>
         </div>
       `;
     }
 
-    // Update Run Controls based on Sign-In state
+    // Update Run Controls based on Sign-In state and backend availability
     const banner = document.getElementById('authRequiredBanner');
+    const backendUp = Boolean(state.isBackendAvailable);
     if (banner) {
-      if (!this.user && !window.isOwner) {
+      if (backendUp && !this.user && window.isOwner !== true) {
         banner.style.display = 'block';
         banner.classList.remove('hidden');
       } else {
@@ -676,22 +695,27 @@ export class ClientAuthManager {
     const runBtn = document.getElementById('runBtn');
     const runLabel = document.getElementById('runLabel');
     if (runBtn && !isRunning) {
-      if (window.isOwner) {
+      if (window.isOwner === true) {
         runBtn.className = 'btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4';
-        runBtn.onclick = () => runDiscovery();
-        if (runLabel) runLabel.innerHTML = '🚀 Run Autonomous Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Owner Mode</span>';
+        runBtn.dataset.action = 'run-discovery';
+        if (runLabel) runLabel.innerHTML = 'Run Autonomous Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Owner Mode</span>';
+      } else if (!backendUp) {
+        runBtn.className = 'btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4';
+        runBtn.dataset.action = 'run-discovery';
+        if (runLabel) runLabel.textContent = 'Run Autonomous Discovery';
       } else if (!this.user) {
-        runBtn.onclick = () => openAuthModal('🔒 Sign-In Required: Please sign in or register to launch autonomous discovery (5 free runs/day).');
+        runBtn.dataset.action = 'open-auth-modal';
+        runBtn.dataset.arg = 'Sign-In Required: Please sign in or register to launch autonomous discovery (5 free runs/day).';
         runBtn.className = 'w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4 bg-gradient-to-r from-amber-600 to-emerald-700 hover:from-amber-500 hover:to-emerald-600 shadow-lg border border-amber-400/40 cursor-pointer transition-all';
-        if (runLabel) runLabel.innerHTML = '🔒 Sign In to Run Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-white/20">5 Runs/Day Free</span>';
+        if (runLabel) runLabel.innerHTML = 'Sign In to Run Discovery <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 border border-white/20">5 Runs/Day Free</span>';
       } else {
         runBtn.className = 'btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4';
         if (quota.runs_remaining <= 0) {
-          runBtn.onclick = () => openQuotaModal();
-          if (runLabel) runLabel.innerHTML = `⏳ Daily Quota Exhausted <span class="text-[10px] font-mono">(${quota.countdown})</span>`;
+          runBtn.dataset.action = 'open-quota-modal';
+          if (runLabel) runLabel.innerHTML = `Daily Quota Exhausted <span class="text-[10px] font-mono">(${quota.countdown})</span>`;
         } else {
-          runBtn.onclick = () => runDiscovery();
-          if (runLabel) runLabel.innerHTML = '🚀 Run Autonomous Discovery';
+          runBtn.dataset.action = 'run-discovery';
+          if (runLabel) runLabel.textContent = 'Run Autonomous Discovery';
         }
       }
     }
@@ -745,17 +769,19 @@ export function updateTrialUI(status) {
 
 
 export async function runDiscovery() {
+  const backendUp = await probeBackendHealth();
   if (isRunning) return;
 
-  // Gate check 1: Researcher Authentication Required
-  if (!clientAuth.isLoggedIn() && !window.isOwner) {
+  const isOwnerSession = window.isOwner === true;
+
+  // Enforce researcher authentication & quota only on live backend (static demo stays open)
+  if (backendUp && !clientAuth.isLoggedIn() && !isOwnerSession) {
     clientAuth.pendingAction = 'discovery';
     openAuthModal('Please sign in or register to access the free trial discovery pipeline (5 runs/day).');
     return;
   }
 
-  // Gate check 2: Quota Limit (5 runs / 24 hours synchronized at 3:00 PM IST)
-  if (!window.isOwner) {
+  if (backendUp && clientAuth.isLoggedIn() && !isOwnerSession) {
     const quota = clientAuth.getQuota();
     if (quota.runs_remaining <= 0) {
       openQuotaModal();
@@ -763,77 +789,176 @@ export async function runDiscovery() {
     }
   }
 
-  // Consume 1 run
-  clientAuth.consumeRun();
-
-
+  const targetSelect = document.getElementById('targetSelect');
+  let target = targetSelect ? targetSelect.value : '7RPZ';
+  const targetTab = state.currentTargetTab || currentTargetTab || 'presets';
+  if (targetTab === 'esmfold') {
+    const rawSeq = document.getElementById('esmfoldSeqInput')?.value || state.currentTargetSeq || '';
+    const cleanSeq = rawSeq.replace(/^>.*$/gm, '').replace(/\s+/g, '').toUpperCase();
+    if (!cleanSeq || cleanSeq.length < 10) {
+      showToast('Please enter or load an amino acid sequence (at least 10 residues) for ESMFold.');
+      return;
+    }
+    state.currentTargetSeq = cleanSeq;
+    target = cleanSeq;
+  } else if (targetTab === 'rcsb') {
+    target = (document.getElementById('customTargetInput')?.value || '').trim() || '7RPZ';
+  }
 
   isRunning = true;
-  const targetSelect = document.getElementById('targetSelect');
-  let target = targetSelect ? targetSelect.value : 'KRAS G12D';
-  if (currentTargetTab === 'esmfold') target = 'KRAS G12D';
-  else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'KRAS G12D';
-  target = escapeHtml(target);
+  state.isRunning = true;
+  state.currentLeads = [];
+  state.currentSelectedLead = null;
 
   const candidateSlider = document.getElementById('candidateSlider');
   const candidates = candidateSlider ? parseInt(candidateSlider.value, 10) : 12;
-  const info = TARGETS[target] || TARGETS['KRAS G12D'] || { pdb: '8AZV', indication: 'Colorectal/NSCLC', pocket: 'Switch II', mutant: 'G12D', color: '#76b900' };
+  const info = TARGETS[target] || (targetTab === 'esmfold'
+    ? {
+        name: `ESMFold Target (${target.length} aa)`,
+        pdb: 'DE NOVO',
+        pocket: 'Predicted Binding Pocket',
+        mutant: 'De Novo',
+        color: '#a855f7',
+        ligandName: 'DE-NOVO',
+        pocketResidues: state.currentTargetPocketResidues || []
+      }
+    : (TARGETS['7RPZ'] || {
+        name: target,
+        pdb: target,
+        indication: 'Target Screening',
+        pocket: 'Active Binding Pocket',
+        mutant: '—',
+        color: '#76b900',
+        pocketResidues: []
+      }));
+  const safeTargetDisplay = escapeHtml(info.name || target);
+  const safePdbDisplay = escapeHtml(info.pdb || target);
+  const safePocketDisplay = escapeHtml(info.pocket || 'Binding Pocket');
 
   // Reset UI
   document.getElementById('agentLog').innerHTML = '';
-  document.getElementById('leadsContainer').innerHTML = '<div class="text-center text-gray-600 text-xs py-4">Authorizing trial slot & preparing pipeline...</div>';
+  document.getElementById('leadsContainer').innerHTML = '<div class="text-center text-gray-600 text-xs py-4">Preparing autonomous discovery pipeline...</div>';
   resetAgents();
   document.getElementById('progressBar').style.width = '5%';
   document.getElementById('streamDot').style.background = '#76b900';
   document.getElementById('runBtn').disabled = true;
-  document.getElementById('runLabel').textContent = 'Authorizing & Running...';
+  document.getElementById('runLabel').textContent = 'Running Pipeline...';
+
+  const abortController = new AbortController();
+  let streamedDialogues = [];
 
   try {
-  // ─ Anti-Bypass Backend Enforcement ─
+  // ─ Authenticated SSE Streaming Execution via fetch + ReadableStream ─
   let backendData = null;
-  try {
-    const res = isStaticHost ? { ok: false, status: 0 } : await fetch(`/api/run?target=${encodeURIComponent(target)}&candidates=${candidates}`, {
-      method: 'POST',
-      headers: {
+  if (backendUp) {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
         'X-Client-Fingerprint': CLIENT_FP,
         'X-BioNeMo-CSRF': '1'
+      };
+      if (clientAuth.token) {
+        headers['Authorization'] = `Bearer ${clientAuth.token}`;
       }
-    });
 
-    if (res.status === 403) {
-      const errData = await res.json();
-      isRunning = false;
-      document.getElementById('runBtn').disabled = false;
-      updateTrialUI({ runs_used: errData.runs_used || 2, runs_remaining: 0, is_locked: true, max_runs: 2 });
-      showToast('⚠️ Demo rate limit exceeded. Please wait a moment before trying again.');
-      return;
-    }
+      const res = await fetch('./api/stream', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ target, candidates }),
+        signal: abortController.signal
+      });
 
-    if (!res.ok) {
-      throw new Error(`Server returned HTTP ${res.status}`);
-    }
+      if (res.status === 401) {
+        isRunning = false;
+        state.isRunning = false;
+        document.getElementById('runBtn').disabled = false;
+        openAuthModal('Session authentication required before launching a discovery run.');
+        return;
+      }
 
-    backendData = await res.json();
-    if (backendData.trial_status) {
-      updateTrialUI(backendData.trial_status);
+      if (res.status === 403) {
+        const errData = await res.json();
+        isRunning = false;
+        state.isRunning = false;
+        document.getElementById('runBtn').disabled = false;
+        updateTrialUI({ runs_used: errData.runs_used || 5, runs_remaining: 0, is_locked: true, max_runs: 5 });
+        showToast(errData.message || 'Demo rate limit exceeded. Please wait before retrying.');
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(`Server returned HTTP ${res.status}`);
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let stepCount = 0;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split(/\r?\n\r?\n/);
+          buffer = frames.pop() || '';
+
+          for (const frame of frames) {
+            const dataLines = frame
+              .split(/\r?\n/)
+              .filter(l => l.startsWith('data:'))
+              .map(l => l.slice(5).trim());
+            if (dataLines.length === 0) continue;
+
+            const payloadStr = dataLines.join('\n');
+            if (!payloadStr || payloadStr === '[DONE]') continue;
+
+            const evt = JSON.parse(payloadStr);
+            if (evt.event === 'stream_ready') {
+              document.getElementById('progressBar').style.width = '12%';
+            } else if (evt.event === 'council_message') {
+              stepCount += 1;
+              streamedDialogues.push(evt);
+              document.getElementById('progressBar').style.width = `${Math.min(88, 15 + stepCount * 10)}%`;
+              logEntry(evt.avatar || 'AI', evt.persona_name || 'Council Agent', evt.intent || 'UPDATE', escapeHtml(evt.content || ''), info.color || '#76b900');
+            } else if (evt.event === 'campaign_error') {
+              throw new Error(evt.message || 'Campaign execution failed');
+            } else if (evt.event === 'campaign_complete') {
+              backendData = evt;
+            }
+          }
+        }
+      } else {
+        backendData = await res.json();
+      }
+
+      if (backendData) {
+        // Consume local HUD run ONLY after backend confirms HTTP 2xx completion
+        if (clientAuth.isLoggedIn() && !isOwnerSession) {
+          clientAuth.consumeRun();
+        }
+        if (backendData.trial_status) {
+          updateTrialUI(backendData.trial_status);
+        }
+        if (backendData.leads && backendData.leads.length > 0) {
+          state.currentLeads = backendData.leads.map(l => ({
+            ...l,
+            affinity: l.binding_affinity !== undefined ? l.binding_affinity : (l.affinity || -8.5),
+            verdict: l.admet_verdict || l.verdict || 'PASS',
+            pareto: l.is_pareto !== undefined ? l.is_pareto : (l.pareto || false)
+          }));
+          currentTargetPdbText = backendData.target_pdb || currentTargetPdbText;
+          currentTargetPocketResidues = backendData.pocket_residues || currentTargetPocketResidues;
+          currentTargetIsEsmfold = backendData.is_esmfold || false;
+          currentTargetMeanPlddt = backendData.mean_plddt || 0.0;
+        }
+      }
+    } catch (err) {
+      if (backendUp) console.warn('API stream warning:', err);
     }
-    if (backendData.leads && backendData.leads.length > 0) {
-      state.currentLeads = backendData.leads.map(l => ({
-        ...l,
-        affinity: l.binding_affinity !== undefined ? l.binding_affinity : (l.affinity || -8.5),
-        verdict: l.admet_verdict || l.verdict || 'PASS',
-        pareto: l.is_pareto !== undefined ? l.is_pareto : (l.pareto || false)
-      }));
-      currentTargetPdbText = backendData.target_pdb || currentTargetPdbText;
-      currentTargetPocketResidues = backendData.pocket_residues || currentTargetPocketResidues;
-      currentTargetIsEsmfold = backendData.is_esmfold || false;
-      currentTargetMeanPlddt = backendData.mean_plddt || 0.0;
-    }
-  } catch (err) {
-    if (!isStaticHost) console.warn('API run warning:', err);
   }
   if (!backendData) {
-    // Static mode: active without lockout
     const q = staticQuota(1);
     updateTrialUI(q);
   }
@@ -976,7 +1101,7 @@ export async function runDiscovery() {
   setAgent('scout', 'running', 'Resolving target...');
 
   await sleep(600);
-  logEntry('🎯', 'Target Scout', 'BIOLOGICAL_PROFILING', `Resolved <strong style="color:${info.color}">${target}</strong> → PDB:${info.pdb}. Pocket: ${info.pocket}. Annotating ${info.mutant !== '—' ? 'oncogenic mutation '+info.mutant : 'pathogenic variant'}. Reference ligand SMILES extracted.`, info.color);
+  logEntry('🎯', 'Target Scout', 'BIOLOGICAL_PROFILING', `Resolved <strong style="color:${info.color}">${safeTargetDisplay}</strong> → PDB:${safePdbDisplay}. Pocket: ${safePocketDisplay}. Annotating ${info.mutant !== '—' ? 'oncogenic mutation '+escapeHtml(info.mutant) : 'pathogenic variant'}. Reference ligand SMILES extracted.`, info.color);
   setAgent('scout', 'done', `Resolved → ${info.pdb}`);
   setProgress(20);
   await sleep(400);
@@ -1002,9 +1127,9 @@ export async function runDiscovery() {
   await sleep(900);
 
   const contacts = (info.pocketResidues && info.pocketResidues.length > 0)
-    ? info.pocketResidues.slice(0, 3).join(', ')
+    ? escapeHtml(info.pocketResidues.slice(0, 3).join(', '))
     : 'Active site interaction residues';
-  logEntry('🔬', 'DiffDock Agent', 'DIFFDOCK_DOCKING_SIMULATION', `NVIDIA NIM DiffDock executed 3D conformer generation (ETKDGv3) + generative diffusion pose sampling for ${runResult.dockedCount} leads into <strong style="color:${info.color}">${target}</strong> (${info.pdb}). Top lead: <strong style="color:var(--nvidia-green)">${runResult.topLead.id}</strong> ΔG = <strong style="color:var(--nvidia-green)">${runResult.topLead.affinity} kcal/mol</strong>. Key contacts: ${contacts}.`, '#00f1fd');
+  logEntry('🔬', 'DiffDock Agent', 'DIFFDOCK_DOCKING_SIMULATION', `NVIDIA NIM DiffDock executed 3D conformer generation (ETKDGv3) + generative diffusion pose sampling for ${runResult.dockedCount} leads into <strong style="color:${info.color}">${safeTargetDisplay}</strong> (${safePdbDisplay}). Top lead: <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> ΔG = <strong style="color:var(--nvidia-green)">${runResult.topLead.affinity} kcal/mol</strong>. Key contacts: ${contacts}.`, '#00f1fd');
   setAgent('docking', 'done', `Top: ${runResult.topLead.affinity} kcal/mol`);
   setProgress(80);
   await sleep(500);
@@ -1012,8 +1137,8 @@ export async function runDiscovery() {
   // ─ Stage 5: PI Pareto ─
   setAgent('pi', 'running', 'Arbitrating Pareto...');
   await sleep(700);
-  logEntry('👩‍🔬', 'Principal Investigator', 'PARETO_ARBITRATION', `Multi-objective Pareto frontier computed across ${runResult.dockedCount} docked leads (ΔG × QED × SAScore). Hypervolume: 94.8%. Identified <strong style="color:var(--nvidia-green)">${runResult.paretoCount} strictly non-dominated</strong> candidates. Top clinical nomination: <strong style="color:var(--nvidia-green)">${runResult.topLead.id}</strong> (ΔG=${runResult.topLead.affinity}, QED=${runResult.topLead.qed}).`, '#76b900');
-  logEntry('✅', 'Principal Investigator', 'CONSENSUS_ACHIEVED', `Unanimous agent consensus. Candidate <strong style="color:var(--nvidia-green)">${runResult.topLead.id}</strong> locked for dry-lab nomination and wet-lab synthesis dispatch.`, '#76b900');
+  logEntry('👩‍🔬', 'Principal Investigator', 'PARETO_ARBITRATION', `Multi-objective Pareto frontier computed across ${runResult.dockedCount} docked leads (ΔG × QED × SAScore). Hypervolume: 94.8%. Identified <strong style="color:var(--nvidia-green)">${runResult.paretoCount} strictly non-dominated</strong> candidates. Top clinical nomination: <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> (ΔG=${runResult.topLead.affinity}, QED=${runResult.topLead.qed}).`, '#76b900');
+  logEntry('✅', 'Principal Investigator', 'CONSENSUS_ACHIEVED', `Unanimous agent consensus. Candidate <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> locked for dry-lab nomination and wet-lab synthesis dispatch.`, '#76b900');
   setAgent('pi', 'done', `${runResult.paretoCount} Pareto leads`);
   setProgress(100);
 
@@ -1036,21 +1161,22 @@ export async function runDiscovery() {
   }
   } catch (err) {
     console.error('Autonomous Discovery Execution Error:', err);
-    showToast('⚠️ Discovery error: ' + (err.message || 'Execution failed'));
+    showToast('Discovery error: ' + (err.message || 'Execution failed'));
   } finally {
     const dot = document.getElementById('streamDot');
     if (dot) dot.style.background = '#76b900';
     isRunning = false;
+    state.isRunning = false;
 
     const btn = document.getElementById('runBtn');
     if (btn) {
       btn.disabled = false;
-      btn.onclick = () => runDiscovery();
+      btn.dataset.action = 'run-discovery';
       btn.style.background = '';
       btn.style.border = '';
     }
     const lbl = document.getElementById('runLabel');
-    if (lbl) lbl.textContent = '🚀 Run Autonomous Discovery';
+    if (lbl) lbl.textContent = 'Run Autonomous Discovery';
   }
 }
 window.runDiscovery = runDiscovery;

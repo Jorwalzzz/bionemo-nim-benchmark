@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net https://cdnjs.cloudflare.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
 <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
 <meta name="referrer" content="strict-origin-when-cross-origin"/>
-<script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.innerHTML=''}}</script>
+<script src="./js/frame-guard.js"></script>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>NVIDIA BioNeMo Benchmark Cockpit — Interactive 3D Discovery Studio</title>
@@ -27,8 +27,8 @@
 <link rel="stylesheet" href="./assets/css/theme.css"/>
 <link rel="stylesheet" href="./app.min.css?v=20261121"/>
 <link rel="stylesheet" href="./cockpit.css?v=20261121"/>
-<script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
-<script src="./vendor/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'" defer></script>
+<script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" data-fallback-src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
+<script src="./vendor/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous" data-fallback-src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
 </head>
 <body class="dark bg-grid">
 <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-md focus:shadow-lg focus:outline-none">Skip to main cockpit workspace</a>
@@ -148,34 +148,36 @@
       <a href="./index.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-all">
         <span>← Benchmark Overview</span>
       </a>
-      <button aria-label="Start guided tour" onclick="startInteractiveTour()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: 1px solid rgba(236, 72, 153, 0.5);">
-        <span>🧭 Guide</span>
+      <button type="button" aria-label="Start guided tour" data-action="start-tour" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: 1px solid rgba(236, 72, 153, 0.5);">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        <span>Guide</span>
       </button>
-      <button aria-label="Open hardware benchmark" onclick="openBenchmarkModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105 glow-green" style="background: linear-gradient(135deg, rgba(118,185,0,0.25), rgba(0,241,253,0.15)); border: 1px solid rgba(118,185,0,0.6);">
+      <button type="button" aria-label="Open hardware benchmark" data-action="open-benchmark-modal" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 transition-all hover:scale-105 glow-green" style="background: linear-gradient(135deg, rgba(118,185,0,0.25), rgba(0,241,253,0.15)); border: 1px solid rgba(118,185,0,0.6);">
         <span class="w-1.5 h-1.5 rounded-full bg-nvidia-green animate-pulse"></span>
-        <span>⚡ Benchmark</span>
+        <span>Benchmark</span>
       </button>
-      <button aria-label="Submit Feedback" id="feedbackNavBtn" onclick="openFeedbackModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 flex items-center gap-1.5 transition-all">
-        <span>💬 Feedback</span>
+      <button type="button" aria-label="Submit Feedback" id="feedbackNavBtn" data-action="open-feedback-modal" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 flex items-center gap-1.5 transition-all">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        <span>Feedback</span>
       </button>
       <div id="ownerAccessContainer" class="hidden items-center gap-2" style="display: none;"></div>
       <div id="staticDemoContainer" class="hidden items-center gap-2" style="display: none;">
-        <button aria-label="Static Demo Mode Information" id="staticDemoPill" onclick="openStaticDemoModal()" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer">
+        <button type="button" aria-label="Static Demo Mode Information" id="staticDemoPill" data-action="open-static-demo-modal" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all cursor-pointer">
           <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
           <span>STATIC DEMO MODE</span>
         </button>
       </div>
       <div id="authHudContainer" class="flex items-center gap-2">
-        <button aria-label="Sign In or Register" id="authBtn" onclick="openAuthModal()" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
-          <span>🔑 Sign In</span>
+        <button type="button" aria-label="Sign In or Register" id="authBtn" data-action="open-auth-modal" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
+          <span>Sign In</span>
           <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/30 border border-white/20">5 Runs/Day</span>
         </button>
       </div>
-      <button aria-label="Desktop App Status & Developer Letter" id="fullAppNavBtn" onclick="openInstallModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all">
+      <button type="button" aria-label="Desktop App Status & Developer Letter" id="fullAppNavBtn" data-action="open-install-modal" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 flex items-center gap-1.5 transition-all">
           <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-          <span>🌱 Desktop App Status</span>
-        </button>
-    </div></div>
+          <span>Desktop App Status</span>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -194,7 +196,7 @@
         </div>
       </div>
     </div>
-    <button aria-label="Close dialog" onclick="closeInteractiveTour()" class="text-gray-500 hover:text-white text-lg leading-none p-1 transition-colors">✕</button>
+    <button type="button" aria-label="Close dialog" data-action="close-tour" class="text-gray-500 hover:text-white text-lg leading-none p-1 transition-colors">&times;</button>
   </div>
 
   <!-- Progress Bar (10 steps) -->
@@ -229,15 +231,15 @@
   <!-- Actions & Navigation -->
   <div class="flex items-center justify-between pt-2 border-t border-surface-border">
     <div class="flex items-center gap-2">
-      <button aria-label="Previous step" id="btnTourPrev" onclick="prevTourStep()" class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white rounded-lg bg-white/5 border border-white/10 transition-colors">
-        ◀ Previous
+      <button type="button" aria-label="Previous step" id="btnTourPrev" data-action="tour-prev" class="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-white rounded-lg bg-white/5 border border-white/10 transition-colors">
+        &lsaquo; Previous
       </button>
-      <button aria-label="Execute step action" id="btnTourAction" onclick="executeTourAction()" class="px-3 py-1.5 text-xs font-bold text-cyan-300 hover:text-white rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 transition-all flex items-center gap-1">
-        ⚡ Try This Step
+      <button type="button" aria-label="Execute step action" id="btnTourAction" data-action="tour-action" class="px-3 py-1.5 text-xs font-bold text-cyan-300 hover:text-white rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 transition-all flex items-center gap-1">
+        Try This Step
       </button>
     </div>
-    <button aria-label="Next step" id="btnTourNext" onclick="nextTourStep()" class="px-4 py-1.5 text-xs font-bold text-white rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 shadow-md shadow-purple-500/20 transition-all flex items-center gap-1">
-      <span>Next Step ➔</span>
+    <button type="button" aria-label="Next step" id="btnTourNext" data-action="tour-next" class="px-4 py-1.5 text-xs font-bold text-white rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 shadow-md shadow-purple-500/20 transition-all flex items-center gap-1">
+      <span>Next Step &rarr;</span>
     </button>
   </div>
 </div>
@@ -252,7 +254,7 @@
               <!-- Target Selection Tabs -->
         <div class="mb-3">
           <div class="flex items-center justify-between mb-2">
-            <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <label for="targetSelect" class="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
               <svg class="w-3.5 h-3.5 text-nvidia-green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"></circle>
                 <circle cx="12" cy="12" r="6"></circle>
@@ -263,14 +265,14 @@
             <span id="targetModeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PRESET</span>
           </div>
           <div class="grid grid-cols-3 gap-1 bg-[#101620] p-1 rounded-lg border border-surface-border mb-2.5">
-            <button aria-label="Switch to target presets" type="button" onclick="switchTargetTab('presets')" id="tabBtnPresets" class="py-1 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all">Presets</button>
-            <button aria-label="Switch to RCSB PDB target input" type="button" onclick="switchTargetTab('rcsb')" id="tabBtnRcsb" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">RCSB PDB</button>
-            <button aria-label="Switch to ESMFold de novo folding" type="button" onclick="switchTargetTab('esmfold')" id="tabBtnEsmfold" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">ESMFold</button>
+            <button aria-label="Switch to target presets" type="button" data-action="switch-target-tab" data-arg="presets" id="tabBtnPresets" class="py-1 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all">Presets</button>
+            <button aria-label="Switch to RCSB PDB target input" type="button" data-action="switch-target-tab" data-arg="rcsb" id="tabBtnRcsb" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">RCSB PDB</button>
+            <button aria-label="Switch to ESMFold de novo folding" type="button" data-action="switch-target-tab" data-arg="esmfold" id="tabBtnEsmfold" class="py-1 text-[11px] font-semibold rounded text-gray-400 hover:text-white transition-all">ESMFold</button>
           </div>
 
           <!-- Tab 1: Presets -->
           <div id="targetTabPresets">
-            <select id="targetSelect" aria-label="Target Selection" class="w-full text-xs rounded-lg px-3 py-2.5 font-medium focus:outline-none focus:ring-2 transition-all" style="background: #161b22; border: 1px solid #30363d; color: #e6edf3;" onchange="updateTargetInfo()">
+            <select id="targetSelect" aria-label="Target Selection" class="w-full text-xs rounded-lg px-3 py-2.5 font-medium focus:outline-none focus:ring-2 transition-all" style="background: #161b22; border: 1px solid #30363d; color: #e6edf3;" data-change-action="update-target-info">
               <optgroup label="Repo Benchmark Core">
                 <option value="7RPZ" selected>KRAS G12D (7RPZ · MRTX1133)</option>
                 <option value="4MNE">BRAF V600E (4MNE · Vemurafenib)</option>
@@ -301,8 +303,9 @@
           <!-- Tab 2: RCSB PDB -->
           <div id="targetTabRcsb" class="hidden">
             <div class="flex gap-1.5">
-              <input type="text" id="customTargetInput" aria-label="Custom RCSB PDB ID" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" oninput="onCustomTargetInput(this.value)" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
-              <button aria-label="Fetch target structure from RCSB PDB" type="button" onclick="fetchCustomTarget()" class="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors">Fetch</button>
+              <label for="customTargetInput" class="sr-only">Custom RCSB PDB ID</label>
+              <input type="text" id="customTargetInput" aria-label="Custom RCSB PDB ID" placeholder="RCSB PDB (e.g. 6LU7, 2ITZ)" data-input-action="custom-target-input" class="flex-1 text-xs px-2.5 py-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 placeholder-gray-500 font-mono focus:border-nvidia-green focus:outline-none" />
+              <button aria-label="Fetch target structure from RCSB PDB" type="button" data-action="fetch-custom-target" class="px-3 py-2 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 transition-colors">Fetch</button>
             </div>
             <div id="rcsbMetadataPreview" class="hidden mt-2 p-2.5 rounded-lg bg-black/40 border border-surface-border text-xs">
               <div class="flex items-center justify-between mb-1">
@@ -318,20 +321,20 @@
           <div id="targetTabEsmfold" class="hidden space-y-2">
             <div>
               <div class="flex justify-between items-center mb-1">
-                <span class="text-[11px] text-gray-400">Amino Acid Sequence</span>
+                <label for="esmfoldSeqInput" class="text-[11px] text-gray-400">Amino Acid Sequence</label>
                 <span class="text-[10px] text-cyan-400 font-mono" id="seqLenBadge">0 aa</span>
               </div>
-              <textarea id="esmfoldSeqInput" aria-label="ESMFold Amino Acid Sequence" rows="3" placeholder="Paste FASTA or amino acid sequence (e.g. MTEYKLVVV...)" oninput="updateSeqCount()" class="w-full text-[11px] p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 font-mono focus:border-cyan-400 focus:outline-none resize-none"></textarea>
+              <textarea id="esmfoldSeqInput" aria-label="ESMFold Amino Acid Sequence" rows="3" placeholder="Paste FASTA or amino acid sequence (e.g. MTEYKLVVV...)" data-input-action="update-seq-count" class="w-full text-[11px] p-2 rounded-lg bg-[#161b22] border border-[#30363d] text-gray-200 font-mono focus:border-cyan-400 focus:outline-none resize-none"></textarea>
             </div>
             <div>
               <div class="text-[10px] text-gray-400 mb-1">Example FASTA Sequences:</div>
               <div class="flex flex-wrap gap-1.5">
-                <button aria-label="Load Ubiquitin 76aa FASTA sequence" type="button" onclick="loadEsmPreset('ubiquitin')" id="chipEsmUbiquitin" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">Ubiquitin 76aa</button>
-                <button aria-label="Load KRAS G12D 169aa FASTA sequence" type="button" onclick="loadEsmPreset('kras')" id="chipEsmKras" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">KRAS G12D 169aa</button>
-                <button aria-label="Load Mpro 306aa FASTA sequence" type="button" onclick="loadEsmPreset('mpro')" id="chipEsmMpro" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">Mpro 306aa</button>
+                <button aria-label="Load Ubiquitin 76aa FASTA sequence" type="button" data-action="load-esm-preset" data-arg="ubiquitin" id="chipEsmUbiquitin" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">Ubiquitin 76aa</button>
+                <button aria-label="Load KRAS G12D 169aa FASTA sequence" type="button" data-action="load-esm-preset" data-arg="kras" id="chipEsmKras" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">KRAS G12D 169aa</button>
+                <button aria-label="Load Mpro 306aa FASTA sequence" type="button" data-action="load-esm-preset" data-arg="mpro" id="chipEsmMpro" class="text-[10px] px-2 py-0.5 bg-slate-800/80 hover:bg-cyan-500/20 hover:text-cyan-300 text-gray-300 rounded-md border border-gray-700/80 hover:border-cyan-500/40 font-mono transition-colors">Mpro 306aa</button>
               </div>
             </div>
-            <button aria-label="Fold de novo sequence with ESMFold" type="button" onclick="foldDeNovoSequence()" class="w-full py-1.5 text-xs font-bold rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors">
+            <button aria-label="Fold de novo sequence with ESMFold" type="button" data-action="fold-denovo" class="w-full py-1.5 text-xs font-bold rounded-lg bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-colors">
               <span>Fold De Novo Structure (ESMFold)</span>
             </button>
           </div>
@@ -362,20 +365,20 @@
 
       <!-- Candidate Slider -->
       <div class="mb-5">
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
-          📦 Candidates: <span id="candidateNum" class="text-nvidia-green">10</span>
+        <label for="candidateSlider" class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 block">
+          Candidates: <span id="candidateNum" class="text-nvidia-green">10</span>
         </label>
-        <input type="range" id="candidateSlider" aria-label="Candidate Count Slider" min="4" max="20" value="10" class="w-full accent-green-500 cursor-pointer" oninput="document.getElementById('candidateNum').textContent=this.value"/>
+        <input type="range" id="candidateSlider" aria-label="Candidate Count Slider" min="4" max="20" value="10" class="w-full accent-green-500 cursor-pointer" data-input-action="candidate-slider"/>
       </div>
 <div class="mb-5">
   <div class="flex justify-between items-center mb-1.5">
-    <label class="text-xs font-semibold text-gray-400 uppercase tracking-wider">🔄 Discovery Rounds</label>
+    <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Discovery Rounds</span>
     <span id="roundsDisplay" class="text-xs font-bold text-cyan-400 font-mono">2 Rounds</span>
   </div>
   <div class="grid grid-cols-3 gap-1.5">
-    <button aria-label="Set optimization rounds" type="button" onclick="setRounds(1)" id="btn-round-1" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">1 (Fast)</button>
-    <button aria-label="Set optimization rounds" type="button" onclick="setRounds(2)" id="btn-round-2" class="py-1.5 text-xs rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-bold transition-colors">2 (Evolve)</button>
-    <button aria-label="Set optimization rounds" type="button" onclick="setRounds(3)" id="btn-round-3" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">3 (Deep)</button>
+    <button aria-label="Set optimization rounds to 1" type="button" data-action="set-rounds" data-arg="1" id="btn-round-1" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">1 (Fast)</button>
+    <button aria-label="Set optimization rounds to 2" type="button" data-action="set-rounds" data-arg="2" id="btn-round-2" class="py-1.5 text-xs rounded-lg border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 font-bold transition-colors">2 (Evolve)</button>
+    <button aria-label="Set optimization rounds to 3" type="button" data-action="set-rounds" data-arg="3" id="btn-round-3" class="py-1.5 text-xs rounded-lg border border-surface-border text-gray-400 hover:text-white transition-colors">3 (Deep)</button>
   </div>
 </div>
 
@@ -383,7 +386,6 @@
       <div id="authRequiredBanner" class="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 mb-3 space-y-2 transition-all">
         <div class="flex items-center justify-between font-bold text-amber-300">
           <span class="flex items-center gap-1.5">
-            <span>🔒</span>
             <span>Sign-In Required to Run</span>
           </span>
           <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/50 border border-amber-500/30 text-amber-300">5 Runs/Day</span>
@@ -391,15 +393,15 @@
         <p class="text-[11px] text-gray-300 leading-snug">
           Autonomous discovery requires a verified researcher session. Daily quotas refresh at 3:00 PM IST (09:30 UTC).
         </p>
-        <button type="button" onclick="openAuthModal('🔒 Please sign in or register to launch discovery runs.')" class="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
-          <span>🔑 Sign In / Register to Unlock</span>
+        <button type="button" data-action="open-auth-modal" data-arg="Please sign in or register to launch discovery runs." class="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5">
+          <span>Sign In / Register to Unlock</span>
         </button>
       </div>
 
       <!-- Run Button -->
-      <button aria-label="Run autonomous molecular discovery" id="runBtn" onclick="runDiscovery()" class="btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4">
-        <svg id="runIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <span id="runLabel">🚀 Run Autonomous Discovery</span>
+      <button type="button" aria-label="Run autonomous molecular discovery" id="runBtn" data-action="run-discovery" class="btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4">
+        <svg id="runIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <span id="runLabel">Run Autonomous Discovery</span>
       </button>
 
       <!-- Agent Pipeline Status -->
@@ -458,7 +460,7 @@
   <div class="mt-2 flex items-center gap-2 text-[10px] text-gray-500 font-mono flex-wrap">
     <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">AGPLv3 Copyleft</span>
     <span>•</span>
-    <span class="badge-measured px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">186/186 HERMETIC TESTS PASSING</span>
+    <span class="badge-measured px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">223/223 HERMETIC TESTS PASSING</span>
     <span>•</span>
     <span>Permanent Academic DOI via Zenodo</span>
   </div>
@@ -509,7 +511,7 @@
             <span id="provenanceBadge" class="font-bold text-amber-400 shrink-0">OFFLINE DEMO · CLIENT SIMULATION (NOT LIVE NIM)</span>
             <span id="provenanceDetail" class="text-gray-400 truncate hidden sm:inline">(Local simulation; metrics illustrative. Run `python serve_cockpit.py` for live NIM)</span>
           </div>
-          <button id="viewReceiptBtn" aria-label="View raw execution provenance receipt" type="button" onclick="openRawReceiptModal()" class="ml-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-gray-300 border border-gray-700/60 shrink-0 transition-colors">
+          <button id="viewReceiptBtn" aria-label="View raw execution provenance receipt" type="button" data-action="open-raw-receipt" class="ml-2 px-2 py-0.5 rounded text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-gray-300 border border-gray-700/60 shrink-0 transition-colors">
             View Raw JSON
           </button>
         </div>
@@ -556,8 +558,8 @@
               <span class="text-xs font-semibold text-gray-300">🏆 Top Nominated Leads</span>
               <span id="leadCount" class="text-[10px] text-gray-600">0 candidates</span>
             </div>
-            <button id="btnExportRunJson" aria-label="Export active run result as JSON" onclick="exportActiveRunJson()" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-emerald-400 border border-emerald-500/30 transition-colors flex items-center gap-1">
-              <span>📥</span> Export JSON
+            <button type="button" id="btnExportRunJson" aria-label="Export active run result as JSON" data-action="export-run-json" class="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/5 hover:bg-white/10 text-emerald-400 border border-emerald-500/30 transition-colors flex items-center gap-1">
+              <span>Export JSON</span>
             </button>
           </div>
           <div id="leadsContainer" class="space-y-2">
@@ -573,7 +575,7 @@
   </main>
 
   <!-- RIGHT SIDEBAR: Selected Lead Dossier -->
-  <aside class="hidden lg:flex flex-col w-72 xl:w-80 flex-shrink-0 border-l border-surface-border overflow-y-auto" style="background: var(--surface-card);">
+  <aside class="flex flex-col w-full lg:w-72 xl:w-80 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-surface-border overflow-y-auto" style="background: var(--surface-card);">
     <div class="p-5">
       <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">📋 Lead Dossier</div>
       <div id="dossierPanel">
@@ -595,8 +597,8 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ DESKTOP APP STATUS & APOLOGY MODAL ════════ -->
-<div id="installModal" class="modal-backdrop hidden" style="display: none;" onclick="closeModalOnBackdrop(event)">
-  <div class="modal-card max-w-xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="installModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-install-modal">
+  <div class="modal-card max-w-xl p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <!-- Modal Header -->
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
@@ -611,7 +613,7 @@
           <p id="modalSubtitle" class="text-xs text-gray-400">Why we removed downloading scripts & our commitment to you</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeInstallModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none transition-colors">&times;</button>
+      <button type="button" aria-label="Close dialog" data-action="close-install-modal" class="text-gray-400 hover:text-white text-xl p-1 leading-none transition-colors">&times;</button>
     </div>
 
     <!-- Modal Body -->
@@ -649,7 +651,7 @@
         <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition-colors">
           <span>⭐ Follow on GitHub for Desktop Release</span>
         </a>
-        <button aria-label="Close dialog" onclick="closeInstallModal()" class="px-5 py-2 rounded-lg bg-surface-elevated text-white text-xs font-semibold hover:bg-white/10 transition-colors">
+        <button type="button" aria-label="Close dialog" data-action="close-install-modal" class="px-5 py-2 rounded-lg bg-surface-elevated text-white text-xs font-semibold hover:bg-white/10 transition-colors">
           Back to Cockpit
         </button>
       </div>
@@ -663,8 +665,8 @@
 
 
 <!-- ═══════════════════════════════════════════════ 3D INSPECTOR MODAL ════════ -->
-<div id="viewer3DModal" class="modal-backdrop hidden" style="display: none;" onclick="close3DModal(event)">
-  <div class="modal-card max-w-4xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid #30363d; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);">
+<div id="viewer3DModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-3d-modal">
+  <div class="modal-card max-w-4xl p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid #30363d; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);">
     <div class="p-4 border-b border-surface-border flex items-center justify-between bg-[#161b22]">
       <div class="flex items-center gap-3">
         <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></div>
@@ -674,10 +676,10 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button aria-label="Toggle 3D molecule auto-rotation" onclick="toggle3DSpin()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🔄 Spin</button>
-        <button aria-label="Toggle binding pocket surface rendering" onclick="toggle3DSurface()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🎨 Pocket Surface</button>
-        <button aria-label="Reset 3D camera view" onclick="reset3DView()" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">🔍 Recenter</button>
-        <button aria-label="Close dialog" onclick="close3DModalDirect()" class="text-gray-400 hover:text-white p-1 text-lg font-bold ml-2">&times;</button>
+        <button type="button" aria-label="Toggle 3D molecule auto-rotation" data-action="toggle-3d-spin" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">Spin</button>
+        <button type="button" aria-label="Toggle binding pocket surface rendering" data-action="toggle-3d-surface" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">Pocket Surface</button>
+        <button type="button" aria-label="Reset 3D camera view" data-action="reset-3d-view" class="px-2.5 py-1 text-xs text-gray-300 hover:text-white rounded bg-white/5 border border-white/10">Recenter</button>
+        <button type="button" aria-label="Close dialog" data-action="close-3d-modal" class="text-gray-400 hover:text-white p-1 text-lg font-bold ml-2">&times;</button>
       </div>
     </div>
     <div id="modalMolViewer3D" style="width: 100%; height: 500px; position: relative; background: #0b0f14;"></div>
@@ -694,8 +696,8 @@
 
 
 <!-- ═══════════════════════════════════════════════ HARDWARE BENCHMARK MODAL ════════ -->
-<div id="benchmarkModal" class="modal-backdrop hidden" style="display: none;" onclick="closeBenchmarkModal(event)">
-  <div class="modal-card max-w-2xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid #30363d; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);">
+<div id="benchmarkModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-benchmark-modal">
+  <div class="modal-card max-w-2xl p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid #30363d; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85);">
     <!-- Modal Header -->
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
@@ -710,7 +712,7 @@
           <p class="text-xs text-gray-400">Real-time throughput & latency telemetry measuring AI acceleration</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeBenchmarkModalDirect()" class="text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
+      <button type="button" aria-label="Close dialog" data-action="close-benchmark-modal" class="text-gray-400 hover:text-white p-1 text-xl font-bold">&times;</button>
     </div>
 
     <!-- Modal Content -->
@@ -740,7 +742,7 @@
           <div class="text-xs font-bold text-gray-200">Live Host CPU Calibration</div>
           <div id="bmHostCpuName" class="text-[11px] text-gray-400 font-mono">Standard x86_64 Laptop CPU</div>
         </div>
-        <button aria-label="Run live host CPU inference benchmark" id="btnRunLiveBm" onclick="runLiveBenchmark()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 flex items-center gap-1.5 transition-colors">
+        <button type="button" aria-label="Run live host CPU inference benchmark" id="btnRunLiveBm" data-action="run-live-benchmark" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 flex items-center gap-1.5 transition-colors">
           <span>⚡ Calibrate My Laptop CPU</span>
         </button>
       </div>
@@ -836,8 +838,8 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ RESISTANCE ESCAPE MODAL ════ -->
-<div id="resistanceModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeResistanceModal()">
-  <div class="modal-card max-w-3xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(239, 68, 68, 0.15);">
+<div id="resistanceModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-resistance-modal">
+  <div class="modal-card max-w-3xl p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(239, 68, 68, 0.15);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
         <div class="w-3 h-3 rounded-full bg-red-400 animate-pulse"></div>
@@ -849,7 +851,7 @@
           <p class="text-xs text-gray-400">Target Hotspot Entropy (ESM-2) + Counter-Design Evolution (MolMIM)</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeResistanceModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close dialog" data-action="close-resistance-modal" class="text-gray-400 hover:text-white text-xl p-1 leading-none">&times;</button>
     </div>
 
     <div class="p-6 space-y-5 overflow-y-auto max-h-[80vh]">
@@ -913,7 +915,7 @@
       <div class="p-3.5 rounded-xl bg-[#0b0f14] border border-[#30363d] space-y-2">
         <div class="flex justify-between items-center text-xs">
           <span class="text-gray-400 font-semibold">MolMIM Evolved Escape SMILES:</span>
-          <button aria-label="Copy evolved SMILES string" onclick="copyEvolvedSmiles()" class="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition-colors">📋 Copy SMILES</button>
+          <button type="button" aria-label="Copy evolved SMILES string" data-action="copy-evolved-smiles" class="px-2 py-1 text-[10px] rounded bg-white/5 hover:bg-white/10 text-cyan-300 border border-white/10 transition-colors">Copy SMILES</button>
         </div>
         <div id="resEvolvedSmiles" class="text-[11px] font-mono text-emerald-400 p-2 rounded bg-black/40 border border-emerald-500/20 break-all select-all">
           O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5
@@ -922,10 +924,10 @@
 
       <!-- Actions -->
       <div class="flex gap-2 pt-2">
-        <button aria-label="Adopt evolved scaffold" onclick="adoptEvolvedScaffold()" class="flex-1 py-2.5 rounded-lg btn-cta text-white font-bold text-xs flex items-center justify-center gap-2">
-          <span>🧪 Adopt Evolved Candidate into Workbench</span>
+        <button type="button" aria-label="Adopt evolved scaffold" data-action="adopt-evolved-scaffold" class="flex-1 py-2.5 rounded-lg btn-cta text-white font-bold text-xs flex items-center justify-center gap-2">
+          <span>Adopt Evolved Candidate into Workbench</span>
         </button>
-        <button aria-label="Close dialog" onclick="closeResistanceModal()" class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
+        <button type="button" aria-label="Close dialog" data-action="close-resistance-modal" class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
           Close
         </button>
       </div>
@@ -934,8 +936,8 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ ROBOT PROTOCOL MODAL ══════ -->
-<div id="robotProtocolModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeRobotModal()">
-  <div class="modal-card max-w-4xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
+<div id="robotProtocolModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-robot-modal">
+  <div class="modal-card max-w-4xl p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
         <div class="w-3 h-3 rounded-full bg-amber-400 animate-pulse"></div>
@@ -947,7 +949,7 @@
           <p class="text-xs text-gray-400">Target Candidate: <span id="robotModalLeadId" class="text-amber-300 font-mono">LEAD-001</span> | Opentrons API Level 2.15</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeRobotModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close dialog" data-action="close-robot-modal" class="text-gray-400 hover:text-white text-xl p-1 leading-none">&times;</button>
     </div>
 
     <div class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
@@ -967,8 +969,8 @@
         <div class="flex justify-between items-center text-xs">
           <span class="text-gray-400 font-semibold font-mono">Executable Python Script (ot2_synthesis.py):</span>
           <div class="flex gap-2">
-            <button aria-label="Copy Opentrons OT-2 Python protocol" onclick="copyOT2Code()" class="px-2.5 py-1 text-xs rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">📋 Copy Code</button>
-            <button aria-label="Download Opentrons Python script" onclick="downloadCurrentOT2Py()" class="px-2.5 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-colors">⬇ Download .py</button>
+            <button type="button" aria-label="Copy Opentrons OT-2 Python protocol" data-action="copy-ot2-code" class="px-2.5 py-1 text-xs rounded bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors">Copy Code</button>
+            <button type="button" aria-label="Download Opentrons Python script" data-action="download-ot2-py" class="px-2.5 py-1 text-xs font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 transition-colors">Download .py</button>
           </div>
         </div>
         <pre id="ot2CodeContent" class="p-4 rounded-xl bg-[#010409] border border-[#21262d] text-amber-300/90 text-xs font-mono overflow-x-auto max-h-72 select-all leading-relaxed"></pre>
@@ -976,10 +978,10 @@
 
       <!-- Modal Footer -->
       <div class="flex justify-between items-center pt-2">
-        <button aria-label="Download wet-lab SOP protocol card" onclick="generateLabCard()" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5">
-          <span>📋 Download Wet-Lab SOP Card (.md)</span>
+        <button type="button" aria-label="Download wet-lab SOP protocol card" data-action="lab-card" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold flex items-center gap-1.5">
+          <span>Download Wet-Lab SOP Card (.md)</span>
         </button>
-        <button aria-label="Close dialog" onclick="closeRobotModal()" class="px-4 py-2 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">
+        <button type="button" aria-label="Close dialog" data-action="close-robot-modal" class="px-4 py-2 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">
           Close
         </button>
       </div>
@@ -988,14 +990,13 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ OWNER ACCESS MODAL ═══════ -->
-<div id="ownerModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeOwnerModal()">
-  <div class="modal-card max-w-sm p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(118, 185, 0, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="ownerModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-owner-modal">
+  <div class="modal-card max-w-sm p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(118, 185, 0, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <div class="p-4 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-2">
-        <span class="text-nvidia-green font-mono text-sm">🔒</span>
         <h3 class="text-sm font-bold text-white">Owner Access Mode</h3>
       </div>
-      <button aria-label="Close owner dialog" onclick="closeOwnerModal()" class="text-gray-400 hover:text-white text-lg p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close owner dialog" data-action="close-owner-modal" class="text-gray-400 hover:text-white text-lg p-1 leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-4">
       <p class="text-xs text-gray-400">Hardware-bound localhost authentication. Unlocks unlimited discovery campaigns and benchmarking.</p>
@@ -1006,27 +1007,27 @@
       </div>
       <div>
         <label for="ownerPasswordInput" class="block text-[11px] font-mono text-gray-400 uppercase mb-1">Password</label>
-        <input type="password" id="ownerPasswordInput" autocomplete="current-password" placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-[#0d1117] border border-gray-700 text-white text-xs font-mono focus:border-nvidia-green focus:outline-none" onkeydown="if(event.key==='Enter')submitOwnerLogin()">
+        <input type="password" id="ownerPasswordInput" autocomplete="current-password" placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-[#0d1117] border border-gray-700 text-white text-xs font-mono focus:border-nvidia-green focus:outline-none" data-enter-action="submit-owner-login">
       </div>
       <div>
         <label for="ownerBootTokenInput" class="block text-[11px] font-mono text-gray-400 uppercase mb-1">Per-Boot Token</label>
-        <input type="password" id="ownerBootTokenInput" autocomplete="off" placeholder="From data/.owner_boot_token" class="w-full px-3 py-2 rounded-lg bg-[#0d1117] border border-gray-700 text-white text-xs font-mono focus:border-nvidia-green focus:outline-none" onkeydown="if(event.key==='Enter')submitOwnerLogin()">
+        <input type="password" id="ownerBootTokenInput" autocomplete="off" placeholder="From data/.owner_boot_token" class="w-full px-3 py-2 rounded-lg bg-[#0d1117] border border-gray-700 text-white text-xs font-mono focus:border-nvidia-green focus:outline-none" data-enter-action="submit-owner-login">
       </div>
       <div class="flex items-center justify-end gap-2 pt-2">
-        <button type="button" onclick="closeOwnerModal()" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">Cancel</button>
-        <button type="button" id="ownerLoginBtn" onclick="submitOwnerLogin()" class="px-4 py-1.5 rounded-lg bg-nvidia-green hover:brightness-110 text-black text-xs font-bold transition-all shadow-md">Authenticate</button>
+        <button type="button" data-action="close-owner-modal" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">Cancel</button>
+        <button type="button" id="ownerLoginBtn" data-action="submit-owner-login" class="px-4 py-1.5 rounded-lg bg-nvidia-green hover:brightness-110 text-black text-xs font-bold transition-all shadow-md">Authenticate</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════ AUTHENTICATION MODAL ══════ -->
-<div id="authModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeAuthModal()">
-  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="authModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-auth-modal">
+  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-sm">
-          🔑
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
         </div>
         <div>
           <h3 id="authModalTitle" class="text-base font-bold text-white flex items-center gap-2">
@@ -1035,7 +1036,7 @@
           <p class="text-xs text-gray-400">Access Free Trial Discovery Runs (5 runs/day)</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeAuthModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close dialog" data-action="close-auth-modal" class="text-gray-400 hover:text-white text-xl p-1 leading-none">&times;</button>
     </div>
 
     <!-- Sync Notice Banner -->
@@ -1047,30 +1048,30 @@
     <div class="p-6 space-y-4">
       <!-- Tabs -->
       <div class="flex rounded-lg bg-black/40 p-1 border border-surface-border">
-        <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-emerald-600 text-white transition-all">Sign In</button>
-        <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-gray-400 hover:text-white transition-all">Register New</button>
+        <button type="button" id="authTabLogin" data-action="switch-auth-tab" data-arg="login" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-emerald-600 text-white transition-all">Sign In</button>
+        <button type="button" id="authTabRegister" data-action="switch-auth-tab" data-arg="register" class="flex-1 py-1.5 text-xs font-semibold rounded-md text-gray-400 hover:text-white transition-all">Register New</button>
       </div>
 
       <!-- Quick Evaluator 1-Click Button -->
       <div class="p-3 rounded-xl bg-purple-950/20 border border-purple-500/30">
         <div class="text-[11px] text-purple-300 font-semibold mb-1 flex items-center gap-1.5">
-          <span>⚡ Instant Reviewer Access:</span>
+          <span>Instant Reviewer Access:</span>
         </div>
-        <button onclick="handleDemoLogin()" class="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2">
+        <button type="button" data-action="demo-login" class="w-full py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2">
           <span>1-Click Evaluator Sign In</span>
           <span class="text-[10px] font-mono text-purple-200 bg-black/30 px-1.5 py-0.5 rounded">evaluator@bionemo.org</span>
         </button>
       </div>
 
       <!-- Login Form -->
-      <form id="authLoginForm" onsubmit="handleAuthLogin(event)" class="space-y-3">
+      <form id="authLoginForm" data-submit-action="auth-login" class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
-          <input type="email" id="authLoginEmail" required placeholder="dr.smith@institution.edu" oninput="handleEmailInputValidation(this, 'authLoginEmailFeedback')" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+          <label for="authLoginEmail" class="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
+          <input type="email" id="authLoginEmail" required placeholder="dr.smith@institution.edu" data-input-action="email-validation" data-feedback-id="authLoginEmailFeedback" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
           <div id="authLoginEmailFeedback" class="mt-1 text-[11px] font-mono hidden"></div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Password</label>
+          <label for="authLoginPassword" class="block text-xs font-semibold text-gray-300 mb-1">Password</label>
           <input type="password" id="authLoginPassword" required placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
         </div>
         <div id="authLoginError" class="text-xs text-red-400 hidden"></div>
@@ -1080,22 +1081,22 @@
       </form>
 
       <!-- Register Form -->
-      <form id="authRegisterForm" onsubmit="handleAuthRegister(event)" class="space-y-3 hidden" style="display: none;">
+      <form id="authRegisterForm" data-submit-action="auth-register" class="space-y-3 hidden" style="display: none;">
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Full Name</label>
+          <label for="authRegName" class="block text-xs font-semibold text-gray-300 mb-1">Full Name</label>
           <input type="text" id="authRegName" required placeholder="Dr. Jane Doe" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Institution / Organization</label>
+          <label for="authRegOrg" class="block text-xs font-semibold text-gray-300 mb-1">Institution / Organization</label>
           <input type="text" id="authRegOrg" required placeholder="Stanford Bioengineering / Independent" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
-          <input type="email" id="authRegEmail" required placeholder="dr.doe@stanford.edu" oninput="handleEmailInputValidation(this, 'authRegEmailFeedback')" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
+          <label for="authRegEmail" class="block text-xs font-semibold text-gray-300 mb-1">Email Address</label>
+          <input type="email" id="authRegEmail" required placeholder="dr.doe@stanford.edu" data-input-action="email-validation" data-feedback-id="authRegEmailFeedback" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
           <div id="authRegEmailFeedback" class="mt-1 text-[11px] font-mono hidden"></div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Password (Min 6 characters)</label>
+          <label for="authRegPassword" class="block text-xs font-semibold text-gray-300 mb-1">Password (Min 6 characters)</label>
           <input type="password" id="authRegPassword" required minlength="6" placeholder="••••••••" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-emerald-500" />
         </div>
         <div id="authRegError" class="text-xs text-red-400 hidden"></div>
@@ -1108,12 +1109,12 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ QUOTA EXHAUSTED MODAL ══════ -->
-<div id="quotaExhaustedModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeQuotaModal()">
-  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="quotaExhaustedModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-quota-modal">
+  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 font-bold text-sm">
-          ⏳
+          !
         </div>
         <div>
           <h3 class="text-base font-bold text-white flex items-center gap-2">
@@ -1122,7 +1123,7 @@
           <p class="text-xs text-gray-400">5 of 5 Free Runs Used for Current Cycle</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeQuotaModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close dialog" data-action="close-quota-modal" class="text-gray-400 hover:text-white text-xl p-1 leading-none">&times;</button>
     </div>
 
     <div class="p-6 space-y-4 text-center">
@@ -1148,34 +1149,34 @@
         <p class="text-xs text-gray-400 leading-relaxed">
           Deploy the open-source CLI or Desktop App locally on your GPU/CPU workstation for 100% unlimited, unmetered discovery campaigns with your own NVIDIA API key.
         </p>
-        <button onclick="closeQuotaModal(); openInstallModal();" class="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/20 transition-all flex items-center justify-center gap-1.5">
-          <span>🌱 View Desktop App & Local Setup</span>
+        <button type="button" data-action="open-quota-and-install" class="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/20 transition-all flex items-center justify-center gap-1.5">
+          <span>View Desktop App &amp; Local Setup</span>
         </button>
       </div>
 
-      <button onclick="closeQuotaModal()" class="w-full py-2 text-xs text-gray-400 hover:text-white transition-colors">
-        Dismiss & Browse Loaded Results
+      <button type="button" data-action="close-quota-modal" class="w-full py-2 text-xs text-gray-400 hover:text-white transition-colors">
+        Dismiss &amp; Browse Loaded Results
       </button>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════ AUTHENTICATED FEEDBACK MODAL ══════ -->
-<div id="feedbackModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeFeedbackModal()">
-  <div class="modal-card max-w-lg p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="feedbackModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-feedback-modal">
+  <div class="modal-card max-w-lg p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(6, 182, 212, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <div class="p-5 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 font-bold text-sm">
-          💬
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
         </div>
         <div>
           <h3 class="text-base font-bold text-white flex items-center gap-2">
-            <span>Scientific Feedback & Evaluation</span>
+            <span>Scientific Feedback &amp; Evaluation</span>
           </h3>
           <p class="text-xs text-gray-400">Peer review and community evaluation log</p>
         </div>
       </div>
-      <button aria-label="Close dialog" onclick="closeFeedbackModal()" class="text-gray-400 hover:text-white text-xl p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close dialog" data-action="close-feedback-modal" class="text-gray-400 hover:text-white text-xl p-1 leading-none">&times;</button>
     </div>
 
     <!-- Submitter Identity Pill -->
@@ -1187,15 +1188,15 @@
       <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">Verified Session</span>
     </div>
 
-    <form id="feedbackForm" onsubmit="handleFeedbackSubmit(event)" class="p-6 space-y-4">
+    <form id="feedbackForm" data-submit-action="feedback-submit" class="p-6 space-y-4">
       <div>
-        <label class="block text-xs font-semibold text-gray-300 mb-1">Target Evaluation Complex</label>
-        <input type="text" id="feedbackTargetComplex" readonly class="w-full px-3 py-2 rounded-lg bg-black/40 border border-surface-border text-gray-300 font-mono text-xs focus:outline-none" value="KRAS G12D (PDB: 8AFB)" />
+        <label for="feedbackTargetComplex" class="block text-xs font-semibold text-gray-300 mb-1">Target Evaluation Complex</label>
+        <input type="text" id="feedbackTargetComplex" readonly class="w-full px-3 py-2 rounded-lg bg-black/40 border border-surface-border text-gray-300 font-mono text-xs focus:outline-none" value="KRAS G12D (PDB: 7RPZ)" />
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Category</label>
+          <label for="feedbackCategory" class="block text-xs font-semibold text-gray-300 mb-1">Category</label>
           <select id="feedbackCategory" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-cyan-500">
             <option value="Lead Candidates">Lead Candidates & Docking</option>
             <option value="ESMFold Structure">ESMFold 3D Structure</option>
@@ -1206,26 +1207,26 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1">Scientific Quality Rating</label>
+          <label for="feedbackRating" class="block text-xs font-semibold text-gray-300 mb-1">Scientific Quality Rating</label>
           <select id="feedbackRating" class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-amber-300 text-xs font-bold focus:outline-none focus:border-cyan-500">
-            <option value="5">★★★★★ (5/5) Publication Grade</option>
-            <option value="4">★★★★☆ (4/5) High Confidence</option>
-            <option value="3">★★★☆☆ (3/5) Acceptable Baseline</option>
-            <option value="2">★★☆☆☆ (2/5) Needs Tuning</option>
-            <option value="1">★☆☆☆☆ (1/5) Discrepancy Found</option>
+            <option value="5">5/5 · Publication Grade</option>
+            <option value="4">4/5 · High Confidence</option>
+            <option value="3">3/5 · Acceptable Baseline</option>
+            <option value="2">2/5 · Needs Tuning</option>
+            <option value="1">1/5 · Discrepancy Found</option>
           </select>
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-gray-300 mb-1">Scientific Observations / Peer Review Notes</label>
+        <label for="feedbackComments" class="block text-xs font-semibold text-gray-300 mb-1">Scientific Observations / Peer Review Notes</label>
         <textarea id="feedbackComments" required rows="4" placeholder="Detail your experimental observations, pose validation against crystallographic data, or suggestions for the bio-computational pipeline..." class="w-full px-3 py-2 rounded-lg bg-black/50 border border-surface-border text-white text-xs focus:outline-none focus:border-cyan-500 resize-none"></textarea>
       </div>
 
       <div id="feedbackFormError" class="text-xs text-red-400 hidden"></div>
 
       <div class="flex items-center justify-between pt-2">
-        <button type="button" onclick="closeFeedbackModal()" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
+        <button type="button" data-action="close-feedback-modal" class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold">
           Cancel
         </button>
         <button type="submit" id="feedbackSubmitBtn" class="px-5 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold shadow-md transition-all">
@@ -1243,39 +1244,38 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════ RAW RECEIPT MODAL ═════════ -->
-<div id="rawReceiptModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeRawReceiptModal()">
-  <div class="modal-card max-w-2xl p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="rawReceiptModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-raw-receipt">
+  <div class="modal-card max-w-2xl p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(16, 185, 129, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <div class="p-4 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-2">
-        <span class="text-emerald-400 font-mono text-sm">🧾</span>
-        <h3 class="text-sm font-bold text-white">Execution Provenance & Raw Receipt</h3>
+        <h3 class="text-sm font-bold text-white">Execution Provenance &amp; Raw Receipt</h3>
       </div>
-      <button aria-label="Close raw receipt dialog" onclick="closeRawReceiptModal()" class="text-gray-400 hover:text-white text-lg p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close raw receipt dialog" data-action="close-raw-receipt" class="text-gray-400 hover:text-white text-lg p-1 leading-none">&times;</button>
     </div>
     <div class="p-4 space-y-3">
       <div class="flex items-center justify-between text-xs text-gray-400">
-        <span>Verifiable cryptographic execution metadata & API telemetry:</span>
-        <button type="button" id="copyRawReceiptBtn" aria-label="Copy raw receipt JSON" onclick="copyRawReceiptJson()" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-emerald-400 text-xs font-mono border border-emerald-500/30 transition-colors flex items-center gap-1">
-          <span>📋</span> <span id="copyReceiptBtnText">Copy JSON</span>
+        <span>Verifiable cryptographic execution metadata &amp; API telemetry:</span>
+        <button type="button" id="copyRawReceiptBtn" aria-label="Copy raw receipt JSON" data-action="copy-raw-receipt" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-emerald-400 text-xs font-mono border border-emerald-500/30 transition-colors flex items-center gap-1">
+          <span id="copyReceiptBtnText">Copy JSON</span>
         </button>
       </div>
       <pre id="rawReceiptContent" class="p-3 rounded-lg bg-black/70 border border-gray-800 text-[11px] font-mono text-gray-200 overflow-x-auto max-h-[400px] select-all leading-relaxed whitespace-pre"></pre>
       <div class="flex items-center justify-end pt-2 border-t border-surface-border">
-        <button type="button" aria-label="Close raw receipt modal footer button" onclick="closeRawReceiptModal()" class="px-4 py-1.5 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">Close</button>
+        <button type="button" aria-label="Close raw receipt modal footer button" data-action="close-raw-receipt" class="px-4 py-1.5 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">Close</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════ STATIC DEMO MODAL ════════ -->
-<div id="staticDemoModal" class="modal-backdrop hidden" style="display: none;" onclick="if(event.target===this)closeStaticDemoModal()">
-  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" onclick="event.stopPropagation()" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
+<div id="staticDemoModal" class="modal-backdrop hidden" style="display: none;" data-backdrop-close="close-static-demo-modal">
+  <div class="modal-card max-w-md p-0 animate-fade-up overflow-hidden" style="background: #0d1117; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.85);">
     <div class="p-4 border-b border-surface-border flex items-center justify-between bg-[#161b22] modal-header-band">
       <div class="flex items-center gap-2">
-        <span class="text-amber-400 font-mono text-sm">⚡</span>
+        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
         <h3 class="text-sm font-bold text-white">Static Web Preview Mode</h3>
       </div>
-      <button aria-label="Close static demo dialog" onclick="closeStaticDemoModal()" class="text-gray-400 hover:text-white text-lg p-1 leading-none">✕</button>
+      <button type="button" aria-label="Close static demo dialog" data-action="close-static-demo-modal" class="text-gray-400 hover:text-white text-lg p-1 leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-4">
       <p class="text-xs text-gray-300 leading-relaxed">
@@ -1287,7 +1287,7 @@
         <div class="text-[10px] text-gray-500 mt-1 font-mono">or run: <code class="text-gray-300">python serve_cockpit.py</code></div>
       </div>
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-border">
-        <button type="button" aria-label="Close static demo modal footer" onclick="closeStaticDemoModal()" class="px-4 py-1.5 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">Close</button>
+        <button type="button" aria-label="Close static demo modal footer" data-action="close-static-demo-modal" class="px-4 py-1.5 rounded-lg bg-surface-elevated text-gray-200 text-xs font-semibold hover:bg-white/10">Close</button>
       </div>
     </div>
   </div>

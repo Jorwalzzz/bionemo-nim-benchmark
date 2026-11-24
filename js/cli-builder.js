@@ -24,7 +24,7 @@
 
   const state = {
     endpoint: 'health.api.nvidia.com',
-    target: '8AZV',
+    target: '7RPZ',
     poses: 5,
     admetFilter: true,
     batchSize: 32,
@@ -81,7 +81,7 @@
   function applyPreset(presetKey) {
     if (presetKey === 'mock') {
       state.endpoint = 'health.api.nvidia.com';
-      state.target = '8AZV';
+      state.target = '7RPZ';
       state.poses = 5;
       state.admetFilter = true;
       state.batchSize = 16;
@@ -89,7 +89,7 @@
       state.mock = true;
     } else if (presetKey === 'kras') {
       state.endpoint = 'health.api.nvidia.com';
-      state.target = '8AZV';
+      state.target = '7RPZ';
       state.poses = 10;
       state.admetFilter = true;
       state.batchSize = 32;

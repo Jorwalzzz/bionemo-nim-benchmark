@@ -8,7 +8,7 @@
  */
 
 import { showToast } from './ui-controls.js';
-import { isLocalServer, isStaticHost } from './state.js';
+import { isLoopbackHost, isStaticHost, isBackendAvailable, probeBackendHealth } from './state.js';
 
 let isOwnerActive = false;
 
@@ -17,7 +17,7 @@ export function isOwner() {
 }
 
 export function openOwnerModal() {
-  if (isStaticHost || !isLocalServer) return;
+  if (isStaticHost || !isLoopbackHost || !isBackendAvailable) return;
   const modal = document.getElementById('ownerModal');
   if (!modal) return;
   modal.style.display = 'flex';
@@ -184,15 +184,16 @@ export function renderOwnerHUD(ownerId) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.id = 'ownerAccessBtn';
-    btn.onclick = openOwnerModal;
+    btn.dataset.action = 'open-owner-modal';
     btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1.5 transition-all';
-    btn.textContent = '🔒 Owner Access';
+    btn.textContent = 'Owner Access';
     container.appendChild(btn);
   }
 }
 
 export async function initOwnerAccess() {
-  if (isStaticHost || !isLocalServer) {
+  const backendUp = await probeBackendHealth();
+  if (isStaticHost || !isLoopbackHost || !backendUp) {
     const container = document.getElementById('ownerAccessContainer');
     if (container) {
       container.style.display = 'none';

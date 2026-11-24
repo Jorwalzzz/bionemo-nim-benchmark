@@ -6,16 +6,77 @@
 import { TARGET_PRESETS } from '../data/target-presets.js';
 
 // Host Sentinel (detects GitHub Pages / Cloudflare Pages / Static vs Local Workstation server)
-export const isStaticHost = typeof window === 'undefined' || 
-                     window.location.protocol === 'file:' || 
-                     window.location.hostname.endsWith('github.io') || 
-                     window.location.hostname.endsWith('pages.dev') ||
-                     (window.location.protocol.startsWith('http') && window.location.port !== '8000');
+// Static host classification (strictly static origins, independent of port numbers)
+export const isStaticHost = typeof window === 'undefined' ||
+                     window.location.protocol === 'file:' ||
+                     window.location.hostname.endsWith('github.io') ||
+                     window.location.hostname.endsWith('pages.dev');
 
-export const isLocalServer = typeof window !== 'undefined' && 
-                      window.location.protocol.startsWith('http') && 
-                      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') &&
-                      window.location.port === '8000';
+export const isLoopbackHost = typeof window !== 'undefined' &&
+                     window.location.protocol.startsWith('http') &&
+                     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+// Dynamic backend availability updated by probeBackendHealth() via GET ./api/health
+export let isBackendAvailable = !isStaticHost && typeof window !== 'undefined' && window.location.protocol.startsWith('http');
+export let hasProbedBackend = false;
+export let backendHealth = null;
+export let isLocalServer = isLoopbackHost && isBackendAvailable;
+
+let _healthProbePromise = null;
+
+export async function probeBackendHealth(timeoutMs = 1500) {
+  if (isStaticHost || typeof window === 'undefined' || !window.location.protocol.startsWith('http')) {
+    isBackendAvailable = false;
+    hasProbedBackend = true;
+    isLocalServer = false;
+    state.isBackendAvailable = false;
+    return false;
+  }
+  if (hasProbedBackend) return isBackendAvailable;
+  if (_healthProbePromise) return _healthProbePromise;
+
+  _healthProbePromise = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      // Probe static/server header first via HEAD to avoid browser 404 console errors on static servers
+      const headRes = await fetch('./cockpit.html', {
+        method: 'HEAD',
+        signal: controller.signal
+      });
+      if ((headRes.headers.get('X-BioNeMo-Backend') || '').toLowerCase() !== 'fastapi') {
+        isBackendAvailable = false;
+        backendHealth = null;
+        return false;
+      }
+
+      const res = await fetch('./api/health', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
+      });
+      if (!res.ok) {
+        isBackendAvailable = false;
+      } else {
+        const data = await res.json();
+        isBackendAvailable = Boolean(data && data.status && data.status !== 'error');
+        backendHealth = data;
+      }
+    } catch {
+      isBackendAvailable = false;
+      backendHealth = null;
+    } finally {
+      clearTimeout(timer);
+      hasProbedBackend = true;
+      isLocalServer = isLoopbackHost && isBackendAvailable;
+      state.isBackendAvailable = isBackendAvailable;
+      _healthProbePromise = null;
+    }
+    return isBackendAvailable;
+  })();
+
+  return _healthProbePromise;
+}
 
 // ESMFold De Novo Presets
 export const ESMFOLD_PRESETS = {
@@ -548,6 +609,7 @@ export const state = {
   currentTargetMeanPlddt: 90.0,
   currentLeads: [],
   isRunning: false,
+  isBackendAvailable: isBackendAvailable,
   currentOt2Code: '',
   currentLabCardMd: '',
   latestResistanceData: null,
