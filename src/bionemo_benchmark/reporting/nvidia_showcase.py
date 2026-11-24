@@ -29,9 +29,9 @@ class GreenComputeProfiler:
         """
         Calculates energy (kWh), cloud compute cost ($), and carbon footprint (gCO2e).
         """
-        scale_factor = max(1.0, float(num_molecules) / 10.0)
+        scale_factor = max(1.0, float(num_molecules))
 
-        # Total energy consumed in Watt-hours
+        # Total energy consumed in hours across all evaluated molecules
         cpu_total_hours = (cpu_time_sec * scale_factor) / 3600.0
         gpu_total_hours = (gpu_time_sec * scale_factor) / 3600.0
 
@@ -59,6 +59,8 @@ class GreenComputeProfiler:
         )
 
         return {
+            "basis": "Illustrative",
+            "is_illustrative": True,
             "num_molecules": num_molecules,
             "cpu_energy_kwh": cpu_kwh,
             "gpu_energy_kwh": gpu_kwh,
@@ -72,7 +74,7 @@ class GreenComputeProfiler:
             "cost_saved_usd": cost_saved_usd,
             "cost_savings_pct": min(99.5, cost_savings_pct),
             "executive_summary": (
-                f"NVIDIA H100 NIM slashes energy consumption by {energy_reduction_pct}% "
+                f"Illustrative projection: NVIDIA H100 NIM slashes energy consumption by {energy_reduction_pct}% "
                 f"and avoids {co2_saved_g}g CO2e, saving ${cost_saved_usd} per {num_molecules:,} screened molecules."
             ),
         }

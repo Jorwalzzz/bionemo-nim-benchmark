@@ -1,11 +1,15 @@
 """
 Agentic BioNeMo - Retrosynthesis & Reaction Planner Agent (Dr. Chen)
-Deconstructs lead candidate molecules into commercially accessible chemical building blocks
-and proposes robust, validated organic synthesis reaction steps.
+Deconstructs lead candidate molecules via RDKit BRICS bond-cleavage fragmentation
+into retrosynthetic synthons and proposes heuristic organic synthesis transformations.
 """
 
+from __future__ import annotations
+
+import re
 
 from rdkit import Chem
+from rdkit.Chem import BRICS
 
 from bionemo_benchmark.core.models import MoleculeCandidate, RetrosynthesisPlan, RetrosynthesisStep
 
@@ -16,8 +20,30 @@ class RetrosynthesisAgent:
         self.persona_name = "Dr. Chen (Retrosynthesis Planner)"
         self.avatar = "🔬"
 
+    @staticmethod
+    def _extract_brics_precursors(mol: Chem.Mol, fallback_smiles: str) -> tuple[list[dict[str, str]], list[str]]:
+        """Decompose molecule via RDKit BRICS into actual candidate-specific synthon fragments."""
+        raw_fragments = sorted(BRICS.BRICSDecompose(mol, minFragmentSize=3))
+        if not raw_fragments:
+            raw_fragments = [Chem.MolToSmiles(mol, isomericSmiles=True) or fallback_smiles]
+
+        reactants: list[dict[str, str]] = []
+        materials: list[str] = []
+        for idx, brics_smi in enumerate(raw_fragments[:4], start=1):
+            clean_smi = re.sub(r"\[\d+\*\]", "[*]", brics_smi)
+            label = f"BRICS Synthon {idx}"
+            reactants.append(
+                {
+                    "name": label,
+                    "smiles": clean_smi,
+                    "source": "BRICS Retrosynthetic Disconnection (In Silico Fragmentation)",
+                }
+            )
+            materials.append(f"BRICS Synthon {idx}: {clean_smi}")
+        return reactants, materials
+
     def plan_synthesis_route(self, candidate: MoleculeCandidate) -> RetrosynthesisPlan:
-        """Analyzes chemical structure and generates a 2-to-3 step synthesis plan."""
+        """Analyze candidate topology via RDKit BRICS and propose retrosynthetic disconnections."""
         mol = Chem.MolFromSmiles(candidate.smiles)
         if not mol:
             return RetrosynthesisPlan(
@@ -28,137 +54,89 @@ class RetrosynthesisAgent:
                 steps=[],
             )
 
+        brics_reactants, brics_materials = self._extract_brics_precursors(mol, candidate.smiles)
         steps: list[RetrosynthesisStep] = []
-        starting_materials: list[str] = []
+        starting_materials: list[str] = list(brics_materials)
 
-        # Check for Amide functional group: C(=O)N
         has_amide = mol.HasSubstructMatch(Chem.MolFromSmarts("[NX3][CX3](=[OX1])"))
-        # Check for bi-aryl or hetero-aryl bond
         has_biaryl = mol.HasSubstructMatch(Chem.MolFromSmarts("[c:1]-[c:2]"))
-        # Check for aromatic amine: c-N
         has_aromatic_amine = mol.HasSubstructMatch(Chem.MolFromSmarts("[c:1][NX3]"))
 
         step_counter = 1
+        primary_pair = brics_reactants[:2] if len(brics_reactants) >= 2 else brics_reactants
 
         if has_amide:
-            step1 = RetrosynthesisStep(
-                step_number=step_counter,
-                reaction_type="Amide Bond Condensation (Peptide Coupling)",
-                reaction_smarts="[C:1](=O)[OH] + [N:2][H] >> [C:1](=O)[N:2]",
-                reactants=[
-                    {
-                        "name": "Substituted Benzoic Acid Core",
-                        "smiles": "O=C(O)c1ccc(Cl)cc1",
-                        "cas": "74-11-3 (Commercial, Sigma-Aldrich)",
-                    },
-                    {
-                        "name": "Target Amine Intermediate",
-                        "smiles": "NCc1cccnc1",
-                        "cas": "3731-52-0 (Commercial, Enamine)",
-                    },
-                ],
-                reagents=[
-                    "HATU (1.2 equiv)",
-                    "DIPEA (2.5 equiv)",
-                    "Anhydrous DMF",
-                    "25°C, 2 hours",
-                ],
-                product_smiles=candidate.smiles,
-                estimated_yield_pct=84.5,
-                difficulty="Routine (★☆☆)",
-            )
-            steps.append(step1)
-            starting_materials.extend(
-                ["4-Chlorobenzoic acid", "3-(Aminomethyl)pyridine"]
+            steps.append(
+                RetrosynthesisStep(
+                    step_number=step_counter,
+                    reaction_type="BRICS Retrosynthetic Disconnections — Amide Coupling",
+                    reaction_smarts="[C:1](=O)[OH] + [N:2][H] >> [C:1](=O)[N:2]",
+                    reactants=primary_pair,
+                    reagents=[
+                        "Heuristic Reagent Recommendation: HATU (1.2 equiv)",
+                        "Heuristic Reagent Recommendation: DIPEA (2.5 equiv), DMF, 25°C",
+                    ],
+                    product_smiles=candidate.smiles,
+                    estimated_yield_pct=84.5,
+                    difficulty="Routine (Heuristic)",
+                )
             )
             step_counter += 1
 
         if has_biaryl:
-            step2 = RetrosynthesisStep(
-                step_number=step_counter,
-                reaction_type="Suzuki-Miyaura Cross-Coupling",
-                reaction_smarts="[c:1]-[X] + [c:2]-B(OH)2 >> [c:1]-[c:2]",
-                reactants=[
-                    {
-                        "name": "Aryl Bromide Intermediate",
-                        "smiles": "Brc1ccc2ccccc2c1",
-                        "cas": "90-11-9 (Commercial, Combi-Blocks)",
-                    },
-                    {
-                        "name": "Heteroaryl Boronic Acid Pinacol Ester",
-                        "smiles": "OB(O)c1cccnc1",
-                        "cas": "1692-25-7 (Commercial, BLD Pharm)",
-                    },
-                ],
-                reagents=[
-                    "Pd(dppf)Cl2 (5 mol%)",
-                    "K2CO3 (2.0 equiv)",
-                    "1,4-Dioxane : H2O (4:1)",
-                    "90°C under N2, 6 hours",
-                ],
-                product_smiles=candidate.smiles,
-                estimated_yield_pct=76.0,
-                difficulty="Moderate (★★☆)",
+            biaryl_pair = brics_reactants[1:3] if len(brics_reactants) >= 3 else primary_pair
+            steps.append(
+                RetrosynthesisStep(
+                    step_number=step_counter,
+                    reaction_type="BRICS Retrosynthetic Disconnections — Suzuki-Miyaura Coupling",
+                    reaction_smarts="[c:1]-[X] + [c:2]-B(OH)2 >> [c:1]-[c:2]",
+                    reactants=biaryl_pair,
+                    reagents=[
+                        "Heuristic Reagent Recommendation: Pd(dppf)Cl2 (5 mol%)",
+                        "Heuristic Reagent Recommendation: K2CO3, 1,4-Dioxane:H2O, 90°C",
+                    ],
+                    product_smiles=candidate.smiles,
+                    estimated_yield_pct=76.0,
+                    difficulty="Moderate (Heuristic)",
+                )
             )
-            steps.append(step2)
-            starting_materials.extend(["1-Bromonaphthalene", "Pyridine-3-boronic acid"])
             step_counter += 1
 
         elif has_aromatic_amine and not steps:
-            step_snar = RetrosynthesisStep(
-                step_number=1,
-                reaction_type="Nucleophilic Aromatic Substitution (SNAr)",
-                reaction_smarts="[c:1][Cl] + [N:2] >> [c:1][N:2]",
-                reactants=[
-                    {
-                        "name": "2-Chloropyrimidine Core",
-                        "smiles": "Clc1ncccn1",
-                        "cas": "1722-12-9 (Commercial, Sigma-Aldrich)",
-                    },
-                    {
-                        "name": "Substituted Aniline Precursor",
-                        "smiles": "Nc1cccc(F)c1",
-                        "cas": "372-19-0 (Commercial, Oakwood)",
-                    },
-                ],
-                reagents=["i-PrOH", "Conc. HCl (cat.)", "Microwave 120°C, 30 min"],
-                product_smiles=candidate.smiles,
-                estimated_yield_pct=81.0,
-                difficulty="Routine (★☆☆)",
+            steps.append(
+                RetrosynthesisStep(
+                    step_number=step_counter,
+                    reaction_type="BRICS Retrosynthetic Disconnections — SNAr C-N Coupling",
+                    reaction_smarts="[c:1][Cl] + [N:2] >> [c:1][N:2]",
+                    reactants=primary_pair,
+                    reagents=[
+                        "Heuristic Reagent Recommendation: i-PrOH, catalytic acid or base",
+                    ],
+                    product_smiles=candidate.smiles,
+                    estimated_yield_pct=81.0,
+                    difficulty="Routine (Heuristic)",
+                )
             )
-            steps.append(step_snar)
-            starting_materials.extend(["2-Chloropyrimidine", "3-Fluoroaniline"])
+            step_counter += 1
 
-        # Fallback default robust route if no specific motif matched
         if not steps:
-            default_step = RetrosynthesisStep(
-                step_number=1,
-                reaction_type="Late-Stage Functionalization & C-N Alkylation",
-                reaction_smarts="[N:1] + [C:2][Br] >> [N:1][C:2]",
-                reactants=[
-                    {
-                        "name": "Secondary Amine Core Scaffold",
-                        "smiles": "C1CNCCN1",
-                        "cas": "110-85-0 (Commercial, Sigma-Aldrich)",
-                    },
-                    {
-                        "name": "Functionalized Alkyl Halide",
-                        "smiles": "BrCCc1ccccc1",
-                        "cas": "103-63-9 (Commercial, Alfa Aesar)",
-                    },
-                ],
-                reagents=["K2CO3 (2.5 equiv)", "MeCN", "reflux, 4 hours"],
-                product_smiles=candidate.smiles,
-                estimated_yield_pct=72.0,
-                difficulty="Routine (★☆☆)",
+            steps.append(
+                RetrosynthesisStep(
+                    step_number=1,
+                    reaction_type="BRICS Retrosynthetic Disconnections — Late-Stage Fragment Assembly",
+                    reaction_smarts="[N:1] + [C:2][Br] >> [N:1][C:2]",
+                    reactants=primary_pair,
+                    reagents=[
+                        "Heuristic Reagent Recommendation: K2CO3 (2.5 equiv), MeCN",
+                    ],
+                    product_smiles=candidate.smiles,
+                    estimated_yield_pct=72.0,
+                    difficulty="Routine (Heuristic)",
+                )
             )
-            steps.append(default_step)
-            starting_materials.extend(["Piperazine core", "Phenethyl bromide"])
 
         feasibility = (
-            "High Feasibility (1-2 steps from commercial building blocks)"
-            if len(steps) <= 2
-            else "Moderate Feasibility"
+            f"BRICS Retrosynthetic Disconnections ({len(steps)} bond-cleavage step(s), {len(brics_reactants)} synthons — Heuristic)"
         )
         turnaround = 5 if len(steps) == 1 else 10
 
@@ -168,6 +146,6 @@ class RetrosynthesisAgent:
             num_steps=len(steps),
             overall_feasibility=feasibility,
             steps=steps,
-            starting_materials=list(set(starting_materials)),
+            starting_materials=list(dict.fromkeys(starting_materials)),
             estimated_turnaround_days=turnaround,
         )

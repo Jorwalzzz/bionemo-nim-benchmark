@@ -255,12 +255,25 @@ async def api_generate_ind_pdf(request: Request) -> Response:
     if not dossier_data:
         dossier_data = {
             "target": "KRAS G12D",
-            "pdb_id": "8AZV",
+            "pdb_id": "7RPZ",
             "nominated_lead": "LEAD-001",
             "binding_affinity": -9.4,
-            "residue_count": 188,
+            "residue_count": 168,
             "screened": 10,
             "pareto_count": 3,
+            "provenance": {
+                "overall_mode": "HEURISTIC_SIMULATION",
+                "mode": "HEURISTIC_SIMULATION",
+                "is_simulated": True,
+                "pdf_watermark": "HEURISTIC SIMULATION — NOT FOR CLINICAL USE",
+                "stages": [
+                    {
+                        "stage_name": "default_sample_dossier",
+                        "status": "MOCK",
+                        "notes": "Fallback illustrative dossier preview",
+                    }
+                ],
+            },
             "leads": [
                 {
                     "id": "LEAD-001",

@@ -9,6 +9,7 @@ network vs. server inference latency profiling, and full mock simulation fallbac
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import random
@@ -54,6 +55,7 @@ class LatencyProfile:
     network_overhead_ms: float
     status_code: int = 200
     retries_count: int = 0
+    request_id: str | None = None
 
 
 @dataclass
@@ -260,6 +262,14 @@ class NimBioClient:
                     server_inference_ms = max(5.0, total_latency_ms * 0.75)
 
                 network_overhead_ms = max(0.0, total_latency_ms - server_inference_ms)
+                live_req_id = None
+                if resp.status_code == 200:
+                    live_req_id = (
+                        resp.headers.get("nv-request-id")
+                        or resp.headers.get("x-request-id")
+                        or resp.headers.get("request-id")
+                        or f"nim-http200-{hashlib.sha256(resp.content).hexdigest()[:12]}"
+                    )
 
                 latency_profile = LatencyProfile(
                     total_latency_ms=round(total_latency_ms, 2),
@@ -267,6 +277,7 @@ class NimBioClient:
                     network_overhead_ms=round(network_overhead_ms, 2),
                     status_code=resp.status_code,
                     retries_count=attempt,
+                    request_id=live_req_id,
                 )
                 return resp, latency_profile
 

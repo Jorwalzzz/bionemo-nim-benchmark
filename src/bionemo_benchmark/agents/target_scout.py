@@ -3,12 +3,15 @@ Agentic BioNeMo - Agent 1: Target Scout Agent
 Resolves oncology targets, fetches 3D crystal structures, identifies binding pockets,
 and validates canonical amino acid sequences.
 """
+import hashlib
 import logging
 import math
 import os
 import re
+import time
 
 from bionemo_benchmark.core.models import AgentMessage, TargetProfile
+from bionemo_benchmark.core.provenance import StageProvenance, StageStatus
 from bionemo_benchmark.domain.pdb_utils import (
     clean_pdb_structure,
     extract_sequence_from_pdb,
@@ -87,13 +90,13 @@ TARGET_REGISTRY: dict[str, dict] = {
     "KRAS G12D": {
         "gene": "KRAS",
         "uniprot_id": "P01116",
-        "pdb_id": "8AZV",
+        "pdb_id": "7RPZ",
         "description": "Oncogenic KRAS G12D switch-II pocket driver in pancreatic and colorectal adenocarcinoma.",
-        "canonical_sequence": "MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKCDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLKKISKEEKTPGCVKIKKCIIM",
+        "canonical_sequence": "MTEYKLVVVGADGVGKSALTIQLIQNHFVDEYDPTIEDSYRKQVVIDGETCLLDILDTAGQEEYSAMRDQYMRTGEGFLCVFAINNTKSFEDIHHYREQIKRVKDSEDVPMVLVGNKSDLPSRTVDTKQAQDLARSYGIPFIETSAKTRQRVEDAFYTLVREIRQYRLKKISKEEKTPGCVKIKKCIIM",
         "pocket_residues": ["Asp12", "Gly60", "Gln61", "Tyr96", "Arg68", "Asp69"],
         "reference_ligand_name": "MRTX1133",
         "reference_ligand_smiles": "O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5",
-        "pocket_coords": {"x": 14.2, "y": 8.5, "z": -12.1},
+        "pocket_coords": {"x": 1.71, "y": 4.93, "z": -23.16},
     },
     "EGFR T790M": {
         "gene": "EGFR",
@@ -130,6 +133,7 @@ class TargetScoutAgent:
         self.api_key = api_key or os.getenv("NVIDIA_API_KEY", "")
         self.mock = mock or (not self.api_key)
         self.name = name
+        self.last_stage_provenance: StageProvenance | None = None
 
     @staticmethod
     def is_amino_acid_sequence(text: str) -> bool:
@@ -196,11 +200,18 @@ class TargetScoutAgent:
 
         pdb_content = ""
         mean_plddt = 89.5
+        t_stage_start = time.perf_counter()
+        stage_status = StageStatus.MOCK
+        stage_endpoint: str | None = None
+        stage_http_status: int | None = None
+        stage_req_id: str | None = None
+        fallback_reason: str | None = None
 
         # 1. Live NVIDIA NIM ESMFold Inference
         if not self.mock and self.api_key:
+            url = "https://health.api.nvidia.com/v1/biology/meta/esmfold"
+            stage_endpoint = url
             try:
-                url = "https://health.api.nvidia.com/v1/biology/meta/esmfold"
                 headers = {
                     "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
@@ -210,6 +221,7 @@ class TargetScoutAgent:
                 resp = SafeSanitizer.safe_http_request(
                     "POST", url, json_payload=payload, headers=headers, timeout=30.0
                 )
+                stage_http_status = resp.status_code
                 if resp.status_code == 200:
                     data = resp.json()
                     pdb_content = (
@@ -218,6 +230,13 @@ class TargetScoutAgent:
                         else data.get("pdb", "")
                     )
                     if pdb_content:
+                        stage_status = StageStatus.LIVE
+                        stage_req_id = (
+                            resp.headers.get("nv-request-id")
+                            or resp.headers.get("x-request-id")
+                            or resp.headers.get("request-id")
+                            or f"nim-esmfold-{hashlib.sha256(resp.content).hexdigest()[:12]}"
+                        )
                         # Extract pLDDT from B-factors
                         plddts = []
                         for line in pdb_content.splitlines():
@@ -228,7 +247,18 @@ class TargetScoutAgent:
                                     continue
                         if plddts:
                             mean_plddt = round(sum(plddts) / len(plddts), 1)
+                    else:
+                        stage_status = StageStatus.FALLBACK
+                        stage_http_status = None
+                        fallback_reason = "ESMFold NIM returned empty PDB payload; switched to C-alpha heuristic."
+                else:
+                    stage_status = StageStatus.FALLBACK
+                    stage_http_status = None
+                    fallback_reason = f"ESMFold NIM returned HTTP {resp.status_code}; switched to C-alpha heuristic."
             except Exception as e:
+                stage_status = StageStatus.FALLBACK
+                stage_http_status = None
+                fallback_reason = f"ESMFold NIM API failure ({type(e).__name__}); switched to C-alpha heuristic."
                 logger.warning(
                     f"ESMFold NIM API call failed ({e}); switching to de novo simulation."
                 )
@@ -300,6 +330,16 @@ class TargetScoutAgent:
             output_summary=f"Folded sequence de novo via ESMFold (pLDDT: {mean_plddt}%, {len(clean_seq)} residues).",
             status="SUCCESS",
         )
+        self.last_stage_provenance = StageProvenance(
+            stage_name="esmfold",
+            status=stage_status,
+            model_id="meta/esmfold",
+            endpoint_url=stage_endpoint if stage_status == StageStatus.LIVE else None,
+            http_status=stage_http_status if stage_status == StageStatus.LIVE else None,
+            nim_request_id=stage_req_id if stage_status == StageStatus.LIVE else None,
+            latency_ms=round((time.perf_counter() - t_stage_start) * 1000.0, 2),
+            fallback_reason=fallback_reason if stage_status == StageStatus.FALLBACK else None,
+        )
         return profile, message
 
     def scout_target(self, query: str) -> tuple[TargetProfile, AgentMessage]:
@@ -363,6 +403,7 @@ class TargetScoutAgent:
                     output_summary=f"Resolved custom target {clean_query} with {len(profile.canonical_sequence)} residues.",
                     status="SUCCESS",
                 )
+                self.last_stage_provenance = None
                 return profile, message
             except Exception as e:
                 logger.warning(
@@ -412,4 +453,5 @@ class TargetScoutAgent:
             output_summary=f"Mapped {profile.name} (PDB: {profile.pdb_id}) with {len(profile.canonical_sequence)} validated canonical residues.",
             status="SUCCESS",
         )
+        self.last_stage_provenance = None
         return profile, message

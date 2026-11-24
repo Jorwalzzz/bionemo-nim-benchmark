@@ -4,11 +4,13 @@ Explores chemical latent space using NVIDIA NIM MolMIM with CMA-ES property stee
 to generate novel bioisosteric small-molecule analogs.
 """
 
+import hashlib
 import logging
 import os
 import time
 
 from bionemo_benchmark.core.models import AgentMessage, MoleculeCandidate
+from bionemo_benchmark.core.provenance import StageProvenance, StageStatus
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger("GenerativeChemist")
@@ -23,6 +25,7 @@ class GenerativeChemistAgent:
         self.api_key = api_key or os.getenv("NVIDIA_API_KEY", "")
         self.mock = mock or (not self.api_key)
         self.name = name
+        self.last_stage_provenance: StageProvenance | None = None
 
     def generate_derivatives(
         self,
@@ -37,7 +40,12 @@ class GenerativeChemistAgent:
         Supports feedback steering from the PI agent.
         """
         start_time = time.time()
+        t_perf = time.perf_counter()
         candidates: list[MoleculeCandidate] = []
+        stage_status = StageStatus.MOCK
+        http_status: int | None = None
+        nim_request_id: str | None = None
+        fallback_reason: str | None = None
 
         if not self.mock and self.api_key:
             try:
@@ -60,19 +68,41 @@ class GenerativeChemistAgent:
                     headers=headers,
                     timeout=25.0,
                 )
+                http_status = resp.status_code
                 if resp.status_code == 200:
                     data = resp.json()
                     molecules = data.get("molecules", [])
                     for i, m in enumerate(molecules):
-                        candidates.append(
-                            MoleculeCandidate(
-                                id=f"NIM-LEAD-{round_num:02d}-{i + 1:02d}",
-                                smiles=m.get("smi", ""),
-                                parent_smiles=parent_smiles,
-                                generation_round=round_num,
+                        smi = m.get("smi", "")
+                        if smi:
+                            candidates.append(
+                                MoleculeCandidate(
+                                    id=f"NIM-LEAD-{round_num:02d}-{i + 1:02d}",
+                                    smiles=smi,
+                                    parent_smiles=parent_smiles,
+                                    generation_round=round_num,
+                                )
                             )
+                    if candidates:
+                        stage_status = StageStatus.LIVE
+                        nim_request_id = (
+                            resp.headers.get("nv-request-id")
+                            or resp.headers.get("x-request-id")
+                            or resp.headers.get("request-id")
+                            or f"nim-molmim-{hashlib.sha256(resp.content).hexdigest()[:12]}"
                         )
+                    else:
+                        stage_status = StageStatus.FALLBACK
+                        http_status = None
+                        fallback_reason = "MolMIM NIM returned zero valid SMILES; switched to curated medicinal chemistry scaffolds."
+                else:
+                    stage_status = StageStatus.FALLBACK
+                    http_status = None
+                    fallback_reason = f"MolMIM NIM returned HTTP {resp.status_code}; switched to curated medicinal chemistry scaffolds."
             except Exception as e:
+                stage_status = StageStatus.FALLBACK
+                http_status = None
+                fallback_reason = f"MolMIM NIM API failure ({type(e).__name__}); switched to curated medicinal chemistry scaffolds."
                 logger.warning(
                     f"MolMIM NIM API call failed ({e}); falling back to verified medicinal chemistry scaffolds."
                 )
@@ -82,6 +112,17 @@ class GenerativeChemistAgent:
             candidates = self._generate_target_specific_scaffolds(
                 parent_smiles, target_name, num_molecules, round_num
             )
+
+        self.last_stage_provenance = StageProvenance(
+            stage_name="molmim",
+            status=stage_status,
+            model_id="nvidia/molmim",
+            endpoint_url=MOLMIM_NIM_URL if stage_status == StageStatus.LIVE else None,
+            http_status=http_status if stage_status == StageStatus.LIVE else None,
+            nim_request_id=nim_request_id if stage_status == StageStatus.LIVE else None,
+            latency_ms=round((time.perf_counter() - t_perf) * 1000.0, 2),
+            fallback_reason=fallback_reason if stage_status == StageStatus.FALLBACK else None,
+        )
 
         elapsed_ms = (time.time() - start_time) * 1000
 
