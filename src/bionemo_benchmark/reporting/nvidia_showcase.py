@@ -242,8 +242,10 @@ services:
       - DIFFDOCK_ENDPOINT=http://nim-diffdock:8000/v1/biology/mit/diffdock
       - MOLMIM_ENDPOINT=http://nim-molmim:8000/v1/biology/nvidia/molmim
       - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - PORT=8088
+      - HOST=0.0.0.0
     ports:
-      - "8000:8000"
+      - "8088:8088"
 """
 
     @staticmethod

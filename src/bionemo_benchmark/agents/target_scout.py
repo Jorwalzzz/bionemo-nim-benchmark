@@ -321,6 +321,7 @@ class TargetScoutAgent:
         if not matched_key and len(clean_query) == 4 and clean_query.isalnum():
             # Universal RCSB PDB Ingestion
             import urllib.request
+
             from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
             try:

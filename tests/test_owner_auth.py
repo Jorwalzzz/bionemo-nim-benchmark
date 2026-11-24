@@ -17,10 +17,8 @@ from fastapi.testclient import TestClient
 from bionemo_benchmark.infra.owner_security import (
     OWNER_COOKIE_NAME,
     apply_strict_file_acls,
-    get_machine_guid_fingerprint,
     hash_password,
     owner_security_manager,
-    sign_session_token,
 )
 from bionemo_benchmark.server.app import app
 from scripts.setup_owner_access import provision_owner_credentials
@@ -248,12 +246,12 @@ def test_setup_owner_access_cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert exit_code == 0
     assert custom_target.is_file()
 
-    with open(custom_target, "r", encoding="utf-8") as f:
+    with open(custom_target, encoding="utf-8") as f:
         record = json.load(f)
 
     assert record["owner_id"] == "cli_user"
     assert len(record["salt_hex"]) == 32  # 16 bytes hex
     assert len(record["scrypt_hash_hex"]) == 128  # 64 bytes hex
     assert len(record["signing_key_hex"]) == 64  # 32 bytes hex
-    expected_guid = hashlib.sha256("cli-test-guid-8888".encode("utf-8")).hexdigest()
+    expected_guid = hashlib.sha256(b"cli-test-guid-8888").hexdigest()
     assert record["machine_guid_hash"] == expected_guid

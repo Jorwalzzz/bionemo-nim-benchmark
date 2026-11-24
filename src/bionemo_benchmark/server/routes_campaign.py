@@ -6,15 +6,15 @@ installer distribution, and static web page delivery routes.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
 import platform
 import sys
 import time
-from typing import Any
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import (
@@ -295,7 +295,7 @@ def trigger_run(
         "request_ids": [req_id],
         "rdkit_version": rdkit_ver,
         "elapsed_ms": elapsed_ms,
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "timestamp_utc": datetime.now(UTC).isoformat(),
     }
 
     retro_data: dict[str, Any] = {}

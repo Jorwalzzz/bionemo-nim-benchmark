@@ -1,39 +1,81 @@
-# Git & version control
-.git/
-.gitignore
-.gitattributes
+# Default-deny Docker build context allowlist
+*
 
-# Python virtual environment & bytecode
+# Package build & metadata
+!pyproject.toml
+!README.md
+!LICENSE
+!TRADEMARK.md
+!blueprint.yaml
+
+# Application entrypoints
+!serve_cockpit.py
+!run_benchmark.py
+
+# Core source package & MCP shim
+!src/
+!src/**
+!tools/
+!tools/*.py
+
+# Frontend HTML, CSS, JS, and vendor assets
+!index.html
+!cockpit.html
+!cockpit.css
+!app.min.css
+!input.css
+!tailwind.config.js
+!css/
+!css/**
+!js/
+!js/**
+!vendor/
+!vendor/**
+!assets/
+!assets/**
+
+# Runtime installer scripts served by /api/download/*
+!scripts/
+!scripts/installers/
+!scripts/installers/**
+
+# Verified read-only structural/benchmark runtime fixtures & static assets
+!data/
+!data/sample_complexes.json
+!data/pdbs/
+!data/pdbs/*.pdb
+!results/
+!results/benchmark_summary.json
+!results/screened_candidates_summary.csv
+!results/CANDIDATE_SELECTION_DOSSIER.md
+!results/assets/
+!results/assets/**
+
+# Explicitly exclude caches, bytecode, packaging artifacts, local secrets & runtime ledgers
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.egg-info/
+src/bionemo_benchmark/data/
+src/bionemo_benchmark/data/**
+.env
+.env.*
+data/.*
+data/*_auth.json
+data/*_ledger.json
+data/feedback_submissions.json
+data/*.db*
+data/*.sqlite*
+scratch/
+Lenia/
+jidu6411_flash/
+dist_npm/
+node_modules/
+.git/
 .venv/
 venv/
 env/
-__pycache__/
-*.py[cod]
-*$py.class
-*.pyd
-
-# Testing, coverage & lint caches
+audit/
 .pytest_cache/
-.coverage
-htmlcov/
 .ruff_cache/
 .mypy_cache/
-
-# Node & frontend build dependencies
-node_modules/
-package-lock.json
-
-# Local Playwright & visual audit runs
-audit/
-
-# Local credentials & environment overrides
-.env
-.env.*
-!.env.example
-
-# IDE, OS, & log clutter
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-*.log

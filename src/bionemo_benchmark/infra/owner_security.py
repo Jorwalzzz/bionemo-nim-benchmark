@@ -19,12 +19,12 @@ import hmac
 import json
 import logging
 import os
-from pathlib import Path
 import secrets
 import subprocess
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any, NamedTuple
 
 logger = logging.getLogger("OwnerSecurity")
@@ -62,7 +62,7 @@ def get_machine_guid_fingerprint() -> str:
         for mid_path in ("/etc/machine-id", "/var/lib/dbus/machine-id"):
             if os.path.isfile(mid_path):
                 try:
-                    with open(mid_path, "r", encoding="utf-8") as f:
+                    with open(mid_path, encoding="utf-8") as f:
                         content = f.read().strip()
                         if content:
                             return hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -264,7 +264,7 @@ class OwnerSecurityManager:
             return None, False
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
 
             stored_guid_hash = data.get("machine_guid_hash", "")

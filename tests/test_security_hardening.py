@@ -6,8 +6,6 @@ CWE-918 (SSRF), CWE-1236 (CSV Formula Injection), DOM XSS sanitization, and secr
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 

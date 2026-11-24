@@ -12,9 +12,8 @@ Copyright (C) 2026 Jorwalzzz.
 
 from __future__ import annotations
 
-import json
-import re
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
