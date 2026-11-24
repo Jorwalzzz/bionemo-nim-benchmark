@@ -12,8 +12,6 @@ import os
 import platform
 import sys
 import time
-import uuid
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Query, Request, Response
@@ -26,6 +24,11 @@ from fastapi.responses import (
 
 from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
 from bionemo_benchmark.core.models import CouncilMessage
+from bionemo_benchmark.core.provenance import (
+    CampaignProvenance,
+    StageProvenance,
+    StageStatus,
+)
 from bionemo_benchmark.infra.security_sentinel import SecretScrubber
 from bionemo_benchmark.reporting.nvidia_showcase import (
     BioNeMoBlueprintGenerator,
@@ -49,6 +52,43 @@ from bionemo_benchmark.server.serializers import (
 )
 
 router: APIRouter = APIRouter()
+
+
+def _build_campaign_provenance(
+    orchestrator: Any,
+    client_host: str,
+    rdkit_ver: str,
+    elapsed_ms: float,
+) -> dict[str, Any]:
+    """Assemble unforgeable CampaignProvenance directly from executed pipeline stages."""
+    stages = tuple(getattr(orchestrator, "stage_provenances", None) or ())
+    if not stages:
+        stages = (
+            StageProvenance(
+                stage_name="discovery_pipeline",
+                status=StageStatus.MOCK,
+                notes="Simulated / fallback campaign execution",
+            ),
+        )
+    model = CampaignProvenance(
+        stages=stages,
+        backend_host=client_host or "127.0.0.1",
+        rdkit_version=rdkit_ver,
+        elapsed_ms=max(0.0, float(elapsed_ms)),
+    )
+    return model.model_dump(mode="json")
+
+
+def _detect_rdkit_version() -> str:
+    rdkit_ver = "2024.03.5"
+    if "rdkit" in sys.modules:
+        return getattr(sys.modules["rdkit"], "__version__", rdkit_ver)
+    try:
+        import rdkit
+
+        return getattr(rdkit, "__version__", rdkit_ver)
+    except Exception:
+        return rdkit_ver
 
 
 def make_orchestrator(**kw: Any) -> AgenticScientistOrchestrator:
@@ -279,35 +319,17 @@ def trigger_run(
         if reservation_id:
             auth_manager.commit_run(reservation_id)
 
-    is_live = not orchestrator.mock and bool(getattr(orchestrator, "api_key", None))
-    mode = "LIVE_NVIDIA_NIM" if is_live else "MOCK_SIMULATION"
-    req_id = f"req-nim-{uuid.uuid4().hex[:12]}"
     elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
     client_host = request.client.host if request.client else "127.0.0.1"
-
-    rdkit_ver = "2024.03.5"
-    if "rdkit" in sys.modules:
-        rdkit_ver = getattr(sys.modules["rdkit"], "__version__", rdkit_ver)
-    else:
-        try:
-            import rdkit
-            rdkit_ver = getattr(rdkit, "__version__", rdkit_ver)
-        except Exception:
-            pass
-
-    provenance = {
-        "mode": mode,
-        "backend_host": client_host,
-        "nim_endpoints_called": [
-            "/v1/biology/esmfold",
-            "/v1/biology/diffdock",
-            "/v1/biology/molmim",
-        ] if is_live else ["mock://esmfold", "mock://diffdock", "mock://molmim"],
-        "request_ids": [req_id],
-        "rdkit_version": rdkit_ver,
-        "elapsed_ms": elapsed_ms,
-        "timestamp_utc": datetime.now(UTC).isoformat(),
-    }
+    rdkit_ver = _detect_rdkit_version()
+    provenance = _build_campaign_provenance(
+        orchestrator=orchestrator,
+        client_host=client_host,
+        rdkit_ver=rdkit_ver,
+        elapsed_ms=elapsed_ms,
+    )
+    mode = str(provenance["overall_mode"])
+    is_sim = bool(provenance["is_simulated"])
 
     retro_data: dict[str, Any] = {}
     if orchestrator.latest_retrosynthesis_plan:
@@ -371,7 +393,7 @@ def trigger_run(
                 "pose_sdf": lead.pose_sdf,
                 "contact_residues": lead.contact_residues,
                 "provenance": mode,
-                "is_simulated": not is_live,
+                "is_simulated": is_sim,
             }
             for lead in dossier.top_leads
         ],
@@ -464,6 +486,12 @@ async def stream_council_run(
             if reservation_id:
                 auth_manager.commit_run(reservation_id)
                 committed = True
+            stream_prov = _build_campaign_provenance(
+                orchestrator=orch,
+                client_host=request.client.host if request.client else "127.0.0.1",
+                rdkit_ver=_detect_rdkit_version(),
+                elapsed_ms=0.0,
+            )
             done_payload = {
                 "event": "campaign_complete",
                 "target": dossier.target.name,
@@ -476,6 +504,7 @@ async def stream_council_run(
                 else 0.0,
                 "pareto_count": dossier.pareto_leads_count,
                 "screened": dossier.screened_count,
+                "provenance": stream_prov,
             }
             yield f"data: {json.dumps(done_payload)}\n\n"
         except Exception as exc:
@@ -543,8 +572,8 @@ def get_hardware_speedup_benchmark() -> dict[str, Any]:
 
     overall_speedup = round((total_cpu_sec / total_h100_sec), 1)
 
-    cpu_hours_10k = round((total_cpu_sec * 1000) / 3600.0, 1)
-    h100_hours_10k = round((total_h100_sec * 1000) / 3600.0, 2)
+    cpu_hours_10k = round((total_cpu_sec * 10000) / 3600.0, 1)
+    h100_hours_10k = round((total_h100_sec * 10000) / 3600.0, 2)
     time_saved_hours = round(cpu_hours_10k - h100_hours_10k, 1)
 
     green_metrics = GreenComputeProfiler.calculate_campaign_impact(
@@ -553,12 +582,16 @@ def get_hardware_speedup_benchmark() -> dict[str, Any]:
 
     return {
         "status": "success",
+        "basis": "Illustrative",
+        "gpu_latency_basis": "Illustrative NVIDIA H100 NIM reference container latencies",
         "cpu_hardware": cpu_info,
         "gpu_hardware": "NVIDIA H100 80GB SXM5 (TensorRT FP16/FP8 Accelerated)",
         "measured_local_cpu_ms": round(cpu_measured_sec * 1000, 2),
         "overall_speedup_multiplier": overall_speedup,
         "total_cpu_latency_sec": total_cpu_sec,
         "total_h100_latency_sec": total_h100_sec,
+        "cpu_hours_10k_campaign": cpu_hours_10k,
+        "h100_hours_10k_campaign": h100_hours_10k,
         "time_saved_hours_10k_campaign": time_saved_hours,
         "green_compute": green_metrics,
         "tasks": [

@@ -22,6 +22,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from bionemo_benchmark.core.provenance import CampaignProvenance
+
 NVIDIA_GREEN = colors.HexColor("#76B900")
 NAVY_HEADER = colors.HexColor("#0F172A")
 CYAN_ACCENT = colors.HexColor("#06B6D4")
@@ -127,8 +129,28 @@ def generate_ind_pdf(
     story = []
 
     target_name = dossier_data.get("target", "KRAS G12D")
-    pdb_id = dossier_data.get("pdb_id", "8AZV")
+    pdb_id = dossier_data.get("pdb_id", "7RPZ")
     lead_id = dossier_data.get("nominated_lead", "LEAD-001")
+
+    provenance_raw = dossier_data.get("provenance")
+    watermark_text = "HEURISTIC SIMULATION — NOT FOR CLINICAL USE"
+    is_live_verified = False
+    if isinstance(provenance_raw, dict) and provenance_raw.get("stages"):
+        try:
+            validated_prov = CampaignProvenance.model_validate(
+                {
+                    "stages": provenance_raw["stages"],
+                    "backend_host": provenance_raw.get("backend_host", "127.0.0.1"),
+                    "rdkit_version": provenance_raw.get("rdkit_version", "2024.03.5"),
+                    "elapsed_ms": provenance_raw.get("elapsed_ms", 0.0),
+                    "seed": provenance_raw.get("seed", 42),
+                }
+            )
+            watermark_text = validated_prov.pdf_watermark
+            is_live_verified = not validated_prov.is_simulated
+        except Exception:
+            watermark_text = "HEURISTIC SIMULATION — NOT FOR CLINICAL USE"
+            is_live_verified = False
     affinity = dossier_data.get("binding_affinity", -9.4)
     residue_count = dossier_data.get("residue_count", 188)
     screened_count = dossier_data.get("screened", 10)
@@ -520,17 +542,17 @@ def generate_ind_pdf(
     story.append(Paragraph(nim_intro, body_style))
     story.append(Spacer(1, 4))
 
-    # Fallback or live benchmark values
+    # Fallback or benchmark values anchored to benchmark_summary.json
     tasks = benchmark_data.get("tasks", []) if benchmark_data else []
     overall_speedup = (
-        benchmark_data.get("overall_speedup_multiplier", 58.4)
+        benchmark_data.get("overall_speedup_multiplier", 58.9)
         if benchmark_data
-        else 58.4
+        else 58.9
     )
     hours_saved = (
-        benchmark_data.get("time_saved_hours_10k_campaign", 63.5)
+        benchmark_data.get("time_saved_hours_10k_campaign", 88.5)
         if benchmark_data
-        else 63.5
+        else 88.5
     )
 
     bench_table_data = [
@@ -956,5 +978,31 @@ def generate_ind_pdf(
         )
     )
 
-    doc.build(story)
+    story.append(
+        Paragraph(
+            f"<b>PROVENANCE WATERMARK:</b> {watermark_text} | PDB Reference: {pdb_id}",
+            ParagraphStyle(
+                "ProvenanceBanner",
+                parent=styles["Normal"],
+                fontName="Helvetica-Bold",
+                fontSize=8.5,
+                leading=11,
+                textColor=colors.HexColor("#047857" if is_live_verified else "#991B1B"),
+                alignment=1,
+            ),
+        )
+    )
+    story.append(Spacer(1, 4))
+
+    def _draw_watermark(canvas_obj: Any, _doc: Any) -> None:
+        canvas_obj.saveState()
+        canvas_obj.setFont("Helvetica-Bold", 24)
+        canvas_obj.setFillColor(colors.HexColor("#047857" if is_live_verified else "#DC2626"))
+        canvas_obj.setFillAlpha(0.08 if is_live_verified else 0.12)
+        canvas_obj.translate(4.25 * inch, 5.5 * inch)
+        canvas_obj.rotate(35)
+        canvas_obj.drawCentredString(0, 0, watermark_text)
+        canvas_obj.restoreState()
+
+    doc.build(story, onFirstPage=_draw_watermark, onLaterPages=_draw_watermark)
     return buf.getvalue()

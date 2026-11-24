@@ -401,11 +401,11 @@ class SafeSanitizer:
         Sanitizes 4-character PDB code against Path Traversal and Command Injection.
         """
         if not pdb_id:
-            return "8AZV"
+            return "7RPZ"
         if "\x00" in str(pdb_id) or any(ord(c) < 32 for c in str(pdb_id)):
-            return "8AZV"
+            return "7RPZ"
         s = str(pdb_id).strip().upper()[:4]
-        return s if cls.PDB_ID_REGEX.match(s) else "8AZV"
+        return s if cls.PDB_ID_REGEX.match(s) else "7RPZ"
 
     @staticmethod
     def sanitize_code_literal(value: str, max_length: int = 80) -> str:

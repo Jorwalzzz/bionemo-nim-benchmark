@@ -140,32 +140,50 @@ export async function runLiveBenchmark() {
       document.getElementById('bmDiffdockGpu').textContent = `${data.tasks[2].h100_latency_ms} ms`;
     }
   } catch (err) {
-    console.info('Static hosting detected. Running client hardware micro-benchmark...');
-    const t0 = performance.now();
-    let sum = 0;
-    for (let i = 0; i < 2000000; i++) sum += Math.sin(i) * Math.cos(i);
-    const clientSec = Math.max(0.12, (performance.now() - t0) / 100).toFixed(2);
-    const speedup = Math.round(parseFloat(clientSec) / 0.04);
+    console.info('Static hosting or offline backend: anchoring benchmark cards to results/benchmark_summary.json');
+    try {
+      const summaryRes = await fetch('./results/benchmark_summary.json');
+      if (!summaryRes.ok) throw new Error(`HTTP ${summaryRes.status}`);
+      const summary = await summaryRes.json();
+      const headline = summary?.benchmark_metadata?.headline_metric || {};
+      const entries = Array.isArray(summary?.benchmarks) ? summary.benchmarks : [];
 
-    document.getElementById('bmOverallSpeedup').textContent = `${speedup}×`;
-    document.getElementById('bmCpuLatency').textContent = `${clientSec}s`;
-    document.getElementById('bmGpuLatency').textContent = '0.04s';
-    document.getElementById('bmHostCpuName').textContent = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency}-Core Client Device` : 'Client Host CPU';
-    document.getElementById('bmTimeSaved').textContent = `~${Math.round(speedup * 4.2)} hours`;
+      const geomean = headline.geometric_mean_speedup ?? 54.1;
+      const cpuCycle = headline.cpu_cycle_seconds ?? 32.40;
+      const nimCycle = headline.nim_cycle_seconds ?? 0.55;
+      const hoursSaved = headline.time_saved_hours_10k ?? 88.5;
 
-    document.getElementById('bmEsm2Speedup').textContent = `${Math.round(speedup * 0.9)}× Faster`;
-    document.getElementById('bmEsm2Cpu').textContent = `${Math.round(parseFloat(clientSec) * 350)} ms`;
-    document.getElementById('bmEsm2Gpu').textContent = '4.5 ms';
+      document.getElementById('bmOverallSpeedup').textContent = `${geomean}× (GeoMean)`;
+      document.getElementById('bmCpuLatency').textContent = `${cpuCycle.toFixed(2)}s`;
+      document.getElementById('bmGpuLatency').textContent = `${nimCycle.toFixed(2)}s`;
+      document.getElementById('bmHostCpuName').textContent = `${summary?.benchmark_metadata?.cpu_hardware || 'AMD EPYC 7763'} [Measured Baseline]`;
+      document.getElementById('bmTimeSaved').textContent = `~${hoursSaved} hours (Illustrative 10k)`;
 
-    document.getElementById('bmMolmimSpeedup').textContent = `${Math.round(speedup * 1.1)}× Faster`;
-    document.getElementById('bmMolmimCpu').textContent = `${Math.round(parseFloat(clientSec) * 420)} ms`;
-    document.getElementById('bmMolmimGpu').textContent = '3.8 ms';
+      const esm2 = entries.find(e => (e.nim_service || '').includes('ESM-2')) || {};
+      const molmim = entries.find(e => (e.nim_service || '').includes('MolMIM')) || {};
+      const diffdock = entries.find(e => (e.nim_service || '').includes('DiffDock')) || {};
 
-    document.getElementById('bmDiffdockSpeedup').textContent = `${Math.round(speedup * 1.3)}× Faster`;
-    document.getElementById('bmDiffdockCpu').textContent = `${Math.round(parseFloat(clientSec) * 680)} ms`;
-    document.getElementById('bmDiffdockGpu').textContent = '5.2 ms';
+      document.getElementById('bmEsm2Speedup').textContent = `${esm2.speedup_multiplier ?? 40.0}× Faster`;
+      document.getElementById('bmEsm2Cpu').textContent = `${Math.round((esm2.cpu_latency_s ?? 3.20) * 1000)} ms`;
+      document.getElementById('bmEsm2Gpu').textContent = `${Math.round((esm2.gpu_latency_s ?? 0.080) * 1000)} ms`;
 
-    showToast(`⚡ Client hardware benchmark complete (${clientSec}s compute test)!`);
+      document.getElementById('bmMolmimSpeedup').textContent = `${molmim.speedup_multiplier ?? 52.9}× Faster`;
+      document.getElementById('bmMolmimCpu').textContent = `${Math.round((molmim.cpu_latency_s ?? 14.80) * 1000)} ms`;
+      document.getElementById('bmMolmimGpu').textContent = `${Math.round((molmim.gpu_latency_s ?? 0.280) * 1000)} ms`;
+
+      document.getElementById('bmDiffdockSpeedup').textContent = `${diffdock.speedup_multiplier ?? 59.5}× Faster`;
+      document.getElementById('bmDiffdockCpu').textContent = `${Math.round((diffdock.cpu_latency_s ?? 68.40) * 1000)} ms`;
+      document.getElementById('bmDiffdockGpu').textContent = `${Math.round((diffdock.gpu_latency_s ?? 1.150) * 1000)} ms`;
+
+      showToast(`⚡ Loaded H100 vs EPYC benchmark summary (${geomean}× GeoMean, ${hoursSaved}h saved / 10k).`);
+    } catch (jsonErr) {
+      document.getElementById('bmOverallSpeedup').textContent = '54.1× (GeoMean)';
+      document.getElementById('bmCpuLatency').textContent = '32.40s';
+      document.getElementById('bmGpuLatency').textContent = '0.55s';
+      document.getElementById('bmHostCpuName').textContent = 'AMD EPYC 7763 (Reference Baseline)';
+      document.getElementById('bmTimeSaved').textContent = '~88.5 hours (Illustrative 10k)';
+      showToast('⚠️ Benchmark JSON fallback displayed from reference summary (54.1× GeoMean).');
+    }
   } finally {
     if (btn) {
       btn.disabled = false;

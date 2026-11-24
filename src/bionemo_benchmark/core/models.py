@@ -13,18 +13,20 @@ class TargetProfile:
     name: str  # e.g. "KRAS G12D"
     gene: str  # "KRAS"
     uniprot_id: str  # "P01116"
-    pdb_id: str  # "8AZV"
+    pdb_id: str  # "7RPZ"
     description: str  # Clinical oncology background
     canonical_sequence: str  # 20 IUPAC amino acid sequence
-    pocket_residues: list[str]  # ["Gly12Asp", "Gln61", "Tyr96", "Asp69"]
+    pocket_residues: list[str]  # ["Asp12", "Gln61", "Tyr96", "Asp69"]
     reference_ligand_name: str  # "MRTX1133"
     reference_ligand_smiles: str  # Parent chemical scaffold
     target_pocket_coords: dict[str, float] = field(
-        default_factory=lambda: {"x": 12.4, "y": -4.2, "z": 18.9}
+        default_factory=lambda: {"x": 1.71, "y": 4.93, "z": -23.16}
     )
     pdb_text: str = ""  # Full PDB coordinate string for 3D visualization
     is_esmfold: bool = False  # True if folded de novo via NVIDIA NIM ESMFold
     mean_plddt: float = 0.0  # Per-residue confidence metric (0-100%)
+    covalent_adduct: bool = False
+    covalent_residue: str | None = None
 
 
 @dataclass
