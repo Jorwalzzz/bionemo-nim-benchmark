@@ -9,6 +9,7 @@
 
 import { showToast } from './ui-controls.js';
 import { isLoopbackHost, isStaticHost, isBackendAvailable, probeBackendHealth } from './state.js';
+import { openModalDialog, closeModalDialog } from '../shared/dom-utils.js';
 
 let isOwnerActive = false;
 
@@ -20,8 +21,7 @@ export function openOwnerModal() {
   if (isStaticHost || !isLoopbackHost || !isBackendAvailable) return;
   const modal = document.getElementById('ownerModal');
   if (!modal) return;
-  modal.style.display = 'flex';
-  modal.classList.remove('hidden');
+  openModalDialog(modal);
   const msg = document.getElementById('ownerStatusMessage');
   if (msg) {
     msg.style.display = 'none';
@@ -35,10 +35,7 @@ export function openOwnerModal() {
 }
 
 export function closeOwnerModal() {
-  const modal = document.getElementById('ownerModal');
-  if (!modal) return;
-  modal.style.display = 'none';
-  modal.classList.add('hidden');
+  closeModalDialog(document.getElementById('ownerModal'));
 }
 
 export async function submitOwnerLogin() {
@@ -73,7 +70,7 @@ export async function submitOwnerLogin() {
     if (bootToken) {
       headers['X-Owner-Token'] = bootToken;
     }
-    const res = await fetch('/api/owner/login', {
+    const res = await fetch('./api/owner/login', {
       method: 'POST',
       headers,
       body: JSON.stringify({ owner_id: ownerId, password: password, boot_token: bootToken || null })
@@ -86,7 +83,7 @@ export async function submitOwnerLogin() {
       closeOwnerModal();
       pwdInput.value = '';
       if (tokenInput) tokenInput.value = '';
-      showToast('⚡ Owner Verified: Unlimited Discovery & Benchmarks Activated');
+      showToast('Owner Verified: Unlimited Discovery & Benchmarks Activated');
       renderOwnerHUD(data.owner_id);
       if (window.clientAuth) {
         window.clientAuth.init();
@@ -116,7 +113,7 @@ export async function submitOwnerLogin() {
 
 export async function handleOwnerLogout() {
   try {
-    const res = await fetch('/api/owner/logout', {
+    const res = await fetch('./api/owner/logout', {
       method: 'POST',
       headers: { 'X-BioNeMo-CSRF': '1' }
     });
@@ -164,12 +161,12 @@ export function renderOwnerHUD(ownerId) {
     logoutBtn.title = 'Logout Owner Session';
     logoutBtn.onclick = handleOwnerLogout;
     logoutBtn.className = 'px-2 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors';
-    logoutBtn.textContent = '✕';
+    logoutBtn.textContent = '×';
     container.appendChild(logoutBtn);
 
     const trialText = document.getElementById('trialText');
     if (trialText) {
-      trialText.textContent = '⚡ Owner Workstation Mode • Unlimited Discovery Active';
+      trialText.textContent = 'Owner Workstation Mode · Unlimited Discovery Active';
     }
     const banner = document.getElementById('authRequiredBanner');
     if (banner) {
@@ -203,7 +200,7 @@ export async function initOwnerAccess() {
   }
 
   try {
-    const res = await fetch('/api/owner/status');
+    const res = await fetch('./api/owner/status');
     if (!res.ok) return;
     const data = await res.json();
     if (data.configured) {

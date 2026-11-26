@@ -3,22 +3,18 @@
  * Hardware Benchmark, Robotics, Resistance, and 3D Viewers.
  */
 
-import { state } from './state.js';
+import { state, TARGETS } from './state.js';
 import { clientAuth, validateEmailDetailed, handleEmailInputValidation, escapeHtml, runDiscovery } from './api.js';
-import { showToast } from './ui-controls.js';
+import { showToast, closeRawReceiptModal } from './ui-controls.js';
 import { runLiveBenchmark } from './charts.js';
 import { close3DModalDirect } from './viewer3d.js';
-
-// ─── Authentication Modals ──────────────────────────────────────────────────
-import {
-  closeOwnerModal,
-} from './owner-auth.js';
+import { closeOwnerModal } from './owner-auth.js';
+import { openModalDialog, closeModalDialog } from '../shared/dom-utils.js';
 
 export function openAuthModal(noticeMessage) {
   const modal = document.getElementById('authModal');
   if (!modal) return;
-  modal.style.display = 'flex';
-  modal.classList.remove('hidden');
+  openModalDialog(modal);
 
   if (noticeMessage) {
     showToast(noticeMessage);
@@ -27,11 +23,7 @@ export function openAuthModal(noticeMessage) {
 }
 
 export function closeAuthModal() {
-  const modal = document.getElementById('authModal');
-  if (modal) {
-    modal.style.display = 'none';
-    modal.classList.add('hidden');
-  }
+  closeModalDialog(document.getElementById('authModal'));
 }
 
 export function switchAuthTab(tab) {
@@ -86,7 +78,7 @@ export async function handleAuthLogin(event) {
 
   if (res.success) {
     closeAuthModal();
-    showToast(`✅ Welcome back, ${res.user.full_name || res.user.email}! (5 runs/day active)`);
+    showToast(`Welcome back, ${res.user.full_name || res.user.email} (5 runs/day active).`);
     if (clientAuth.pendingAction === 'feedback') {
       clientAuth.pendingAction = null;
       openFeedbackModal();
@@ -109,7 +101,7 @@ export async function handleDemoLogin() {
   const res = await clientAuth.demoLogin();
   if (res.success) {
     closeAuthModal();
-    showToast(`⚡ 1-Click Reviewer Access granted: evaluator@bionemo.org`);
+    showToast('1-Click Reviewer Access granted: evaluator@bionemo.org');
     if (clientAuth.pendingAction === 'feedback') {
       clientAuth.pendingAction = null;
       openFeedbackModal();
@@ -118,7 +110,7 @@ export async function handleDemoLogin() {
       runDiscovery();
     }
   } else {
-    showToast('⚠️ Demo login failed. Please try again.');
+    showToast('Demo login failed. Please try again.');
   }
 }
 
@@ -157,7 +149,7 @@ export async function handleAuthRegister(event) {
 
   if (res.success) {
     closeAuthModal();
-    showToast(`🎉 Account created! Welcome ${res.user.full_name}. 5 runs allocated for today.`);
+    showToast(`Account created. Welcome ${res.user.full_name} (5 runs allocated today).`);
     if (clientAuth.pendingAction === 'feedback') {
       clientAuth.pendingAction = null;
       openFeedbackModal();
@@ -177,26 +169,19 @@ export function handleLogout() {
   clientAuth.logout();
 }
 
-// ─── Daily Quota Modal ──────────────────────────────────────────────────────
 export function openQuotaModal() {
   const modal = document.getElementById('quotaExhaustedModal');
   if (!modal) return;
-  modal.style.display = 'flex';
-  modal.classList.remove('hidden');
+  openModalDialog(modal);
   const quota = clientAuth.getQuota();
   const countEl = document.getElementById('quotaModalCountdown');
   if (countEl) countEl.textContent = quota.countdown;
 }
 
 export function closeQuotaModal() {
-  const modal = document.getElementById('quotaExhaustedModal');
-  if (modal) {
-    modal.style.display = 'none';
-    modal.classList.add('hidden');
-  }
+  closeModalDialog(document.getElementById('quotaExhaustedModal'));
 }
 
-// ─── Feedback Modal ─────────────────────────────────────────────────────────
 export function openFeedbackModal() {
   if (!clientAuth.isLoggedIn() && !window.isOwner) {
     clientAuth.pendingAction = 'feedback';
@@ -206,13 +191,12 @@ export function openFeedbackModal() {
 
   const modal = document.getElementById('feedbackModal');
   if (!modal) return;
-  modal.style.display = 'flex';
-  modal.classList.remove('hidden');
+  openModalDialog(modal);
 
   const user = clientAuth.getCurrentUser();
   const idEl = document.getElementById('feedbackUserIdentity');
-  if (idEl && user) {
-    idEl.textContent = `${user.email} (${user.organization || 'Independent'})`;
+  if (idEl) {
+    idEl.textContent = user ? `${user.email} (${user.organization || 'Independent'})` : 'Local Owner Session';
   }
 
   const targetSelect = document.getElementById('targetSelect');
@@ -226,11 +210,7 @@ export function openFeedbackModal() {
 }
 
 export function closeFeedbackModal() {
-  const modal = document.getElementById('feedbackModal');
-  if (modal) {
-    modal.style.display = 'none';
-    modal.classList.add('hidden');
-  }
+  closeModalDialog(document.getElementById('feedbackModal'));
 }
 
 export function renderFeedbackHistory() {
@@ -249,10 +229,10 @@ export function renderFeedbackHistory() {
     <div class="p-2 rounded bg-black/40 border border-surface-border text-[11px] space-y-1">
       <div class="flex items-center justify-between">
         <span class="text-cyan-300 font-bold">${escapeHtml(item.category)}</span>
-        <span class="text-amber-300 font-bold">★ ${item.rating}/5</span>
+        <span class="text-amber-300 font-bold">${escapeHtml(item.rating)}/5</span>
       </div>
       <p class="text-gray-300 leading-snug break-words">${escapeHtml(item.comments)}</p>
-      <div class="text-[9px] text-gray-500">${new Date(item.timestamp * 1000).toLocaleString()} • ${escapeHtml(item.target_name)}</div>
+      <div class="text-[9px] text-gray-500">${new Date(item.timestamp * 1000).toLocaleString()} · ${escapeHtml(item.target_name)}</div>
     </div>
   `).join('');
 }
@@ -294,7 +274,7 @@ export async function handleFeedbackSubmit(event) {
   if (res.success) {
     if (commentsEl) commentsEl.value = '';
     closeFeedbackModal();
-    showToast('💬 Thank you! Your scientific feedback has been recorded.');
+    showToast('Thank you. Your scientific feedback has been recorded.');
   } else {
     if (errEl) {
       errEl.textContent = res.message || 'Submission failed.';
@@ -303,67 +283,57 @@ export async function handleFeedbackSubmit(event) {
   }
 }
 
-// ─── Install Modal ──────────────────────────────────────────────────────────
 export function openInstallModal() {
   const modal = document.getElementById('installModal');
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
+    const liveStrip = document.getElementById('liveInstallerButtons');
+    if (liveStrip) {
+      liveStrip.classList.toggle('hidden', !state.isBackendAvailable);
+    }
+    openModalDialog(modal);
   }
 }
 
 export function closeInstallModal() {
-  const modal = document.getElementById('installModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  document.body.classList.remove('modal-open');
+  closeModalDialog(document.getElementById('installModal'));
 }
 
 export function closeModalOnBackdrop(e) {
   if (e.target === document.getElementById('installModal')) closeInstallModal();
 }
 
-// ─── Benchmark Modal ────────────────────────────────────────────────────────
 export async function openBenchmarkModal() {
   const modal = document.getElementById('benchmarkModal');
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
+    openModalDialog(modal);
   }
   await runLiveBenchmark();
 }
 
 export function closeBenchmarkModal(e) {
-  if (e.target.id === 'benchmarkModal') {
+  if (e.target && e.target.id === 'benchmarkModal') {
     closeBenchmarkModalDirect();
   }
 }
 
 export function closeBenchmarkModalDirect() {
-  const modal = document.getElementById('benchmarkModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  document.body.classList.remove('modal-open');
+  closeModalDialog(document.getElementById('benchmarkModal'));
 }
 
-// ─── Robot Protocol Modal ───────────────────────────────────────────────────
 export function openRobotModal() {
   const modal = document.getElementById('robotProtocolModal');
   if (modal) {
-    if (!state.currentOt2Code) {
-      const targetSelect = document.getElementById('targetSelect');
-      const selTarget = targetSelect?.value || '7RPZ';
-      const preset = window.TARGET_PRESETS?.getTarget?.(selTarget) || (window.TARGETS && window.TARGETS[selTarget]);
-      const fallbackId = preset ? `${(preset.ligandName || 'LEAD').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)}-SIM-01` : 'LEAD-SIM-01';
-      const fallbackSmiles = preset?.referenceSmiles || 'CC(=O)Nc1ccc(O)cc1';
-      const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || { id: fallbackId, smiles: fallbackSmiles };
-      state.currentOt2Code = `"""\nOpentrons OT-2 Automated Synthesis Protocol\nTarget Candidate: ${lead.id}\nSynthetic Route: 2 Steps (High Feasibility)\nGenerated by NVIDIA BioNeMo Agentic Discovery OS\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "BioNeMo Automated Synthesis: ${lead.id}",\n    "author": "NVIDIA BioNeMo Agentic Discovery OS",\n    "description": "Autonomous multi-step synthesis for nominated drug candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    tips_300 = protocol.load_labware("opentrons_96_tiprack_300ul", 1)\n    reagents = protocol.load_labware("nest_12_reservoir_15ml", 2)\n    temp_mod = protocol.load_module("temperature module gen2", 3)\n    rxn_block = temp_mod.load_labware("opentrons_24_aluminumblock_nest_1.5ml_snapcap")\n    p300 = protocol.load_instrument("p300_single_gen2", "left", tip_racks=[tips_300])\n\n    protocol.comment("Executing Step 1: Amide Coupling for ${lead.id}")\n    p300.pick_up_tip()\n    p300.aspirate(120, reagents['A2'])\n    p300.dispense(120, rxn_block['A1'])\n    p300.mix(3, 80, rxn_block['A1'])\n    p300.drop_tip()\n`;
+    const targetSelect = document.getElementById('targetSelect');
+    const selTarget = targetSelect?.value || '7RPZ';
+    const preset = TARGETS[selTarget] || null;
+    const fallbackId = preset ? `${(preset.ligandName || 'LEAD').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11)}-SIM-01` : 'LEAD-SIM-01';
+    const fallbackSmiles = preset?.referenceSmiles || 'CC(=O)Nc1ccc(O)cc1';
+    const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || { id: fallbackId, smiles: fallbackSmiles };
+    const expectedKey = `${selTarget}|${lead.id}|${lead.smiles || ''}`;
+
+    if (!state.currentOt2Code || state.currentOt2Key !== expectedKey) {
+      state.currentOt2Key = expectedKey;
+      state.currentOt2Code = `"""\nOpentrons OT-2 Automated Synthesis Protocol\nTarget Complex: ${selTarget}\nTarget Candidate: ${lead.id}\nSynthetic Route: 2 Steps (High Feasibility)\nGenerated by NVIDIA BioNeMo Agentic Discovery OS\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "BioNeMo Automated Synthesis: ${lead.id}",\n    "author": "NVIDIA BioNeMo Agentic Discovery OS",\n    "description": "Autonomous multi-step synthesis for nominated drug candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    tips_300 = protocol.load_labware("opentrons_96_tiprack_300ul", 1)\n    reagents = protocol.load_labware("nest_12_reservoir_15ml", 2)\n    temp_mod = protocol.load_module("temperature module gen2", 3)\n    rxn_block = temp_mod.load_labware("opentrons_24_aluminumblock_nest_1.5ml_snapcap")\n    p300 = protocol.load_instrument("p300_single_gen2", "left", tip_racks=[tips_300])\n\n    protocol.comment("Executing Step 1: Amide Coupling for ${lead.id}")\n    p300.pick_up_tip()\n    p300.aspirate(120, reagents['A2'])\n    p300.dispense(120, rxn_block['A1'])\n    p300.mix(3, 80, rxn_block['A1'])\n    p300.drop_tip()\n`;
       const codeEl = document.getElementById('ot2CodeContent');
       if (codeEl) codeEl.textContent = state.currentOt2Code;
       const leadEl = document.getElementById('robotModalLeadId');
@@ -371,60 +341,30 @@ export function openRobotModal() {
       const stepEl = document.getElementById('robotModalSteps');
       if (stepEl) stepEl.textContent = '2 Steps (High Feasibility)';
     }
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
+    openModalDialog(modal);
   }
 }
 
 export function closeRobotModal() {
-  const modal = document.getElementById('robotProtocolModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  document.body.classList.remove('modal-open');
+  closeModalDialog(document.getElementById('robotProtocolModal'));
 }
 
-// ─── Resistance Modal ───────────────────────────────────────────────────────
 export function openResistanceModal() {
-  const modal = document.getElementById('resistanceModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-  }
+  openModalDialog(document.getElementById('resistanceModal'));
 }
 
 export function closeResistanceModal() {
-  const modal = document.getElementById('resistanceModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  document.body.classList.remove('modal-open');
+  closeModalDialog(document.getElementById('resistanceModal'));
 }
 
-// ─── Static Demo Modal ──────────────────────────────────────────────────────
 export function openStaticDemoModal() {
-  const modal = document.getElementById('staticDemoModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open');
-  }
+  openModalDialog(document.getElementById('staticDemoModal'));
 }
 
 export function closeStaticDemoModal() {
-  const modal = document.getElementById('staticDemoModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  document.body.classList.remove('modal-open');
+  closeModalDialog(document.getElementById('staticDemoModal'));
 }
 
-// ─── Close All Modals Utility ───────────────────────────────────────────────
 export function closeAllModals() {
   closeOwnerModal();
   closeAuthModal();
@@ -435,5 +375,7 @@ export function closeAllModals() {
   closeRobotModal();
   closeResistanceModal();
   closeStaticDemoModal();
+  closeRawReceiptModal();
   close3DModalDirect();
+  closeModalDialog(document.getElementById('tourCardModal'));
 }

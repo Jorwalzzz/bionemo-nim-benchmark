@@ -1,5 +1,5 @@
 /**
- * Interactive 10-Step Guided Tour Engine for BioNeMo Cockpit.
+ * Interactive 10-Step Guided Tour Engine for BioNeMo Cockpit (Non-modal <dialog>).
  */
 
 import { state } from './state.js';
@@ -8,6 +8,7 @@ import { openBenchmarkModal, openResistanceModal } from './modals.js';
 import { open3DModal, toggle3DSpin } from './viewer3d.js';
 import { runDiscovery } from './api.js';
 import { generateRobotProtocol, downloadIndPdf } from './exports.js';
+import { openModalDialog, closeModalDialog } from '../shared/dom-utils.js';
 
 export const TOUR_STEPS = [
   {
@@ -17,7 +18,7 @@ export const TOUR_STEPS = [
     whatIs: '• Left: Target selection & AI Council Swarm\n• Center: Multi-Agent Thought Stream & Pareto Frontier\n• Right: Live Clinical Lead Dossier & 3D Inspector',
     whatToDo: 'Glance across the 3 columns to see how biology, 3D biophysics, and chemistry synchronize.',
     action: () => {
-      showToast('🧭 Highlighting 3-Panel Discovery Studio.');
+      showToast('Highlighting 3-Panel Discovery Studio.');
       const aside = document.querySelector('aside');
       if (aside) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -27,7 +28,7 @@ export const TOUR_STEPS = [
     title: '2/10: Hardware Speedup Benchmark',
     techBadge: 'NVIDIA H100 vs CPU',
     whatIs: '• Biomolecular AI takes hours on laptops\n• NVIDIA NIM on H100 delivers up to 54× acceleration in sub-seconds',
-    whatToDo: 'Click "⚡ Try This Step" to open the live benchmark and compare your local CPU against H100 Tensor Cores.',
+    whatToDo: 'Click "Try This Step" to open the benchmark modal and compare local CPU against H100 Tensor Cores.',
     action: () => {
       openBenchmarkModal();
     }
@@ -54,10 +55,10 @@ export const TOUR_STEPS = [
     title: '4/10: Launch 6-Agent AI Council',
     techBadge: 'Autonomous Swarm',
     whatIs: '• 6 AI agents collaborate: Scout, Chemist, Critic, Docker, Planner, and Arbiter\n• Generates and screens novel small molecule leads',
-    whatToDo: 'Click "⚡ Try This Step" (or the green "Launch Discovery" button) to watch the council stream real-time results.',
+    whatToDo: 'Click "Try This Step" (or "Run Autonomous Discovery") to watch the council stream results.',
     action: () => {
       runDiscovery();
-      showToast('🚀 Autonomous 6-Agent Council launched!');
+      showToast('Autonomous 6-Agent Council launched.');
     }
   },
   {
@@ -65,13 +66,13 @@ export const TOUR_STEPS = [
     title: '5/10: Pareto Frontier & Top Lead',
     techBadge: 'Pareto Optimization',
     whatIs: '• Balances binding affinity (ΔG) against drug-likeness (QED)\n• Nominates the #1 lead candidate on the optimal frontier',
-    whatToDo: 'Click "⚡ Try This Step" to highlight and select the highest-scoring candidate.',
+    whatToDo: 'Click "Try This Step" to highlight and select the highest-scoring candidate.',
     action: () => {
       if (state.currentLeads && state.currentLeads.length > 0) {
         selectLead(0);
-        showToast(`🏆 Selected top nominated lead: ${state.currentLeads[0].id}`);
+        showToast(`Selected top nominated lead: ${state.currentLeads[0].id}`);
       } else {
-        showToast('ℹ️ Launch the council in Step 4 first to generate candidate leads.');
+        showToast('Launch the council in Step 4 first to generate candidate leads.');
       }
       const table = document.getElementById('leadsContainer');
       if (table) table.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -82,19 +83,19 @@ export const TOUR_STEPS = [
     title: '6/10: 3D Protein-Ligand Inspector',
     techBadge: '3Dmol.js WebGL',
     whatIs: '• Real-time 3D rendering of target binding pocket and docked ligand\n• Cyan sticks: active site | Green sticks: drug molecule',
-    whatToDo: 'Click "⚡ Try This Step" to open the high-res 3D inspector with pocket surfaces and auto-rotation.',
+    whatToDo: 'Click "Try This Step" to open the high-res 3D inspector with pocket surfaces and auto-rotation.',
     action: () => {
       open3DModal();
       toggle3DSpin();
-      showToast('🔬 3D Inspector opened with auto-rotation.');
+      showToast('3D Inspector opened with auto-rotation.');
     }
   },
   {
     step: 7,
     title: '7/10: Chemical Workbench & Re-Docking',
     techBadge: 'RDKit & Bioisosteres',
-    whatIs: '• Edit SMILES directly or click bioisosteric functional groups (F-swap, Me-cap)\n• Triggers instant DiffDock re-docking & Lipinski recalculation',
-    whatToDo: 'Click "⚡ Try This Step" to focus the workbench and test an analog substitution.',
+    whatIs: '• Edit SMILES directly or click bioisosteric functional groups (F-swap, Me-cap)\n• Triggers instant re-scoring & Lipinski recalculation',
+    whatToDo: 'Click "Try This Step" to focus the workbench and test an analog substitution.',
     action: () => {
       const wb = document.getElementById('workbenchCard') || document.getElementById('workbenchSmilesInput');
       if (wb) wb.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -102,18 +103,18 @@ export const TOUR_STEPS = [
       if (input && (!input.value || input.value.trim() === '')) {
         input.value = 'COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1';
       }
-      showToast('🧪 Chemical Workbench active: ready for bioisosteric edits.');
+      showToast('Chemical Workbench active: ready for bioisosteric edits.');
     }
   },
   {
     step: 8,
     title: '8/10: Adaptive Resistance Engine',
     techBadge: 'ESM-2 Counter-Design',
-    whatIs: '• Predicts tumor escape mutations (e.g. G12D→G12V (steric resistance — illustrative))\n• MolMIM generates counter-measure scaffolds that retain potency',
-    whatToDo: 'Click "⚡ Try This Step" to open the Resistance Engine and evolve an escape-resistant scaffold.',
+    whatIs: '• Simulates target escape mutations (e.g. G12D→G12V illustrative scenario)\n• Generates counter-measure scaffolds that retain pocket fit',
+    whatToDo: 'Click "Try This Step" to open the Resistance Engine and evaluate escape resistance.',
     action: () => {
       openResistanceModal();
-      showToast('🛡️ Resistance Engine opened.');
+      showToast('Resistance Engine opened.');
     }
   },
   {
@@ -121,21 +122,21 @@ export const TOUR_STEPS = [
     title: '9/10: Opentrons OT-2 Robot Protocol',
     techBadge: 'Wet-Lab Robotics',
     whatIs: '• Converts computational designs into automated wet-lab synthesis\n• Generates ready-to-run Python code for Opentrons OT-2 robots & 96-well SOP cards',
-    whatToDo: 'Click "⚡ Try This Step" to inspect and copy the executable liquid-handling protocol.',
+    whatToDo: 'Click "Try This Step" to inspect and copy the executable liquid-handling protocol.',
     action: () => {
       generateRobotProtocol();
-      showToast('🤖 Opentrons OT-2 protocol modal opened.');
+      showToast('Opentrons OT-2 protocol dialog opened.');
     }
   },
   {
     step: 10,
     title: '10/10: Pre-Clinical Candidate Dossier',
     techBadge: 'ReportLab PDF Engine',
-    whatIs: '• Compiles pharmacology, safety margins, and binding metrics into an official FDA briefing\n• Formats a complete multi-page regulatory PDF',
-    whatToDo: 'Click "⚡ Try This Step" to download your Pre-Clinical Candidate Briefing Dossier (PDF).',
+    whatIs: '• Compiles pharmacology, safety margins, and binding metrics into a structured briefing\n• Exports print-ready dossier / ReportLab PDF',
+    whatToDo: 'Click "Try This Step" to download your Pre-Clinical Candidate Briefing Dossier.',
     action: () => {
       downloadIndPdf();
-      showToast('📄 Downloading Pre-Clinical Candidate Briefing PDF...');
+      showToast('Generating Pre-Clinical Candidate Briefing Dossier...');
     }
   }
 ];
@@ -144,20 +145,22 @@ export function startInteractiveTour() {
   state.currentTourStep = 0;
   const modal = document.getElementById('tourCardModal');
   if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'block';
+    openModalDialog(modal, { nonModal: true });
+    if (!modal.dataset.cancelBound) {
+      modal.dataset.cancelBound = '1';
+      modal.addEventListener('cancel', (e) => {
+        e.preventDefault();
+        closeInteractiveTour();
+      });
+    }
   }
   renderTourStep(0);
 }
 
 export function closeInteractiveTour() {
   try { localStorage.setItem('bionemo_guide_seen', 'true'); } catch (e) {}
-  const modal = document.getElementById('tourCardModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-  showToast('Guided tour closed. Click "🧭 Guide" anytime to resume.');
+  closeModalDialog(document.getElementById('tourCardModal'));
+  showToast('Guided tour closed. Click "Guide" anytime to resume.');
 }
 
 export function renderTourStep(index) {
@@ -188,18 +191,14 @@ export function renderTourStep(index) {
   }
 
   if (btnNext) {
-    if (index === TOUR_STEPS.length - 1) {
-      btnNext.innerHTML = '<span>Finish Tour 🎉</span>';
-    } else {
-      btnNext.innerHTML = '<span>Next Step ➔</span>';
-    }
+    btnNext.textContent = index === TOUR_STEPS.length - 1 ? 'Finish Tour' : 'Next Step →';
   }
 }
 
 export function nextTourStep() {
   if (state.currentTourStep >= TOUR_STEPS.length - 1) {
     closeInteractiveTour();
-    showToast('🎉 Tour completed! Enjoy using BioNeMo Autonomous Scientist.');
+    showToast('Tour completed.');
     return;
   }
   renderTourStep(state.currentTourStep + 1);

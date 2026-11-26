@@ -156,7 +156,7 @@ h1, h2, h3, h4, .font-heading { font-family: var(--font-display, 'Space Grotesk'
 /* Modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal-backdrop.hidden, .modal-backdrop[hidden], [hidden], .hidden { display: none !important; }
-.modal-card { background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); border: 1px solid rgba(118,185,0,0.3); border-radius: 16px; box-shadow: 0 0 60px rgba(118,185,0,0.2), 0 25px 80px rgba(0,0,0,0.5); max-width: 640px; width: 95%; max-height: 90vh; overflow-y: auto; }
+:where(.modal-card) { background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); border: 1px solid rgba(118,185,0,0.3); border-radius: 16px; box-shadow: 0 0 60px rgba(118,185,0,0.2), 0 25px 80px rgba(0,0,0,0.5); max-width: 640px; width: 95%; max-height: 90vh; overflow-y: auto; }
 .tab-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: all 0.2s; cursor: pointer; border: 1px solid transparent; }
 .tab-btn.active { background: rgba(118,185,0,0.15); border-color: rgba(118,185,0,0.4); color: var(--nvidia-green); }
 .tab-btn:not(.active) { color: #6b7280; }
@@ -352,7 +352,7 @@ h1, h2, h3, h4, .font-heading { font-family: var(--font-display, 'Space Grotesk'
   box-shadow: var(--shadow-surface);
 }
 [data-theme="light"] .modal-card,
-[data-theme="light"] dialog.modal-dialog {
+[data-theme="light"] dialog#tourCardModal {
   background: #FFFFFF !important;
   color: var(--color-ink-primary) !important;
   border-color: var(--border-hairline-bright) !important;
@@ -411,6 +411,10 @@ h1, h2, h3, h4, .font-heading { font-family: var(--font-display, 'Space Grotesk'
 }
 
 /* Native dialog & popover top-layer support */
+dialog.modal-dialog:not([open]),
+dialog#tourCardModal:not([open]) {
+  display: none !important;
+}
 dialog.modal-dialog {
   margin: auto;
   padding: 0;
@@ -420,15 +424,15 @@ dialog.modal-dialog {
   max-height: 92vh;
   overflow: visible;
 }
+dialog.modal-dialog > .modal-card {
+  width: 92vw;
+}
 dialog.modal-dialog::backdrop {
   background: rgba(0, 0, 0, 0.76);
   backdrop-filter: blur(4px);
 }
 dialog#tourCardModal {
   margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
 }
 #toast[popover] {
   inset: auto;

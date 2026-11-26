@@ -3,10 +3,11 @@
  * anti-bypass authentication, and synchronized IST daily quota enforcement.
  */
 
-import { isStaticHost, isBackendAvailable, probeBackendHealth, state, TARGETS, EMPIRICAL_TARGET_LEADS } from './state.js';
+import { isStaticHost, probeBackendHealth, state, TARGETS } from './state.js';
 import { TARGET_PRESETS } from '../data/target-presets.js';
 import { renderLeads, setAgent, resetAgents, logEntry, showToast, sleep, updateProvenanceBanner } from './ui-controls.js';
 import { renderPareto } from './charts.js';
+import { openAuthModal, openQuotaModal } from './modals.js';
 
 // --- Block 9 ---
 // ─── Client Hardware & Canvas Fingerprinting (Anti-Bypass) ───────────────────
@@ -306,7 +307,10 @@ export class ClientAuthManager {
     }
 
     this.renderHUD();
-    setInterval(() => this.tick(), 1000);
+    if (this.tickIntervalId) {
+      clearInterval(this.tickIntervalId);
+    }
+    this.tickIntervalId = setInterval(() => this.tick(), 1000);
   }
 
   isLoggedIn() {
@@ -549,8 +553,10 @@ export class ClientAuthManager {
     try {
       localStorage.removeItem('bionemo_auth_session');
     } catch (e) {}
+    const fbId = document.getElementById('feedbackUserIdentity');
+    if (fbId) fbId.textContent = 'Not signed in';
     this.renderHUD();
-    showToast('👋 Signed out of researcher session.');
+    showToast('Signed out of researcher session.');
   }
 
   async submitFeedback(payload) {
@@ -631,12 +637,12 @@ export class ClientAuthManager {
 
     const hudCountdown = document.getElementById('hudCountdownText');
     if (hudCountdown) {
-      hudCountdown.textContent = `⏳ ${quota.countdown} (3:00 PM IST)`;
+      hudCountdown.textContent = `${quota.countdown} (3:00 PM IST)`;
     }
 
     if (quota.secondsRemaining === 86399) {
       this.renderHUD();
-      showToast('🎉 Synchronized 3:00 PM IST cycle refreshed! 5 new discovery runs granted.');
+      showToast('Synchronized 3:00 PM IST cycle refreshed. 5 new discovery runs granted.');
     }
   }
 
@@ -648,7 +654,7 @@ export class ClientAuthManager {
 
     if (!this.user) {
       container.innerHTML = `
-        <button id="authBtn" data-action="open-auth-modal" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
+        <button type="button" id="authBtn" data-action="open-auth-modal" class="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border border-emerald-400/40 shadow-sm flex items-center gap-1.5 transition-all">
           <span>Sign In</span>
           <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-black/40 border border-white/20">5 Runs/Day</span>
         </button>
@@ -694,7 +700,7 @@ export class ClientAuthManager {
 
     const runBtn = document.getElementById('runBtn');
     const runLabel = document.getElementById('runLabel');
-    if (runBtn && !isRunning) {
+    if (runBtn && !state.isRunning) {
       if (window.isOwner === true) {
         runBtn.className = 'btn-cta w-full text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-4';
         runBtn.dataset.action = 'run-discovery';
@@ -723,9 +729,9 @@ export class ClientAuthManager {
     const trialText = document.getElementById('trialText');
     if (trialText) {
       if (!this.user) {
-        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Discovery Studio</span> <span class="text-amber-300 text-[11px] font-mono">• Sign in for 5 free runs/day</span>`;
+        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">Discovery Studio</span> <span class="text-amber-300 text-[11px] font-mono">· Sign in for 5 free runs/day</span>`;
       } else {
-        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">${escapeHtml(this.user.organization || 'Research Lab')}</span> <span class="text-cyan-300 text-[11px] font-mono">• ${quota.runs_remaining} runs left (resets 3:00 PM IST)</span>`;
+        trialText.innerHTML = `<span class="text-emerald-400 font-bold tracking-wide">${escapeHtml(this.user.organization || 'Research Lab')}</span> <span class="text-cyan-300 text-[11px] font-mono">· ${quota.runs_remaining} runs left (resets 3:00 PM IST)</span>`;
       }
     }
   }
@@ -736,12 +742,13 @@ export const clientAuth = new ClientAuthManager();
 
 export async function resetTrialQuota() {
   try {
-    const res = await fetch('/api/reset-trial', {
+    if (!(await probeBackendHealth())) return;
+    const res = await fetch('./api/reset-trial', {
       method: 'POST',
       headers: { 'X-Client-Fingerprint': CLIENT_FP, 'X-BioNeMo-CSRF': '1' }
     });
     if (res.ok) {
-      showToast('✅ Demo quota reset! You can now test trial workflows.');
+      showToast('Demo quota reset. Ready to run discovery.');
       fetchTrialStatus();
     }
   } catch (e) {
@@ -768,13 +775,15 @@ export function updateTrialUI(status) {
 }
 
 
+let activeDiscoveryController = null;
+
 export async function runDiscovery() {
+  if (state.isRunning) return;
   const backendUp = await probeBackendHealth();
-  if (isRunning) return;
+  if (state.isRunning) return;
 
   const isOwnerSession = window.isOwner === true;
 
-  // Enforce researcher authentication & quota only on live backend (static demo stays open)
   if (backendUp && !clientAuth.isLoggedIn() && !isOwnerSession) {
     clientAuth.pendingAction = 'discovery';
     openAuthModal('Please sign in or register to access the free trial discovery pipeline (5 runs/day).');
@@ -791,7 +800,7 @@ export async function runDiscovery() {
 
   const targetSelect = document.getElementById('targetSelect');
   let target = targetSelect ? targetSelect.value : '7RPZ';
-  const targetTab = state.currentTargetTab || currentTargetTab || 'presets';
+  const targetTab = state.currentTargetTab || 'presets';
   if (targetTab === 'esmfold') {
     const rawSeq = document.getElementById('esmfoldSeqInput')?.value || state.currentTargetSeq || '';
     const cleanSeq = rawSeq.replace(/^>.*$/gm, '').replace(/\s+/g, '').toUpperCase();
@@ -805,10 +814,10 @@ export async function runDiscovery() {
     target = (document.getElementById('customTargetInput')?.value || '').trim() || '7RPZ';
   }
 
-  isRunning = true;
   state.isRunning = true;
   state.currentLeads = [];
   state.currentSelectedLead = null;
+  let authBlocked = false;
 
   const candidateSlider = document.getElementById('candidateSlider');
   const candidates = candidateSlider ? parseInt(candidateSlider.value, 10) : 12;
@@ -835,7 +844,6 @@ export async function runDiscovery() {
   const safePdbDisplay = escapeHtml(info.pdb || target);
   const safePocketDisplay = escapeHtml(info.pocket || 'Binding Pocket');
 
-  // Reset UI
   document.getElementById('agentLog').innerHTML = '';
   document.getElementById('leadsContainer').innerHTML = '<div class="text-center text-gray-600 text-xs py-4">Preparing autonomous discovery pipeline...</div>';
   resetAgents();
@@ -844,14 +852,16 @@ export async function runDiscovery() {
   document.getElementById('runBtn').disabled = true;
   document.getElementById('runLabel').textContent = 'Running Pipeline...';
 
+  if (activeDiscoveryController) {
+    activeDiscoveryController.abort();
+  }
   const abortController = new AbortController();
+  activeDiscoveryController = abortController;
   let streamedDialogues = [];
 
   try {
-  // ─ Authenticated SSE Streaming Execution via fetch + ReadableStream ─
-  let backendData = null;
-  if (backendUp) {
-    try {
+    let backendData = null;
+    if (backendUp) {
       const headers = {
         'Content-Type': 'application/json',
         'X-Client-Fingerprint': CLIENT_FP,
@@ -869,25 +879,24 @@ export async function runDiscovery() {
       });
 
       if (res.status === 401) {
-        isRunning = false;
-        state.isRunning = false;
-        document.getElementById('runBtn').disabled = false;
+        authBlocked = true;
+        document.getElementById('streamDot').style.background = '#ef4444';
         openAuthModal('Session authentication required before launching a discovery run.');
         return;
       }
 
-      if (res.status === 403) {
-        const errData = await res.json();
-        isRunning = false;
-        state.isRunning = false;
-        document.getElementById('runBtn').disabled = false;
+      if (res.status === 403 || res.status === 429) {
+        authBlocked = true;
+        const errData = await res.json().catch(() => ({}));
+        document.getElementById('streamDot').style.background = '#ef4444';
         updateTrialUI({ runs_used: errData.runs_used || 5, runs_remaining: 0, is_locked: true, max_runs: 5 });
-        showToast(errData.message || 'Demo rate limit exceeded. Please wait before retrying.');
+        showToast(errData.message || 'Daily quota limit exceeded.');
         return;
       }
 
       if (!res.ok) {
-        throw new Error(`Server returned HTTP ${res.status}`);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Backend error (HTTP ${res.status})`);
       }
 
       const contentType = res.headers.get('content-type') || '';
@@ -921,7 +930,7 @@ export async function runDiscovery() {
               stepCount += 1;
               streamedDialogues.push(evt);
               document.getElementById('progressBar').style.width = `${Math.min(88, 15 + stepCount * 10)}%`;
-              logEntry(evt.avatar || 'AI', evt.persona_name || 'Council Agent', evt.intent || 'UPDATE', escapeHtml(evt.content || ''), info.color || '#76b900');
+              logEntry('', evt.persona_name || 'Council Agent', evt.intent || 'UPDATE', escapeHtml(evt.content || ''), info.color || '#76b900');
             } else if (evt.event === 'campaign_error') {
               throw new Error(evt.message || 'Campaign execution failed');
             } else if (evt.event === 'campaign_complete') {
@@ -934,7 +943,6 @@ export async function runDiscovery() {
       }
 
       if (backendData) {
-        // Consume local HUD run ONLY after backend confirms HTTP 2xx completion
         if (clientAuth.isLoggedIn() && !isOwnerSession) {
           clientAuth.consumeRun();
         }
@@ -948,20 +956,17 @@ export async function runDiscovery() {
             verdict: l.admet_verdict || l.verdict || 'PASS',
             pareto: l.is_pareto !== undefined ? l.is_pareto : (l.pareto || false)
           }));
-          currentTargetPdbText = backendData.target_pdb || currentTargetPdbText;
-          currentTargetPocketResidues = backendData.pocket_residues || currentTargetPocketResidues;
-          currentTargetIsEsmfold = backendData.is_esmfold || false;
-          currentTargetMeanPlddt = backendData.mean_plddt || 0.0;
+          state.currentTargetPdbText = backendData.target_pdb || state.currentTargetPdbText;
+          state.currentTargetPocketResidues = backendData.pocket_residues || state.currentTargetPocketResidues;
+          state.currentTargetIsEsmfold = backendData.is_esmfold || false;
+          state.currentTargetMeanPlddt = backendData.mean_plddt || 0.0;
         }
       }
-    } catch (err) {
-      if (backendUp) console.warn('API stream warning:', err);
     }
-  }
-  if (!backendData) {
-    const q = staticQuota(1);
-    updateTrialUI(q);
-  }
+    if (!backendData) {
+      const q = staticQuota(1);
+      updateTrialUI(q);
+    }
 
   // 1. Resolve active leads either from backend or generated in silico strictly from target metadata
   let activeProvenance = null;
@@ -1067,10 +1072,8 @@ export async function runDiscovery() {
 
   // ─ Stage 1: Target Scout ─
   
-  // Render Autonomous Council Debate Dialogue if provided by backend
-  if (backendData && backendData.council_dialogues && backendData.council_dialogues.length > 0) {
+  if (backendData && backendData.council_dialogues && backendData.council_dialogues.length > 0 && streamedDialogues.length === 0) {
     document.getElementById('agentLog').innerHTML = '';
-    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     for (const d of backendData.council_dialogues) {
       const isVeto = d.intent === 'VETO';
       const isClear = d.intent === 'CLEARANCE';
@@ -1078,7 +1081,7 @@ export async function runDiscovery() {
       const badgeColor = isVeto ? '#ef4444' : isClear ? '#10b981' : isConsensus ? '#f59e0b' : '#06b6d4';
       const bgColor = isVeto ? 'rgba(239, 68, 68, 0.08)' : 'rgba(22, 27, 34, 0.6)';
       const borderColor = isVeto ? 'rgba(239, 68, 68, 0.3)' : 'rgba(48, 54, 61, 0.5)';
-      
+
       const entry = document.createElement('div');
       entry.className = 'p-2.5 rounded-xl border text-xs animate-fade-up';
       entry.style.background = bgColor;
@@ -1086,63 +1089,59 @@ export async function runDiscovery() {
       entry.innerHTML = `
         <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-1.5 font-bold">
-            <span class="text-sm">${esc(d.avatar || '🏛️')}</span>
-            <span class="text-gray-200 text-xs">${esc(d.persona || 'Council Agent')}</span>
-            <span class="px-1.5 py-0.2 text-[9px] rounded font-mono font-bold" style="background:${badgeColor}22; color:${badgeColor}; border:1px solid ${badgeColor}44;">${esc(d.intent)}</span>
+            <span class="text-gray-200 text-xs">${escapeHtml(d.persona || 'Council Agent')}</span>
+            <span class="px-1.5 py-0.2 text-[9px] rounded font-mono font-bold" style="background:${badgeColor}22; color:${badgeColor}; border:1px solid ${badgeColor}44;">${escapeHtml(d.intent)}</span>
           </div>
-          <span class="text-[10px] text-gray-500 font-mono">${esc(d.time || '')}</span>
+          <span class="text-[10px] text-gray-500 font-mono">${escapeHtml(d.time || '')}</span>
         </div>
-        <div class="text-gray-300 font-sans leading-relaxed text-[11px]">${esc(d.content)}</div>
+        <div class="text-gray-300 font-sans leading-relaxed text-[11px]">${escapeHtml(d.content)}</div>
       `;
       document.getElementById('agentLog').appendChild(entry);
     }
   }
 
-  setAgent('scout', 'running', 'Resolving target...');
+  if (streamedDialogues.length > 0) {
+    setAgent('scout', 'done', `Resolved → ${info.pdb}`);
+    setAgent('chemist', 'done', `${runResult.screenedCount} molecules synthesized`);
+    setAgent('admet', 'done', `${runResult.passedCount} PASS, ${runResult.flaggedCount} FLAGGED`);
+    setAgent('docking', 'done', `Top: ${runResult.topLead.affinity} kcal/mol`);
+    setAgent('pi', 'done', `${runResult.paretoCount} Pareto leads`);
+    setProgress(100);
+  } else {
+    setAgent('scout', 'running', 'Resolving target...');
+    await sleep(250);
+    logEntry('', 'Target Scout', 'BIOLOGICAL_PROFILING', `Resolved <strong style="color:${info.color}">${safeTargetDisplay}</strong> → PDB:${safePdbDisplay}. Pocket: ${safePocketDisplay}. Annotating ${info.mutant !== '—' ? 'oncogenic mutation ' + escapeHtml(info.mutant) : 'pathogenic variant'}.`, info.color);
+    setAgent('scout', 'done', `Resolved → ${info.pdb}`);
+    setProgress(20);
 
-  await sleep(600);
-  logEntry('🎯', 'Target Scout', 'BIOLOGICAL_PROFILING', `Resolved <strong style="color:${info.color}">${safeTargetDisplay}</strong> → PDB:${safePdbDisplay}. Pocket: ${safePocketDisplay}. Annotating ${info.mutant !== '—' ? 'oncogenic mutation '+escapeHtml(info.mutant) : 'pathogenic variant'}. Reference ligand SMILES extracted.`, info.color);
-  setAgent('scout', 'done', `Resolved → ${info.pdb}`);
-  setProgress(20);
-  await sleep(400);
+    setAgent('chemist', 'running', 'Generating scaffolds...');
+    await sleep(300);
+    logEntry('', 'Generative Chemist', 'MOLMIM_LATENT_EXPLORATION', `MolMIM latent-space CMA-ES exploration seeded from reference ligand. Generating ${runResult.screenedCount} derivatives.`, '#a855f7');
+    setAgent('chemist', 'done', `${runResult.screenedCount} molecules synthesized`);
+    setProgress(40);
 
-  // ─ Stage 2: Generative Chemist ─
-  setAgent('chemist', 'running', 'Generating scaffolds...');
-  await sleep(800);
-  logEntry('⚗️', 'Generative Chemist', 'MOLMIM_LATENT_EXPLORATION', `NVIDIA NIM MolMIM activated. Executing latent-space CMA-ES exploration (radius=0.35) seeded from reference ligand. Generating ${runResult.screenedCount} bioisosteric derivatives via scaffold hopping and ring substitution.`, '#a855f7');
-  setAgent('chemist', 'done', `${runResult.screenedCount} molecules synthesized`);
-  setProgress(40);
-  await sleep(400);
+    setAgent('admet', 'running', 'Screening ADMET...');
+    await sleep(250);
+    logEntry('', 'ADMET Critic', 'MEDCHEM_EVALUATION', `RDKit filtration complete: ${runResult.passedCount} PASS + ${runResult.flaggedCount} FLAGGED across Lipinski Ro5, Veber criteria, and PAINS alerts.`, '#f59e0b');
+    setAgent('admet', 'done', `${runResult.passedCount} PASS, ${runResult.flaggedCount} FLAGGED`);
+    setProgress(60);
 
-  // ─ Stage 3: ADMET ─
-  setAgent('admet', 'running', 'Screening ADMET...');
-  await sleep(700);
-  logEntry('🧪', 'ADMET Critic', 'MEDCHEM_EVALUATION', `RDKit-powered filtration complete. ${runResult.passedCount} PASS + ${runResult.flaggedCount} FLAGGED across Lipinski Ro5, Veber criteria, PAINS structural alerts, SAScore ≤7.0, hERG cardiotoxicity heuristic. All PASS/FLAGGED molecules cleared for molecular docking.`, '#f59e0b');
-  setAgent('admet', 'done', `${runResult.passedCount} PASS, ${runResult.flaggedCount} FLAGGED`);
-  setProgress(60);
-  await sleep(400);
+    setAgent('docking', 'running', 'DiffDock simulating...');
+    await sleep(300);
+    const contacts = (info.pocketResidues && info.pocketResidues.length > 0)
+      ? escapeHtml(info.pocketResidues.slice(0, 3).join(', '))
+      : 'Active site interaction residues';
+    logEntry('', 'DiffDock Agent', 'DIFFDOCK_DOCKING_SIMULATION', `Conformer generation & diffusion pose sampling for ${runResult.dockedCount} leads into <strong style="color:${info.color}">${safeTargetDisplay}</strong> (${safePdbDisplay}). Top lead: <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> ΔG = <strong style="color:var(--nvidia-green)">${runResult.topLead.affinity} kcal/mol</strong>. Contacts: ${contacts}.`, '#00f1fd');
+    setAgent('docking', 'done', `Top: ${runResult.topLead.affinity} kcal/mol`);
+    setProgress(80);
 
-  // ─ Stage 4: DiffDock ─
-  setAgent('docking', 'running', 'DiffDock simulating...');
-  await sleep(900);
+    setAgent('pi', 'running', 'Arbitrating Pareto...');
+    await sleep(250);
+    logEntry('', 'Principal Investigator', 'PARETO_ARBITRATION', `Multi-objective Pareto frontier computed across ${runResult.dockedCount} leads. Identified <strong style="color:var(--nvidia-green)">${runResult.paretoCount} strictly non-dominated</strong> candidates. Top nomination: <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> (ΔG=${runResult.topLead.affinity}, QED=${runResult.topLead.qed}).`, '#76b900');
+    setAgent('pi', 'done', `${runResult.paretoCount} Pareto leads`);
+    setProgress(100);
+  }
 
-  const contacts = (info.pocketResidues && info.pocketResidues.length > 0)
-    ? escapeHtml(info.pocketResidues.slice(0, 3).join(', '))
-    : 'Active site interaction residues';
-  logEntry('🔬', 'DiffDock Agent', 'DIFFDOCK_DOCKING_SIMULATION', `NVIDIA NIM DiffDock executed 3D conformer generation (ETKDGv3) + generative diffusion pose sampling for ${runResult.dockedCount} leads into <strong style="color:${info.color}">${safeTargetDisplay}</strong> (${safePdbDisplay}). Top lead: <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> ΔG = <strong style="color:var(--nvidia-green)">${runResult.topLead.affinity} kcal/mol</strong>. Key contacts: ${contacts}.`, '#00f1fd');
-  setAgent('docking', 'done', `Top: ${runResult.topLead.affinity} kcal/mol`);
-  setProgress(80);
-  await sleep(500);
-
-  // ─ Stage 5: PI Pareto ─
-  setAgent('pi', 'running', 'Arbitrating Pareto...');
-  await sleep(700);
-  logEntry('👩‍🔬', 'Principal Investigator', 'PARETO_ARBITRATION', `Multi-objective Pareto frontier computed across ${runResult.dockedCount} docked leads (ΔG × QED × SAScore). Hypervolume: 94.8%. Identified <strong style="color:var(--nvidia-green)">${runResult.paretoCount} strictly non-dominated</strong> candidates. Top clinical nomination: <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> (ΔG=${runResult.topLead.affinity}, QED=${runResult.topLead.qed}).`, '#76b900');
-  logEntry('✅', 'Principal Investigator', 'CONSENSUS_ACHIEVED', `Unanimous agent consensus. Candidate <strong style="color:var(--nvidia-green)">${escapeHtml(runResult.topLead.id)}</strong> locked for dry-lab nomination and wet-lab synthesis dispatch.`, '#76b900');
-  setAgent('pi', 'done', `${runResult.paretoCount} Pareto leads`);
-  setProgress(100);
-
-  // Update KPIs from Single-Source runResult
   const kpiAff = document.getElementById('kpiAffinity');
   if (kpiAff) kpiAff.textContent = typeof runResult.topLead.affinity === 'number' ? runResult.topLead.affinity.toFixed(2) : runResult.topLead.affinity;
   const kpiQed = document.getElementById('kpiQed');
@@ -1152,7 +1151,6 @@ export async function runDiscovery() {
   const kpiPar = document.getElementById('kpiPareto');
   if (kpiPar) kpiPar.textContent = runResult.paretoCount;
 
-  // Render leads
   renderLeads();
   try {
     renderPareto();
@@ -1160,23 +1158,26 @@ export async function runDiscovery() {
     console.warn('Pareto chart render warning:', chartErr);
   }
   } catch (err) {
+    if (err && err.name === 'AbortError') return;
     console.error('Autonomous Discovery Execution Error:', err);
-    showToast('Discovery error: ' + (err.message || 'Execution failed'));
+    document.getElementById('streamDot').style.background = '#ef4444';
+    document.getElementById('leadsContainer').innerHTML = `<div class="p-4 rounded-xl bg-red-950/30 border border-red-500/30 text-xs text-red-300 text-center">Discovery execution failed: ${escapeHtml(err.message || 'Server error')}. Click Retry to run again.</div>`;
+    showToast(`Discovery error: ${err.message || 'Execution failed'}`);
   } finally {
-    const dot = document.getElementById('streamDot');
-    if (dot) dot.style.background = '#76b900';
-    isRunning = false;
     state.isRunning = false;
+    activeDiscoveryController = null;
 
     const btn = document.getElementById('runBtn');
     if (btn) {
       btn.disabled = false;
-      btn.dataset.action = 'run-discovery';
-      btn.style.background = '';
-      btn.style.border = '';
     }
-    const lbl = document.getElementById('runLabel');
-    if (lbl) lbl.textContent = 'Run Autonomous Discovery';
+    if (!authBlocked) {
+      const dot = document.getElementById('streamDot');
+      if (dot && dot.style.background !== 'rgb(239, 68, 68)') {
+        dot.style.background = '#76b900';
+      }
+      clientAuth.renderHUD();
+    }
   }
 }
 window.runDiscovery = runDiscovery;

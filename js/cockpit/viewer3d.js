@@ -3,7 +3,12 @@
  * de novo folding coordinate generation, and client-side redocking evaluator.
  */
 
-import { state, isStaticHost, probeBackendHealth, TARGETS } from './state.js';
+import { state, probeBackendHealth, TARGETS } from './state.js';
+import { showToast, renderLeads } from './ui-controls.js';
+import { clientAuth } from './api.js';
+import { openAuthModal } from './modals.js';
+import { renderPareto } from './charts.js';
+import { openModalDialog, closeModalDialog } from '../shared/dom-utils.js';
 
 // In-Memory PDB Text Cache (eliminates 636KB eager pdb_data.js bundle)
 export const pdbCache = new Map();
@@ -110,29 +115,30 @@ export async function foldDeNovoSequence() {
   const txt = (document.getElementById('esmfoldSeqInput').value || '').trim();
   const clean = txt.replace(/^>.*$/gm, '').replace(/\s+/g, '');
   if (!clean || clean.length < 15) {
-    showToast('⚠️ Please enter an amino acid sequence (min 15 residues).');
+    showToast('Please enter an amino acid sequence (min 15 residues).');
     return;
   }
 
-  showToast('🧬 Calling NVIDIA NIM ESMFold to predict 3D structure...');
+  showToast('Calling NVIDIA NIM ESMFold to predict 3D structure...');
   let data = null;
 
   try {
-    const res = await fetch('/api/target/fetch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: clean })
-    });
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      console.warn(`Backend responded with HTTP ${res.status}. Engaging Autonomous Client-Side ESMFold engine.`);
+    if (await probeBackendHealth()) {
+      const res = await fetch('./api/target/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
+        body: JSON.stringify({ target: clean })
+      });
+      if (res.ok) {
+        data = await res.json();
+      } else {
+        console.warn(`Backend responded with HTTP ${res.status}. Engaging client-side ESMFold generator.`);
+      }
     }
   } catch (err) {
-    console.warn(`Network/Static environment detected (${err.message}). Engaging Autonomous Client-Side ESMFold engine.`);
+    console.warn(`Network/Static environment detected (${err.message}). Engaging client-side ESMFold generator.`);
   }
 
-  // If backend was unavailable or returned non-200 (e.g. HTTP 405 on static web servers), seamlessly generate coordinates
   if (!data || !data.pdb_text) {
     const fallback = generateClientDeNovoPdb(clean);
     data = {
@@ -146,24 +152,21 @@ export async function foldDeNovoSequence() {
     };
   }
 
-  currentTargetPdbText = data.pdb_text || '';
-  currentTargetPocketResidues = data.pocket_residues || [];
-  currentTargetIsEsmfold = true;
-  currentTargetMeanPlddt = data.mean_plddt || 89.7;
-  currentTargetSeq = clean;
+  state.currentTargetPdbText = data.pdb_text || '';
+  state.currentTargetPocketResidues = data.pocket_residues || [];
+  state.currentTargetIsEsmfold = true;
+  state.currentTargetMeanPlddt = data.mean_plddt || 89.7;
+  state.currentTargetSeq = clean;
 
-  // Update Target Card
   document.getElementById('targetName').textContent = data.name;
   document.getElementById('targetName').style.color = '#a855f7';
-  document.getElementById('targetPdb').textContent = `DE NOVO (pLDDT ${currentTargetMeanPlddt.toFixed(1)})`;
+  document.getElementById('targetPdb').textContent = `DE NOVO (pLDDT ${state.currentTargetMeanPlddt.toFixed(1)})`;
   document.getElementById('targetInd').textContent = data.indication || 'De Novo Protein Folding';
   document.getElementById('targetPocket').textContent = data.pocket || 'Predicted Catalytic Pocket';
   document.getElementById('targetMut').textContent = 'Variant / De Novo';
 
-  showToast(`✅ ESMFold folded structure with mean pLDDT: ${currentTargetMeanPlddt.toFixed(1)}%!`);
-  
-  // Automatically render de novo structure in 3D viewer
-  render3DComplex(currentTargetPdbText, null, currentTargetPocketResidues, true, currentTargetMeanPlddt);
+  showToast(`ESMFold folded structure with mean pLDDT: ${state.currentTargetMeanPlddt.toFixed(1)}%.`);
+  render3DComplex(state.currentTargetPdbText, null, state.currentTargetPocketResidues, true, state.currentTargetMeanPlddt);
 }
 
 // ─── 3DMOL.JS INTERACTIVE 3D WEBGL VIEWER ENGINE ────────────────────────────
@@ -459,27 +462,27 @@ export function reset3DView() {
 export function open3DModal() {
   const modal = document.getElementById('viewer3DModal');
   if (!modal) return;
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
-  
+  openModalDialog(modal);
+
   const targetName = document.getElementById('targetName').textContent || 'Target Complex';
-  document.getElementById('modal3DTitle').textContent = `${targetName} · ${currentSelectedLead ? currentSelectedLead.id : 'Pocket View'}`;
-  
-  if (currentSelectedLead) {
-    document.getElementById('modal3DMetrics').textContent = `ΔG: ${currentSelectedLead.affinity} kcal/mol | QED: ${currentSelectedLead.qed} | SAScore: ${currentSelectedLead.sascore}`;
+  const lead = state.currentSelectedLead;
+  document.getElementById('modal3DTitle').textContent = `${targetName} · ${lead ? lead.id : 'Pocket View'}`;
+
+  if (lead) {
+    document.getElementById('modal3DMetrics').textContent = `ΔG: ${lead.affinity} kcal/mol | QED: ${lead.qed} | SAScore: ${lead.sascore}`;
   }
 
-  setTimeout(() => {
+  requestAnimationFrame(() => {
     const container = document.getElementById('modalMolViewer3D');
     if (!container || typeof $3Dmol === 'undefined') return;
     container.innerHTML = '';
     modalViewer = $3Dmol.createViewer(container, { backgroundColor: '#0b0f14' });
 
-    if (currentTargetPdbText && currentTargetPdbText.length > 50) {
-      modalViewer.addModel(currentTargetPdbText, "pdb");
+    if (state.currentTargetPdbText && state.currentTargetPdbText.length > 50) {
+      modalViewer.addModel(state.currentTargetPdbText, 'pdb');
       modalViewer.setStyle({ model: 0 }, { cartoon: { color: 'spectrum', opacity: 0.85 } });
 
-      const resiNums = currentTargetPocketResidues.map(r => {
+      const resiNums = (state.currentTargetPocketResidues || []).map(r => {
         if (typeof r === 'number') return r;
         const m = String(r).match(/\d+/);
         return m ? parseInt(m[0], 10) : null;
@@ -494,58 +497,53 @@ export function open3DModal() {
     }
 
     if (currentPoseSdf && currentPoseSdf.length > 50) {
-      modalViewer.addModel(currentPoseSdf, "sdf");
+      modalViewer.addModel(currentPoseSdf, 'sdf');
       modalViewer.setStyle({ model: -1 }, {
         stick: { colorscheme: 'greenCarbon', radius: 0.3 }
       });
     }
 
+    modalViewer.resize();
     modalViewer.zoomTo();
     modalViewer.render();
-    if (is3DSpinning) modalViewer.spin("y", 1);
-  }, 100);
+    if (is3DSpinning) modalViewer.spin('y', 1);
+  });
 }
 
 export function close3DModal(e) {
-  if (e.target.id === 'viewer3DModal') {
+  if (e.target && e.target.id === 'viewer3DModal') {
     close3DModalDirect();
   }
 }
 
 export function close3DModalDirect() {
-  const modal = document.getElementById('viewer3DModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
+  closeModalDialog(document.getElementById('viewer3DModal'));
   if (modalViewer) {
     modalViewer.spin(false);
     modalViewer = null;
   }
-  document.body.classList.remove('modal-open');
 }
 
 export async function updateLead3DView(lead) {
   if (!lead) return;
 
-  // If we don't have the target PDB text in memory, fetch it!
-  if (!currentTargetPdbText || currentTargetPdbText.length < 50) {
+  if (!state.currentTargetPdbText || state.currentTargetPdbText.length < 50) {
     const targetSelectVal = document.getElementById('targetSelect')?.value || '7RPZ';
-    const targetInfo = (typeof TARGETS !== 'undefined') ? (TARGETS[targetSelectVal] || TARGETS['7RPZ']) : null;
+    const targetInfo = TARGETS[targetSelectVal] || TARGETS['7RPZ'] || null;
     const pdbIdToLoad = targetInfo ? (targetInfo.pdbId || targetInfo.pdb) : targetSelectVal;
 
     const backendUp = await probeBackendHealth();
     if (!backendUp) {
       const loadedPdb = await loadPdb(pdbIdToLoad);
       if (loadedPdb) {
-        currentTargetPdbText = loadedPdb;
-        currentTargetPocketResidues = targetInfo?.pocketResidues || [12, 13, 32, 60, 61, 96];
+        state.currentTargetPdbText = loadedPdb;
+        state.currentTargetPocketResidues = targetInfo?.pocketResidues || [12, 13, 32, 60, 61, 96];
       }
     } else {
       let target = targetSelectVal;
-      if (currentTargetTab === 'esmfold' && currentTargetSeq) {
-        target = currentTargetSeq;
-      } else if (currentTargetTab === 'rcsb') {
+      if (state.currentTargetTab === 'esmfold' && state.currentTargetSeq) {
+        target = state.currentTargetSeq;
+      } else if (state.currentTargetTab === 'rcsb') {
         target = (document.getElementById('customTargetInput')?.value || '').trim() || '7RPZ';
       }
 
@@ -557,35 +555,35 @@ export async function updateLead3DView(lead) {
         });
         if (res.ok) {
           const data = await res.json();
-          currentTargetPdbText = data.pdb_text || '';
-          currentTargetPocketResidues = data.pocket_residues || [];
-          currentTargetIsEsmfold = data.is_esmfold || false;
-          currentTargetMeanPlddt = data.mean_plddt || 89.7;
+          state.currentTargetPdbText = data.pdb_text || '';
+          state.currentTargetPocketResidues = data.pocket_residues || [];
+          state.currentTargetIsEsmfold = data.is_esmfold || false;
+          state.currentTargetMeanPlddt = data.mean_plddt || 89.7;
         } else {
           const loadedPdb = await loadPdb(pdbIdToLoad);
           if (loadedPdb) {
-            currentTargetPdbText = loadedPdb;
-            currentTargetPocketResidues = targetInfo?.pocketResidues || [12, 13, 32, 60, 61, 96];
+            state.currentTargetPdbText = loadedPdb;
+            state.currentTargetPocketResidues = targetInfo?.pocketResidues || [12, 13, 32, 60, 61, 96];
           }
         }
       } catch (e) {
-        console.warn("Could not fetch target PDB:", e);
+        console.warn('Could not fetch target PDB:', e);
         const loadedPdb = await loadPdb(pdbIdToLoad);
         if (loadedPdb) {
-          currentTargetPdbText = loadedPdb;
-          currentTargetPocketResidues = targetInfo?.pocketResidues || [12, 13, 32, 60, 61, 96];
+          state.currentTargetPdbText = loadedPdb;
+          state.currentTargetPocketResidues = targetInfo?.pocketResidues || [12, 13, 32, 60, 61, 96];
         }
       }
     }
   }
 
-  // Render the complex with this lead's pose SDF
+  state.currentPoseSdf = lead.pose_sdf || '';
   render3DComplex(
-    currentTargetPdbText,
+    state.currentTargetPdbText,
     lead.pose_sdf || null,
-    currentTargetPocketResidues,
-    currentTargetIsEsmfold,
-    currentTargetMeanPlddt
+    state.currentTargetPocketResidues,
+    state.currentTargetIsEsmfold,
+    state.currentTargetMeanPlddt
   );
 }
 
@@ -698,14 +696,12 @@ export async function fetchCustomTarget() {
   const title = meta?.title || `${code} Macromolecular Target`;
   const resStr = meta?.resolutionA ? `${meta.resolutionA.toFixed(2)} Å` : '—';
 
-  // 2. Load coordinate structure
   const pdbText = await loadPdb(code);
   if (pdbText && pdbText.length > 50) {
-    currentTargetPdbText = pdbText;
-    currentTargetPocketResidues = [12, 13, 32, 60, 61, 96];
-    currentTargetIsEsmfold = false;
+    state.currentTargetPdbText = pdbText;
+    state.currentTargetPocketResidues = [12, 13, 32, 60, 61, 96];
+    state.currentTargetIsEsmfold = false;
 
-    // Update Telemetry Panel
     const nameEl = document.getElementById('targetName');
     const pdbEl = document.getElementById('targetPdb');
     const indEl = document.getElementById('targetInd');
@@ -734,10 +730,10 @@ export async function fetchCustomTarget() {
       badgeEl.className = 'badge-measured text-[10px]';
     }
 
-    render3DComplex(pdbText, null, currentTargetPocketResidues, false, 95.0);
-    showToast(`✅ PDB ${code} loaded (${resStr})!`);
+    render3DComplex(pdbText, null, state.currentTargetPocketResidues, false, 95.0);
+    showToast(`PDB ${code} loaded (${resStr}).`);
   } else {
-    showToast(`⚠️ Could not resolve PDB coordinates for ${code}`);
+    showToast(`Could not resolve PDB coordinates for ${code}.`);
   }
 }
 
@@ -870,19 +866,19 @@ export function evaluateClientRedock(smiles, targetName) {
 export function triggerRedockFromWorkbench() {
   if (!clientAuth.isLoggedIn() && !window.isOwner) {
     clientAuth.pendingAction = 'redock';
-    openAuthModal('🔒 Sign-In Required: Please sign in or register to test chemical modifications and re-dock leads.');
+    openAuthModal('Sign-In Required: Please sign in or register to test chemical modifications and re-dock leads.');
     return;
   }
   const smilesInput = document.getElementById('workbenchSmilesInput');
   const smiles = smilesInput ? smilesInput.value : '';
   let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
-  if (currentTargetTab === 'esmfold') target = 'ESMFold De Novo';
-  else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'RCSB Target';
+  if (state.currentTargetTab === 'esmfold') target = 'ESMFold De Novo';
+  else if (state.currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'RCSB Target';
   redockModifiedLead(smiles, target);
 }
 
 export async function redockModifiedLead(smiles, targetName) {
-  showToast('⚡ Dr. Elena re-docking modified lead in 3D...');
+  showToast('Re-docking modified lead in 3D...');
   let data = null;
 
   try {
@@ -901,16 +897,15 @@ export async function redockModifiedLead(smiles, targetName) {
       }
     }
   } catch (e) {
-    console.warn('API redock endpoint unreachable. Engaging Autonomous In Silico Re-Docking Engine:', e);
+    console.warn('API redock endpoint unreachable. Engaging client-side evaluation:', e);
   }
 
-  // Static / GitHub Pages Fallback: run autonomous client-side re-dock evaluation
   if (!data || typeof data.valid === 'undefined') {
     data = evaluateClientRedock(smiles, targetName);
   }
 
   if (!data.valid) {
-    showToast('❌ Re-dock error: ' + (data.error || 'Invalid chemical structure'));
+    showToast(`Re-dock error: ${data.error || 'Invalid chemical structure'}`);
     return;
   }
 
@@ -922,23 +917,22 @@ export async function redockModifiedLead(smiles, targetName) {
     sp1.textContent = `${Number(data.binding_affinity_kcal_mol).toFixed(2)} kcal/mol `;
     const sp2 = document.createElement('span');
     sp2.className = 'text-emerald-400 text-[10px]';
-    sp2.textContent = `(QED ${Number(data.qed).toFixed(3)} • SAScore ${Number(data.sascore).toFixed(2)})`;
+    sp2.textContent = `(QED ${Number(data.qed).toFixed(3)} · SAScore ${Number(data.sascore).toFixed(2)})`;
     affBox.appendChild(sp1);
     affBox.appendChild(sp2);
   }
 
-  // Update selected lead parameters in memory and UI
-  if (currentSelectedLead) {
-    currentSelectedLead.affinity = data.binding_affinity_kcal_mol;
-    currentSelectedLead.qed = data.qed;
-    currentSelectedLead.sascore = data.sascore;
-    currentSelectedLead.smiles = smiles;
-    if (data.mw) currentSelectedLead.mw = data.mw;
-    if (data.admet_verdict) currentSelectedLead.verdict = data.admet_verdict;
+  if (state.currentSelectedLead) {
+    state.currentSelectedLead.affinity = data.binding_affinity_kcal_mol;
+    state.currentSelectedLead.qed = data.qed;
+    state.currentSelectedLead.sascore = data.sascore;
+    state.currentSelectedLead.smiles = smiles;
+    if (data.mw) state.currentSelectedLead.mw = data.mw;
+    if (data.admet_verdict) state.currentSelectedLead.verdict = data.admet_verdict;
     renderLeads();
     renderPareto();
   }
 
-  showToast('✅ Re-dock complete: ' + data.binding_affinity_kcal_mol + ' kcal/mol!');
+  showToast(`Re-dock complete: ${data.binding_affinity_kcal_mol} kcal/mol.`);
 }
 

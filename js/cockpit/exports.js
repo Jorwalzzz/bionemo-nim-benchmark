@@ -5,58 +5,46 @@
 import { state, probeBackendHealth } from './state.js';
 import { showToast } from './ui-controls.js';
 import { escapeHtml } from './api.js';
+import { copyToClipboard, downloadBlob } from '../shared/dom-utils.js';
 import { openRobotModal, openResistanceModal, closeResistanceModal } from './modals.js';
 
 export async function downloadInstaller(type) {
-  const isLocalServer = window.location.protocol.startsWith('http') &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   let file = 'install.bat';
   if (type === 'unix') file = 'install.sh';
   else if (type === 'powershell') file = 'install.ps1';
 
-  showToast('Preparing ' + file + '...');
+  showToast(`Preparing ${file}...`);
 
+  const backendUp = await probeBackendHealth();
   const candidateUrls = [];
-  if (isLocalServer) {
-    candidateUrls.push('/api/download/installer-' + type);
+  if (backendUp) {
+    candidateUrls.push(`./api/download/installer-${type}`);
   }
-  candidateUrls.push('./scripts/installers/' + file);
-  candidateUrls.push('scripts/installers/' + file);
-  candidateUrls.push('https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/' + file);
+  candidateUrls.push(`./scripts/installers/${file}`);
 
-  let blob = null;
+  let content = null;
   for (const url of candidateUrls) {
     try {
       const res = await fetch(url);
       if (res.ok) {
-        const content = await res.text();
-        if (content && content.length > 50) {
-          blob = new Blob([content], { type: 'application/octet-stream' });
+        const text = await res.text();
+        if (text && text.length > 50) {
+          content = text;
           break;
         }
       }
-    } catch (e) {
-      // Continue to next candidate URL
+    } catch (_) {
+      // Try next source
     }
   }
 
-  if (blob) {
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = blobUrl;
-    a.download = file;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(blobUrl);
-    }, 1500);
-    showToast('Downloaded ' + file + '! Run it to launch.');
+  if (content) {
+    downloadBlob(content, file, 'application/octet-stream');
+    showToast(`Downloaded ${file}.`);
   } else {
-    const fallbackUrl = 'https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/' + file;
-    window.open(fallbackUrl, '_blank');
-    showToast('Opening ' + file + ' directly in new tab...');
+    const fallbackUrl = `https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/scripts/installers/${file}`;
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+    showToast(`Opening ${file} in new tab...`);
   }
 }
 
@@ -66,51 +54,58 @@ export async function downloadDossier() {
   const url = backendUp ? './api/dossier' : './results/CANDIDATE_SELECTION_DOSSIER.md';
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
-    const blob = new Blob([text], { type: 'text/markdown' });
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = file;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(blobUrl);
-    }, 1000);
-    showToast('Dossier (.md) downloaded!');
+    downloadBlob(text, file, 'text/markdown');
+    showToast('Dossier (.md) downloaded.');
   } catch (e) {
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 }
 
+/**
+ * Exports genuine 3D docked SDF poses when available (live backend pose_sdf or verified KRAS G12D crystal SDF).
+ * Never synthesizes fake 3D coordinates from bare SMILES; exports canonical .smi text instead.
+ */
 export async function downloadSDF() {
-  const file = 'top_leads_docked.sdf';
-  const url = 'results/top_leads_docked.sdf';
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    const blob = new Blob([text], { type: 'chemical/x-mdl-sdfile' });
-    const blobUrl = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = blobUrl;
-    a.download = file;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(blobUrl);
-    }, 1000);
-    showToast('Docked Poses (.sdf) downloaded!');
-  } catch (e) {
-    window.open(url, '_blank');
+  const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || null;
+  if (lead && lead.pose_sdf && lead.pose_sdf.includes('M  END')) {
+    const safeId = (lead.id || 'lead').replace(/[^a-zA-Z0-9_-]/g, '_');
+    downloadBlob(lead.pose_sdf, `${safeId}_docked.sdf`, 'chemical/x-mdl-sdfile');
+    showToast(`Exported real 3D SDF pose for ${lead.id}.`);
+    return;
   }
+
+  const targetVal = document.getElementById('targetSelect')?.value || '7RPZ';
+  if ((state.currentTargetTab || 'presets') === 'presets' && (targetVal === '7RPZ' || targetVal === 'KRAS G12D')) {
+    const url = './results/top_leads_docked.sdf';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      downloadBlob(text, 'top_leads_docked.sdf', 'chemical/x-mdl-sdfile');
+      showToast('Docked KRAS G12D poses (.sdf) downloaded.');
+      return;
+    } catch (_) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+  }
+
+  const leads = state.currentLeads && state.currentLeads.length ? state.currentLeads : (lead ? [lead] : []);
+  if (leads.length > 0) {
+    const smiText = leads
+      .map(l => `${l.smiles || 'C'}\t${l.id || 'CANDIDATE'}\tAffinity=${l.affinity ?? 'NA'}`)
+      .join('\n') + '\n';
+    downloadBlob(smiText, `${targetVal.replace(/[^a-zA-Z0-9_-]/g, '_')}_candidates.smi`, 'chemical/x-daylight-smiles');
+    showToast('Exported 2D SMILES (.smi) — live NIM backend required for 3D SDF conformer coordinates.');
+    return;
+  }
+  showToast('Run discovery first to export candidate structures.');
 }
 
 export async function generateINDPdf() {
-  showToast('📄 Compiling Pre-Clinical Candidate Summary Dossier...');
+  showToast('Compiling Pre-Clinical Candidate Summary Dossier...');
 
   const currentTargetTab = state.currentTargetTab || 'presets';
   let target = document.getElementById('targetSelect')?.value || '7RPZ';
@@ -144,8 +139,8 @@ export async function generateINDPdf() {
         num_steps: 2,
         feasibility: 'Commercially Accessible (1-2 steps)',
         steps: [
-          { step: 1, reaction_type: 'Amide Condensation (PyBOP/DIPEA)', reagents: ['DIPEA', 'DMF', 'rt 2h'], yield_pct: 85.0, difficulty: 'Routine (★☆☆)' },
-          { step: 2, reaction_type: 'Suzuki-Miyaura Cross-Coupling', reagents: ['Pd(dppf)Cl2', 'K2CO3', '80°C'], yield_pct: 78.0, difficulty: 'Routine (★☆☆)' }
+          { step: 1, reaction_type: 'Amide Condensation (PyBOP/DIPEA)', reagents: ['DIPEA', 'DMF', 'rt 2h'], yield_pct: 85.0, difficulty: 'Routine' },
+          { step: 2, reaction_type: 'Suzuki-Miyaura Cross-Coupling', reagents: ['Pd(dppf)Cl2', 'K2CO3', '80°C'], yield_pct: 78.0, difficulty: 'Routine' }
         ]
       }
     }
@@ -163,14 +158,7 @@ export async function generateINDPdf() {
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
     const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `FDA_IND_Section2_Briefing_${target.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+    downloadBlob(blob, `FDA_IND_Section2_Briefing_${target.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`, 'application/pdf');
     showToast('Pre-Clinical Candidate Summary PDF downloaded.');
   } catch (err) {
     console.warn('Backend PDF endpoint unavailable in static mode. Generating print-styled HTML dossier:', err);
@@ -193,7 +181,7 @@ export async function generateINDPdf() {
 </head>
 <body>
   <h1>Pre-Clinical Candidate Selection Dossier</h1>
-  <div class="banner">SIMULATED / ILLUSTRATIVE STATIC PREVIEW (${escapeHtml(provMode)}) — Research summary only; not a regulatory IND submission under 21 CFR 312. Execute backend \`POST /api/dossier/pdf\` for ReportLab PDF output.</div>
+  <div class="banner">SIMULATED / ILLUSTRATIVE STATIC PREVIEW (${escapeHtml(provMode)}) — Research summary only; not a regulatory IND submission under 21 CFR 312. Execute backend <code>POST ./api/dossier/pdf</code> for ReportLab PDF output.</div>
   <table>
     <tr><th>Target</th><td>${escapeHtml(target)}</td><th>PDB ID</th><td>${escapeHtml(pdbIdVal)}</td></tr>
     <tr><th>Nominated Lead</th><td>${escapeHtml(lead.id)}</td><th>Binding Affinity</th><td>${escapeHtml(lead.affinity)} kcal/mol</td></tr>
@@ -205,7 +193,7 @@ export async function generateINDPdf() {
 </body>
 </html>`;
     try {
-      const printWin = window.open('', '_blank', 'noopener');
+      const printWin = window.open('', '_blank', 'noopener,noreferrer');
       if (printWin) {
         printWin.document.open();
         printWin.document.write(htmlDossier);
@@ -213,31 +201,22 @@ export async function generateINDPdf() {
         printWin.focus();
         printWin.print();
       }
-    } catch (_) {
-      // Fallback safely to downloadable self-contained HTML dossier if popups are blocked
-    }
-    const blob = new Blob([htmlDossier], { type: 'text/html;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `PreClinical_Dossier_${target.replace(/[^a-zA-Z0-9]/g, '_')}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    showToast('Print-ready HTML dossier generated (use Print -> Save as PDF).');
+    } catch (_) {}
+    downloadBlob(htmlDossier, `PreClinical_Dossier_${target.replace(/[^a-zA-Z0-9]/g, '_')}.html`, 'text/html;charset=utf-8');
+    showToast('Print-ready HTML dossier generated (Print to PDF).');
   }
 }
 
 export const downloadIndPdf = generateINDPdf;
 
 export async function generateRobotProtocol() {
+  const targetVal = document.getElementById('targetSelect')?.value || '7RPZ';
   const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || {
     id: 'LEAD-001',
     smiles: 'CC(=O)N1CCNCC1'
   };
 
-  showToast('🤖 Generating Opentrons OT-2 Python protocol...');
+  showToast('Generating Opentrons OT-2 Python protocol...');
   try {
     if (!(await probeBackendHealth())) throw new Error('Static host: use client-side protocol');
     const res = await fetch('./api/robot/protocol', {
@@ -252,6 +231,7 @@ export async function generateRobotProtocol() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.currentOt2Code = data.ot2_protocol_py || '';
+    state.currentOt2Key = `${targetVal}|${lead.id}|${lead.smiles || ''}`;
     state.currentLabCardMd = data.lab_card_md || '';
 
     const codeEl = document.getElementById('ot2CodeContent');
@@ -261,11 +241,12 @@ export async function generateRobotProtocol() {
     const stepsEl = document.getElementById('robotModalSteps');
     if (stepsEl) stepsEl.textContent = `${data.num_steps} Steps (${data.feasibility})`;
     openRobotModal();
-    showToast('✅ Opentrons OT-2 Protocol generated!');
+    showToast('Opentrons OT-2 Protocol generated.');
   } catch (err) {
-    const sampleScript = `"""\nOT-2 AUTOMATED DILUTION PROTOCOL (UNVALIDATED)\nWARNING: Auto-generated for illustrative purposes only.\nNOT reviewed by a qualified chemist. DO NOT use in wet lab without expert review.\nTarget Candidate: ${lead.id}\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "KRAS G12D inhibitor serial dilution (illustrative)",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25   # µL/s, throttled for DMSO viscosity\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]  # Row A: A1 to A12\n    # Dispense diluent (50 µL) into columns 2-12\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    # 2-fold serial dilution down Row A with mixing\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 KRAS G12D serial dilution protocol complete.")\n`;
+    const sampleScript = `"""\nOT-2 AUTOMATED DILUTION PROTOCOL (UNVALIDATED)\nWARNING: Auto-generated for illustrative purposes only.\nNOT reviewed by a qualified chemist. DO NOT use in wet lab without expert review.\nTarget Complex: ${targetVal}\nTarget Candidate: ${lead.id}\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "${targetVal} serial dilution (${lead.id})",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 ${targetVal} serial dilution protocol complete.")\n`;
     state.currentOt2Code = sampleScript;
-    state.currentLabCardMd = `# 🧪 Wet-Lab Protocol Card — ${lead.id}\n> **Generated for BioNeMo NIM Benchmark Suite**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Assay & Dilution Overview\n- Format: Corning 96-well flat-bottom plate (360 µL/well)\n- Gradient: 2-fold serial dilution down Row A (columns 1 to 12)\n- Fluidics: Throttled aspiration (25 µL/s) for DMSO compatibility\n`;
+    state.currentOt2Key = `${targetVal}|${lead.id}|${lead.smiles || ''}`;
+    state.currentLabCardMd = `# Wet-Lab Protocol Card — ${lead.id} (${targetVal})\n> **Generated for BioNeMo NIM Benchmark Suite**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Assay & Dilution Overview\n- Format: Corning 96-well flat-bottom plate (360 µL/well)\n- Gradient: 2-fold serial dilution down Row A (columns 1 to 12)\n- Fluidics: Throttled aspiration (25 µL/s) for DMSO compatibility\n`;
     const codeEl = document.getElementById('ot2CodeContent');
     if (codeEl) codeEl.textContent = state.currentOt2Code;
     const leadEl = document.getElementById('robotModalLeadId');
@@ -273,7 +254,7 @@ export async function generateRobotProtocol() {
     const stepsEl = document.getElementById('robotModalSteps');
     if (stepsEl) stepsEl.textContent = '2 Steps (High Feasibility)';
     openRobotModal();
-    showToast('✅ Opentrons OT-2 Protocol generated (Static Ready)!');
+    showToast('Opentrons OT-2 Protocol generated (Static Ready).');
   }
 }
 
@@ -292,52 +273,27 @@ export async function generateLabCard() {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-
-    const blob = new Blob([data.lab_card_md], { type: 'text/markdown' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `WetLab_Card_${lead.id}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    showToast('📋 Wet-Lab SOP Card (.md) downloaded!');
+    downloadBlob(data.lab_card_md, `WetLab_Card_${lead.id}.md`, 'text/markdown');
+    showToast('Wet-Lab SOP Card (.md) downloaded.');
   } catch (err) {
-    const cardContent = state.currentLabCardMd || `# 🧪 Wet-Lab Protocol Card — ${lead.id}\n> **Generated by NVIDIA BioNeMo Autonomous Scientist**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Route Overview\n- Synthetic Complexity: Commercially Accessible (2 steps)\n- Reagents: DIPEA, DMF, Pd(dppf)Cl2, K2CO3\n`;
-    const blob = new Blob([cardContent], { type: 'text/markdown' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `WetLab_Card_${lead.id}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    showToast('📋 Wet-Lab SOP Card (.md) downloaded!');
+    const cardContent = state.currentLabCardMd || `# Wet-Lab Protocol Card — ${lead.id}\n> **Generated by NVIDIA BioNeMo Autonomous Scientist**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Route Overview\n- Synthetic Complexity: Commercially Accessible (2 steps)\n- Reagents: DIPEA, DMF, Pd(dppf)Cl2, K2CO3\n`;
+    downloadBlob(cardContent, `WetLab_Card_${lead.id}.md`, 'text/markdown');
+    showToast('Wet-Lab SOP Card (.md) downloaded.');
   }
 }
 
 export function downloadCurrentOT2Py() {
   if (!state.currentOt2Code) return;
   const leadId = (state.currentSelectedLead && state.currentSelectedLead.id) || 'LEAD-001';
-  const blob = new Blob([state.currentOt2Code], { type: 'text/x-python' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `ot2_synthesis_${leadId}.py`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-  showToast('📥 ot2_synthesis protocol downloaded!');
+  downloadBlob(state.currentOt2Code, `ot2_synthesis_${leadId}.py`, 'text/x-python');
+  showToast('ot2_synthesis protocol downloaded.');
 }
 
-export function copyOT2Code() {
+export async function copyOT2Code() {
   if (!state.currentOt2Code) return;
-  navigator.clipboard.writeText(state.currentOt2Code).then(() => {
-    showToast('📋 Python protocol copied to clipboard!');
-  });
+  if (await copyToClipboard(state.currentOt2Code)) {
+    showToast('Python protocol copied to clipboard.');
+  }
 }
 
 export async function runResistanceStressTest() {
@@ -392,7 +348,7 @@ export async function runResistanceStressTest() {
     if (deltaEl) deltaEl.textContent = `+${data.delta_recovery.toFixed(2)} kcal/mol`;
 
     const mechEl = document.getElementById('resMechanismText');
-    if (mechEl) mechEl.textContent = data.structural_mechanism || 'Bioisosteric latent transformation successfully circumvents steric clash in binding pocket.';
+    if (mechEl) mechEl.textContent = data.structural_mechanism || 'Bioisosteric latent transformation circumvents steric clash in binding pocket.';
     const smilesEl = document.getElementById('resEvolvedSmiles');
     if (smilesEl) smilesEl.textContent = data.evolved_smiles || '';
 
@@ -401,7 +357,7 @@ export async function runResistanceStressTest() {
       statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
     }
 
-    showToast('✅ Resistance scan complete: Escape scaffold evolved via MolMIM!');
+    showToast('Resistance scan complete: Escape scaffold evolved via MolMIM.');
   } catch (err) {
     state.latestResistanceData = {
       mutation_simulated: 'G12D → G12V (Steric Resistance — Illustrative Scripted Scenario)',
@@ -434,27 +390,27 @@ export async function runResistanceStressTest() {
       statusBadge.textContent = state.latestResistanceData.verdict;
       statusBadge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
     }
-    showToast('✅ Calibrated resistance scan loaded (Static Ready)!');
+    showToast('Calibrated resistance scan loaded (Static Ready).');
   }
 }
 
 export function adoptEvolvedScaffold() {
   if (!state.latestResistanceData || !state.latestResistanceData.evolved_smiles) {
-    showToast('⚠️ No evolved scaffold available.');
+    showToast('No evolved scaffold available.');
     return;
   }
   const input = document.getElementById('workbenchSmilesInput');
   if (input) {
     input.value = state.latestResistanceData.evolved_smiles;
-    showToast('🧪 Evolved scaffold injected into Chemical Workbench!');
+    showToast('Evolved scaffold injected into Chemical Workbench.');
   }
   closeResistanceModal();
 }
 
-export function copyEvolvedSmiles() {
+export async function copyEvolvedSmiles() {
   const smiles = document.getElementById('resEvolvedSmiles')?.textContent;
   if (!smiles) return;
-  navigator.clipboard.writeText(smiles).then(() => {
-    showToast('📋 Evolved SMILES copied!');
-  });
+  if (await copyToClipboard(smiles)) {
+    showToast('Evolved SMILES copied.');
+  }
 }

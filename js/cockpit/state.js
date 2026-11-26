@@ -5,18 +5,23 @@
 
 import { TARGET_PRESETS } from '../data/target-presets.js';
 
-// Host Sentinel (detects GitHub Pages / Cloudflare Pages / Static vs Local Workstation server)
-// Static host classification (strictly static origins, independent of port numbers)
-export const isStaticHost = typeof window === 'undefined' ||
-                     window.location.protocol === 'file:' ||
-                     window.location.hostname.endsWith('github.io') ||
-                     window.location.hostname.endsWith('pages.dev');
+const overrideBackendLocal =
+  typeof window !== 'undefined' &&
+  typeof window.location.search === 'string' &&
+  new URLSearchParams(window.location.search).get('backend') === 'local';
 
-export const isLoopbackHost = typeof window !== 'undefined' &&
-                     window.location.protocol.startsWith('http') &&
-                     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+export const isStaticHost =
+  typeof window === 'undefined' ||
+  (!overrideBackendLocal &&
+    (window.location.protocol === 'file:' ||
+      window.location.hostname.endsWith('github.io') ||
+      window.location.hostname.endsWith('pages.dev')));
 
-// Dynamic backend availability updated by probeBackendHealth() via GET ./api/health
+export const isLoopbackHost =
+  typeof window !== 'undefined' &&
+  window.location.protocol.startsWith('http') &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 export let isBackendAvailable = !isStaticHost && typeof window !== 'undefined' && window.location.protocol.startsWith('http');
 export let hasProbedBackend = false;
 export let backendHealth = null;
@@ -24,7 +29,7 @@ export let isLocalServer = isLoopbackHost && isBackendAvailable;
 
 let _healthProbePromise = null;
 
-export async function probeBackendHealth(timeoutMs = 1500) {
+export async function probeBackendHealth(timeoutMs = 1500, force = false) {
   if (isStaticHost || typeof window === 'undefined' || !window.location.protocol.startsWith('http')) {
     isBackendAvailable = false;
     hasProbedBackend = true;
@@ -32,7 +37,7 @@ export async function probeBackendHealth(timeoutMs = 1500) {
     state.isBackendAvailable = false;
     return false;
   }
-  if (hasProbedBackend) return isBackendAvailable;
+  if (!force && hasProbedBackend) return isBackendAvailable;
   if (_healthProbePromise) return _healthProbePromise;
 
   _healthProbePromise = (async () => {

@@ -6,6 +6,12 @@
 import { state, TARGETS, ESMFOLD_PRESETS, PRESET_INHIBITORS } from './state.js';
 import { loadPdb, render3DComplex, updateLead3DView, evaluateClientRedock } from './viewer3d.js';
 import { escapeHtml } from './api.js';
+import {
+  copyToClipboard,
+  openModalDialog,
+  closeModalDialog,
+  showPopoverToast
+} from '../shared/dom-utils.js';
 
 let wbDebounceTimer = null;
 
@@ -264,10 +270,14 @@ export function updateTargetInfo() {
     }
   }
 
+  state.currentOt2Code = '';
+  state.currentOt2Key = '';
+  state.latestResistanceData = null;
+
   if (currentTargetTab === 'presets' && info && (info.pdb || info.pdbId)) {
     const targetPdbId = info.pdbId || info.pdb;
     (async () => {
-      const pdbText = (typeof loadPdb === 'function') ? await loadPdb(targetPdbId) : window['PDB_' + targetPdbId];
+      const pdbText = (typeof loadPdb === 'function') ? await loadPdb(targetPdbId) : null;
       if (pdbText && typeof render3DComplex === 'function') {
         state.currentTargetPdbText = pdbText;
         state.currentTargetPocketResidues = info.pocketResidues || [12, 13, 32, 60, 61, 96];
@@ -288,37 +298,81 @@ export function resetAgents() {
   ['scout', 'chemist', 'admet', 'docking', 'pi'].forEach(a => setAgent(a, 'idle', 'Standby'));
 }
 
-export function logEntry(icon, agent, role, text, color) {
+function appendSafeLogMarkup(container, rawHtmlOrText) {
+  const src = String(rawHtmlOrText ?? '');
+  const tagRegex = /<(strong)(?:\s+style="([^"]*)")?>([\s\S]*?)<\/strong>/gi;
+  let lastIdx = 0;
+  let match;
+  while ((match = tagRegex.exec(src)) !== null) {
+    if (match.index > lastIdx) {
+      container.appendChild(document.createTextNode(src.slice(lastIdx, match.index)));
+    }
+    const strongEl = document.createElement('strong');
+    const styleVal = match[2] || '';
+    const colorMatch = styleVal.match(/color:\s*(#[0-9a-fA-F]{3,8}|var\(--[a-zA-Z0-9-]+\))/);
+    if (colorMatch) {
+      strongEl.style.color = colorMatch[1];
+    }
+    strongEl.textContent = match[3];
+    container.appendChild(strongEl);
+    lastIdx = tagRegex.lastIndex;
+  }
+  if (lastIdx < src.length) {
+    container.appendChild(document.createTextNode(src.slice(lastIdx)));
+  }
+}
+
+export function logEntry(labelTag, agent, role, text, color) {
   const log = document.getElementById('agentLog');
   if (!log) return;
   const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
   const tsEl = document.getElementById('streamTimestamp');
   if (tsEl) tsEl.textContent = ts;
 
-  const safeAgent = escapeHtml(agent);
-  const safeRole = escapeHtml(role);
-  const safeColor = /^[#a-zA-Z0-9]+$/.test(color) ? color : '#76b900';
-  // Allow only safe inline tags (strong, span) with styling; strip scripts, handlers, and other tags
-  const safeText = String(text ?? '')
-    .replace(/<\/?(?!strong\b|span\b|\/strong|\/span)[a-z0-9-]+(?:\s+[^>]*)?>/gi, '')
-    .replace(/\s+on[a-z]+\s*=/gi, ' data-blocked=')
-    .replace(/\b(?:javascript|vbscript|data):/gi, 'blocked:');
+  const safeColor = /^#[a-fA-F0-9]{3,8}$|^var\(--[a-zA-Z0-9-]+\)$/.test(color || '') ? color : '#76b900';
 
-  const el = document.createElement('div');
-  el.className = 'animate-fade-up';
-  el.innerHTML = `
-    <div class="flex items-start gap-2 p-2.5 rounded-lg" style="background: rgba(22,27,34,0.6); border: 1px solid ${safeColor}20;">
-      <span class="text-base">${icon}</span>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="font-bold text-[10px] uppercase tracking-wider" style="color: ${safeColor}">${safeAgent}</span>
-          <span class="text-[9px] text-gray-600">${safeRole}</span>
-          <span class="text-[9px] text-gray-700 ml-auto font-mono">${ts}</span>
-        </div>
-        <div class="text-gray-300 leading-relaxed text-[11px] break-words">${safeText}</div>
-      </div>
-    </div>`;
-  log.appendChild(el);
+  const wrapper = document.createElement('div');
+  wrapper.className = 'animate-fade-up';
+
+  const card = document.createElement('div');
+  card.className = 'flex items-start gap-2.5 p-2.5 rounded-lg';
+  card.style.background = 'rgba(22,27,34,0.6)';
+  card.style.border = `1px solid ${safeColor.startsWith('#') ? safeColor + '25' : 'rgba(118,185,0,0.2)'}`;
+
+  const dot = document.createElement('span');
+  dot.className = 'w-2 h-2 rounded-full mt-1.5 shrink-0';
+  dot.style.background = safeColor;
+
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'flex-1 min-w-0';
+
+  const metaRow = document.createElement('div');
+  metaRow.className = 'flex items-center gap-2 mb-1';
+
+  const agentSpan = document.createElement('span');
+  agentSpan.className = 'font-bold text-[10px] uppercase tracking-wider';
+  agentSpan.style.color = safeColor;
+  agentSpan.textContent = String(agent || 'Agent');
+
+  const roleSpan = document.createElement('span');
+  roleSpan.className = 'text-[9px] text-gray-500 font-mono';
+  roleSpan.textContent = String(role || '');
+
+  const timeSpan = document.createElement('span');
+  timeSpan.className = 'text-[9px] text-gray-600 ml-auto font-mono';
+  timeSpan.textContent = ts;
+
+  metaRow.append(agentSpan, roleSpan, timeSpan);
+
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'text-gray-300 leading-relaxed text-[11px] break-words';
+  appendSafeLogMarkup(bodyDiv, text);
+
+  contentWrap.append(metaRow, bodyDiv);
+  card.append(dot, contentWrap);
+  wrapper.appendChild(card);
+
+  log.appendChild(wrapper);
   while (log.children.length > 25) {
     log.removeChild(log.firstChild);
   }
@@ -335,7 +389,7 @@ export function renderLeads() {
   if (leads.length === 0) {
     container.innerHTML = `
       <div id="emptyLeadsState" class="flex flex-col items-center justify-center p-8 text-center text-gray-500">
-        <span class="text-3xl mb-2">🧪</span>
+        <svg class="w-7 h-7 mb-2 text-emerald-400/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3v6l-4 7a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-4-7V3m-6 0h6"/></svg>
         <div class="text-xs font-semibold text-gray-400">No leads nominated yet</div>
         <div class="text-[10px] text-gray-600 mt-1">Select a target and run autonomous discovery to nominate Pareto-optimal drug candidates.</div>
       </div>
@@ -344,7 +398,7 @@ export function renderLeads() {
     if (panel) {
       panel.innerHTML = `
         <div class="flex flex-col items-center justify-center h-48 text-center text-gray-600 text-xs">
-          <span class="text-2xl mb-1 select-none">📋</span>
+          <svg class="w-6 h-6 mb-1.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span>No lead selected</span>
           <span class="text-[10px] text-gray-700 mt-1">Nominated candidates will appear here</span>
         </div>
@@ -353,24 +407,23 @@ export function renderLeads() {
     return;
   }
 
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   container.innerHTML = leads.map((lead, i) => {
     const isSimulated = Boolean(lead.is_simulated || lead.provenance === 'SIMULATED');
     return `
       <div class="lead-card ${i === 0 ? 'selected' : ''}" data-action="select-lead" data-lead-index="${i}" role="button" tabindex="0">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <span class="font-mono font-bold text-xs text-white">${esc(lead.id)}</span>
+            <span class="font-mono font-bold text-xs text-white">${escapeHtml(lead.id)}</span>
             ${lead.pareto ? '<span class="badge-green">PARETO</span>' : ''}
             ${isSimulated ? '<span class="badge-simulated px-1.5 py-0.5 text-[9px] rounded font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">SIMULATED</span>' : '<span class="badge-live px-1.5 py-0.5 text-[9px] rounded font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">NIM LIVE</span>'}
           </div>
-          <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${esc(lead.verdict)}</span>
+          <span class="${lead.verdict === 'PASS' ? 'badge-green' : 'badge-yellow'}">${escapeHtml(lead.verdict)}</span>
         </div>
         <div class="grid grid-cols-4 gap-2 text-[10px]">
-          <div><div class="text-gray-600">ΔG</div><div class="font-mono font-bold" style="color: var(--nvidia-green);">${esc(typeof lead.affinity === 'number' ? lead.affinity.toFixed(2) : lead.affinity)}</div></div>
-          <div><div class="text-gray-600">QED</div><div class="font-mono font-bold" style="color: var(--cyber-cyan);">${esc(typeof lead.qed === 'number' ? lead.qed.toFixed(3) : lead.qed)}</div></div>
-          <div><div class="text-gray-600">MW</div><div class="font-mono text-gray-300">${esc(typeof lead.mw === 'number' ? lead.mw.toFixed(1) : lead.mw)}</div></div>
-          <div><div class="text-gray-600">SAScore</div><div class="font-mono text-gray-300">${esc(typeof lead.sascore === 'number' ? lead.sascore.toFixed(2) : lead.sascore)}</div></div>
+          <div><div class="text-gray-600">ΔG</div><div class="font-mono font-bold" style="color: var(--nvidia-green);">${escapeHtml(typeof lead.affinity === 'number' ? lead.affinity.toFixed(2) : lead.affinity)}</div></div>
+          <div><div class="text-gray-600">QED</div><div class="font-mono font-bold" style="color: var(--cyber-cyan);">${escapeHtml(typeof lead.qed === 'number' ? lead.qed.toFixed(3) : lead.qed)}</div></div>
+          <div><div class="text-gray-600">MW</div><div class="font-mono text-gray-300">${escapeHtml(typeof lead.mw === 'number' ? lead.mw.toFixed(1) : lead.mw)}</div></div>
+          <div><div class="text-gray-600">SAScore</div><div class="font-mono text-gray-300">${escapeHtml(typeof lead.sascore === 'number' ? lead.sascore.toFixed(2) : lead.sascore)}</div></div>
         </div>
       </div>
     `;
@@ -384,6 +437,9 @@ export function selectLead(i) {
   const lead = leads[i];
   if (!lead) return;
   state.currentSelectedLead = lead;
+  state.currentOt2Code = '';
+  state.currentOt2Key = '';
+  state.latestResistanceData = null;
 
   const currentTargetTab = state.currentTargetTab || 'presets';
   let target = document.getElementById('targetSelect')?.value || 'KRAS G12D';
@@ -457,9 +513,9 @@ export function selectLead(i) {
       <!-- Interactive Chemical Workbench (Human-in-the-Loop) -->
       <div id="workbenchCard" class="p-2.5 rounded-xl bg-surface-elevated border border-surface-border">
         <div class="text-[11px] font-bold text-cyan-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-          <span>🧪 Chemical Workbench</span>
+          <span>Chemical Workbench</span>
           <div id="workbenchValenceBadge">
-            <span class="badge-valence-valid">✓ Valid Chemical Graph</span>
+            <span class="badge-valence-valid">Valid Chemical Graph</span>
           </div>
         </div>
 
@@ -488,7 +544,7 @@ export function selectLead(i) {
         </div>
 
         <button type="button" data-action="trigger-redock" class="w-full py-1.5 btn-cta text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5">
-          <span>⚡ Instant Re-Dock Modified Lead</span>
+          <span>Instant Re-Dock Modified Lead</span>
         </button>
         <div id="redockAffinityDisplay" class="mt-1.5 text-center text-xs"></div>
       </div>
@@ -496,10 +552,7 @@ export function selectLead(i) {
       <!-- Dr. Chen's Retrosynthesis Procedure Card -->
       <div class="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5">
         <div class="text-[11px] font-bold text-amber-400 mb-1 flex items-center justify-between">
-          <div class="flex items-center gap-1">
-            <span>🔬</span>
-            <span>Dr. Chen's Wet-Lab Synthesis Route</span>
-          </div>
+          <span>Wet-Lab Synthesis Route</span>
           <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-300">Robotics Ready</span>
         </div>
         <div class="text-[10px] text-gray-300 space-y-1 mb-2">
@@ -508,10 +561,10 @@ export function selectLead(i) {
         </div>
         <div class="pt-2 border-t border-amber-500/20 flex gap-1.5">
           <button type="button" data-action="robot-protocol" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 flex items-center justify-center gap-1 transition-all">
-            <span>🤖 Opentrons OT-2 Code</span>
+            <span>Opentrons OT-2 Code</span>
           </button>
           <button type="button" data-action="lab-card" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 flex items-center justify-center gap-1 transition-all">
-            <span>📋 Wet-Lab SOP</span>
+            <span>Wet-Lab SOP</span>
           </button>
         </div>
       </div>
@@ -519,22 +572,19 @@ export function selectLead(i) {
       <!-- Adaptive Resistance Stress-Test Card -->
       <div class="p-2.5 rounded-xl border border-red-500/25 bg-red-950/20">
         <div class="text-[11px] font-bold text-red-400 mb-1 flex items-center justify-between">
-          <div class="flex items-center gap-1">
-            <span>🛡️</span>
-            <span>Adaptive Resistance Stress-Test</span>
-          </div>
+          <span>Adaptive Resistance Stress-Test</span>
           <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-red-500/20 text-red-300 border border-red-500/30">ESM-2 / MolMIM</span>
         </div>
         <p class="text-[10px] text-gray-400 mb-2">Simulate target point mutation clash & auto-evolve escape scaffold via MolMIM latent steering.</p>
         <button type="button" data-action="resistance-test" class="w-full py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-red-600/30 to-purple-600/30 hover:from-red-600/50 hover:to-purple-600/50 text-red-200 border border-red-500/40 flex items-center justify-center gap-1.5 transition-all">
-          <span>⚡ Run Resistance Stress-Test</span>
+          <span>Run Resistance Stress-Test</span>
         </button>
       </div>
 
       <!-- Export Buttons -->
       <div class="space-y-1.5 pt-1">
         <button type="button" data-action="generate-ind-pdf" class="w-full py-2.5 text-xs font-bold text-white rounded-lg flex items-center justify-center gap-1.5 transition-all hover:scale-102 glow-green shadow-lg" style="background: linear-gradient(135deg, #1e40af, #2563eb); border: 1px solid rgba(59, 130, 246, 0.6);">
-          <span>📄 Download Pre-Clinical Summary (PDF)</span>
+          <span>Download Pre-Clinical Summary (PDF)</span>
           <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/20 text-white font-bold">CMC Template</span>
         </button>
         <button type="button" data-action="download-dossier" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">
@@ -559,22 +609,20 @@ export function switchTab(tab) {
   });
 }
 
-export function copyCode(elId, btn) {
+export async function copyCode(elId, btn) {
   const el = document.getElementById(elId);
   if (!el) return;
-  navigator.clipboard.writeText(el.textContent).then(() => {
-    btn.textContent = 'Copied!';
-    showToast();
-    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-  });
+  if (await copyToClipboard(el.textContent || '')) {
+    if (btn) {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    }
+    showToast('Copied to clipboard.');
+  }
 }
 
 export function showToast(msg) {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  if (msg) t.textContent = msg;
-  t.classList.remove('hide');
-  setTimeout(() => t.classList.add('hide'), 2500);
+  showPopoverToast(document.getElementById('toast'), msg || 'Copied to clipboard.', 2800);
 }
 
 export function sleep(ms) {
@@ -631,30 +679,22 @@ export function openRawReceiptModal() {
     notice: 'No live NIM backend response received yet. Running in offline client demo mode.'
   };
   content.textContent = JSON.stringify(receipt, null, 2);
-  modal.classList.remove('hidden');
-  modal.style.display = 'flex';
+  openModalDialog(modal);
 }
 
 export function closeRawReceiptModal() {
-  const modal = document.getElementById('rawReceiptModal');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
+  closeModalDialog(document.getElementById('rawReceiptModal'));
 }
 
 export async function copyRawReceiptJson() {
   const content = document.getElementById('rawReceiptContent');
   const btnText = document.getElementById('copyReceiptBtnText');
   if (!content) return;
-  try {
-    await navigator.clipboard.writeText(content.textContent || '');
+  if (await copyToClipboard(content.textContent || '')) {
     if (btnText) {
       btnText.textContent = 'Copied!';
       setTimeout(() => { btnText.textContent = 'Copy JSON'; }, 2000);
     }
-  } catch (err) {
-    console.warn('Clipboard write failed:', err);
   }
 }
 
@@ -682,5 +722,5 @@ export function exportActiveRunJson() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('📥 Exported discovery run JSON');
+  showToast('Exported discovery run JSON.');
 }

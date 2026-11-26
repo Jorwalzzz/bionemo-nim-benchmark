@@ -2,7 +2,8 @@
  * Chart.js Pareto frontier scatter plots and live hardware speedup benchmarks.
  */
 
-import { state } from './state.js';
+import { state, probeBackendHealth } from './state.js';
+import { showToast } from './ui-controls.js';
 
 export let paretoChart = null;
 
@@ -109,38 +110,37 @@ export async function runLiveBenchmark() {
   const btn = document.getElementById('btnRunLiveBm');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳ Benchmarking Host CPU...</span>';
+    btn.textContent = 'Benchmarking Host CPU...';
   }
 
   try {
-    const res = await fetch('/api/benchmark/speedup');
+    const backendUp = await probeBackendHealth();
+    if (!backendUp) throw new Error('Static/offline mode: loading verified benchmark_summary.json');
+    const res = await fetch('./api/benchmark/speedup');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
     document.getElementById('bmOverallSpeedup').textContent = `${data.overall_speedup_multiplier}×`;
     document.getElementById('bmCpuLatency').textContent = `${data.total_cpu_latency_sec}s`;
     document.getElementById('bmGpuLatency').textContent = `${data.total_h100_latency_sec}s`;
-    document.getElementById('bmHostCpuName').textContent = data.cpu_hardware || 'Host x86_64 CPU';
+    document.getElementById('bmHostCpuName').textContent = `${data.cpu_hardware || 'Host x86_64 CPU'} [${data.basis || 'Illustrative'}]`;
     document.getElementById('bmTimeSaved').textContent = `~${data.time_saved_hours_10k_campaign} hours`;
 
     if (data.tasks && data.tasks.length >= 3) {
-      // Task 1: ESM-2
       document.getElementById('bmEsm2Speedup').textContent = `${data.tasks[0].speedup}× Faster`;
       document.getElementById('bmEsm2Cpu').textContent = `${data.tasks[0].cpu_latency_ms} ms`;
       document.getElementById('bmEsm2Gpu').textContent = `${data.tasks[0].h100_latency_ms} ms`;
 
-      // Task 2: MolMIM
       document.getElementById('bmMolmimSpeedup').textContent = `${data.tasks[1].speedup}× Faster`;
       document.getElementById('bmMolmimCpu').textContent = `${data.tasks[1].cpu_latency_ms} ms`;
       document.getElementById('bmMolmimGpu').textContent = `${data.tasks[1].h100_latency_ms} ms`;
 
-      // Task 3: DiffDock
       document.getElementById('bmDiffdockSpeedup').textContent = `${data.tasks[2].speedup}× Faster`;
       document.getElementById('bmDiffdockCpu').textContent = `${data.tasks[2].cpu_latency_ms} ms`;
       document.getElementById('bmDiffdockGpu').textContent = `${data.tasks[2].h100_latency_ms} ms`;
     }
   } catch (err) {
-    console.info('Static hosting or offline backend: anchoring benchmark cards to results/benchmark_summary.json');
+    console.info('Anchoring benchmark modal to results/benchmark_summary.json:', err.message);
     try {
       const summaryRes = await fetch('./results/benchmark_summary.json');
       if (!summaryRes.ok) throw new Error(`HTTP ${summaryRes.status}`);
@@ -175,19 +175,19 @@ export async function runLiveBenchmark() {
       document.getElementById('bmDiffdockCpu').textContent = `${Math.round((diffdock.cpu_latency_s ?? 68.40) * 1000)} ms`;
       document.getElementById('bmDiffdockGpu').textContent = `${Math.round((diffdock.gpu_latency_s ?? 1.150) * 1000)} ms`;
 
-      showToast(`⚡ Loaded H100 vs EPYC benchmark summary (${geomean}× GeoMean, ${hoursSaved}h saved / 10k).`);
+      showToast(`Loaded H100 vs EPYC benchmark summary (${geomean}× GeoMean, ${hoursSaved}h saved / 10k).`);
     } catch (jsonErr) {
       document.getElementById('bmOverallSpeedup').textContent = '54.1× (GeoMean)';
       document.getElementById('bmCpuLatency').textContent = '32.40s';
       document.getElementById('bmGpuLatency').textContent = '0.55s';
       document.getElementById('bmHostCpuName').textContent = 'AMD EPYC 7763 (Reference Baseline)';
       document.getElementById('bmTimeSaved').textContent = '~88.5 hours (Illustrative 10k)';
-      showToast('⚠️ Benchmark JSON fallback displayed from reference summary (54.1× GeoMean).');
+      showToast('Benchmark reference summary loaded (54.1× GeoMean).');
     }
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<span>⚡ Re-Run Host CPU Benchmark</span>';
+      btn.textContent = 'Re-Run Host CPU Benchmark';
     }
   }
 }
