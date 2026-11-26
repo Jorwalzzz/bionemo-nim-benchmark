@@ -183,7 +183,7 @@ export function handleEmailInputValidation(inputEl, feedbackId) {
     wrap.className = 'p-2 rounded bg-amber-950/40 border border-amber-500/40 text-amber-300 flex items-center justify-between';
 
     const msgSpan = document.createElement('span');
-    msgSpan.textContent = `⚠️ ${result.message}`;
+    msgSpan.textContent = `Notice: ${result.message}`;
     wrap.appendChild(msgSpan);
 
     const fixBtn = document.createElement('button');
@@ -200,7 +200,7 @@ export function handleEmailInputValidation(inputEl, feedbackId) {
     wrap.className = 'p-1.5 rounded bg-red-950/40 border border-red-500/40 text-red-300 flex items-center gap-1.5';
 
     const iconSpan = document.createElement('span');
-    iconSpan.textContent = '❌';
+    iconSpan.textContent = '×';
     wrap.appendChild(iconSpan);
 
     const msgSpan = document.createElement('span');

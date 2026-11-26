@@ -14,6 +14,8 @@ from __future__ import annotations
 import json
 import math
 import re
+import shutil
+import subprocess
 import sys
 import tomllib
 from dataclasses import dataclass, field
@@ -21,6 +23,12 @@ from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+SCIENTIFIC_GLYPH_WHITELIST: frozenset[str] = frozenset(
+    {"Δ", "Å", "μ", "×", "≤", "≥", "±", "→", "—", "•", "★", "☆", "◬", "✓", "✗"}
+)
+EMOJI_CODEPOINT_RE = re.compile(r"[\U0001F300-\U0001FAFF\u2600-\u26FF\u2700-\u27BF]")
+GHPAGES_PREFIX = "https://jorwalzzz.github.io/bionemo-nim-benchmark/"
 
 
 @dataclass
@@ -37,6 +45,8 @@ class HTMLAuditState:
     file_path: Path
     has_html_lang: bool = False
     asset_refs: list[tuple[int, str, str]] = field(default_factory=list)  # (line, attr, url)
+    stylesheet_refs: list[tuple[int, str]] = field(default_factory=list)  # (line, href)
+    meta_image_urls: list[tuple[int, str, str]] = field(default_factory=list)  # (line, key, url)
     anchor_ids: set[str] = field(default_factory=set)
     internal_hashes: list[tuple[int, str]] = field(default_factory=list)
     label_fors: set[str] = field(default_factory=set)
@@ -126,6 +136,17 @@ class ReleaseHTMLParser(HTMLParser):
                     )
                 )
 
+        if tag == "meta":
+            meta_key = (attr_map.get("property") or attr_map.get("name") or "").lower()
+            if meta_key in {"og:image", "twitter:image"} and attr_map.get("content", "").strip():
+                self.state.meta_image_urls.append((line, meta_key, attr_map["content"].strip()))
+
+        if tag == "link" and "stylesheet" in attr_map.get("rel", "").lower() and attr_map.get("href", "").strip():
+            href_val = attr_map["href"].strip()
+            parsed_href = urlparse(href_val)
+            if parsed_href.scheme.lower() not in self.SKIP_SCHEMES and not href_val.startswith("//"):
+                self.state.stylesheet_refs.append((line, href_val))
+
         if "id" in attr_map and attr_map["id"].strip():
             self.state.anchor_ids.add(attr_map["id"].strip())
 
@@ -194,7 +215,29 @@ class ReleaseHTMLParser(HTMLParser):
                     )
                 )
 
+        if tag != "button" and attr_map.get("role", "").strip().lower() == "button":
+            self.state.issues.append(
+                AuditIssue(
+                    severity="ERROR",
+                    category="A11Y",
+                    file=self.state.file_path.name,
+                    line=line,
+                    message=f"Non-semantic `<{tag} role=\"button\">` forbidden; use native `<button type=\"button\">`.",
+                )
+            )
+
         if tag == "button":
+            btn_type = attr_map.get("type", "").strip().lower()
+            if btn_type not in {"button", "submit", "reset"}:
+                self.state.issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="A11Y",
+                        file=self.state.file_path.name,
+                        line=line,
+                        message="<button> missing explicit `type` attribute (`button`, `submit`, or `reset`).",
+                    )
+                )
             has_aria = bool(attr_map.get("aria-label", "").strip() or attr_map.get("aria-labelledby", "").strip())
             self._button_stack.append({"line": line, "has_aria": has_aria, "text": ""})
 
@@ -304,6 +347,37 @@ def validate_html_file(html_path: Path, repo_root: Path) -> HTMLAuditState:
                     message=f"Internal anchor `#{target_id}` does not match any `id` in {html_path.name}.",
                 )
             )
+
+    # 3. Validate custom CSS variables referenced in page-loaded non-minified stylesheets
+    defined_vars: set[str] = set()
+    loaded_css_paths: list[tuple[int, Path]] = []
+    for line, href_val in state.stylesheet_refs:
+        clean_css = href_val.split("#")[0].split("?")[0]
+        if clean_css.startswith("/"):
+            continue
+        resolved_css = (html_path.parent / clean_css).resolve()
+        if resolved_css.exists():
+            loaded_css_paths.append((line, resolved_css))
+            css_raw = resolved_css.read_text(encoding="utf-8")
+            defined_vars.update(re.findall(r"(--[A-Za-z0-9_-]+)\s*:", css_raw))
+
+    for _, css_path in loaded_css_paths:
+        if css_path.name.endswith(".min.css"):
+            continue
+        css_raw = css_path.read_text(encoding="utf-8")
+        for idx, css_line in enumerate(css_raw.splitlines(), start=1):
+            for var_name in re.findall(r"var\(\s*(--[A-Za-z0-9_-]+)\b", css_line):
+                if var_name.startswith("--tw-") or var_name in defined_vars:
+                    continue
+                state.issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="PARITY",
+                        file=f"{html_path.name}->{css_path.name}",
+                        line=idx,
+                        message=f"Undefined CSS custom property `{var_name}` not defined in loaded stylesheets for {html_path.name}.",
+                    )
+                )
 
     return state
 
@@ -510,6 +584,105 @@ def audit_repo_parity(
                 message=f"Inconsistent test count claims across docs/HTML: {observed_counts}.",
             )
         )
+
+    # Verify referenced `./...` assets and `og:image`/`twitter:image` targets are tracked in Git
+    tracked_files: set[str] | None = None
+    git_exe = shutil.which("git")
+    if git_exe and (repo_root / ".git").exists():
+        ls_proc = subprocess.run(
+            [git_exe, "ls-files"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+        if ls_proc.returncode == 0:
+            tracked_files = {line.strip().replace("\\", "/") for line in ls_proc.stdout.splitlines() if line.strip()}
+
+    for html_state in (index_state, cockpit_state):
+        if tracked_files is not None:
+            for line, attr, raw_url in html_state.asset_refs:
+                clean_path = raw_url.split("#")[0].split("?")[0]
+                if clean_path.startswith("/"):
+                    continue
+                resolved = (html_state.file_path.parent / clean_path).resolve()
+                if resolved.exists() and resolved.is_relative_to(repo_root):
+                    rel_posix = resolved.relative_to(repo_root).as_posix()
+                    if rel_posix not in tracked_files:
+                        issues.append(
+                            AuditIssue(
+                                severity="ERROR",
+                                category="PATH",
+                                file=html_state.file_path.name,
+                                line=line,
+                                message=f"Asset `{attr}=\"{raw_url}\"` exists on disk (`{rel_posix}`) but is NOT tracked in `git ls-files`.",
+                            )
+                        )
+
+        for line, meta_key, img_url in html_state.meta_image_urls:
+            if img_url.startswith(GHPAGES_PREFIX):
+                rel_img = img_url[len(GHPAGES_PREFIX) :].split("#")[0].split("?")[0]
+                img_path = (repo_root / rel_img).resolve()
+                if not img_path.exists():
+                    issues.append(
+                        AuditIssue(
+                            severity="ERROR",
+                            category="PATH",
+                            file=html_state.file_path.name,
+                            line=line,
+                            message=f"`{meta_key}` target `{img_url}` missing from repo at `{rel_img}`.",
+                        )
+                    )
+                elif tracked_files is not None and rel_img not in tracked_files:
+                    issues.append(
+                        AuditIssue(
+                            severity="ERROR",
+                            category="PATH",
+                            file=html_state.file_path.name,
+                            line=line,
+                            message=f"`{meta_key}` target `{rel_img}` is untracked in `git ls-files`.",
+                        )
+                    )
+
+    # Forbid root-relative `/api/`, `/results/`, etc. inside JS modules
+    js_root = repo_root / "js"
+    if js_root.exists():
+        root_rel_re = re.compile(r"""(['"`])/(api|results|assets|css|js|data)/""")
+        for js_file in sorted(js_root.rglob("*.js")):
+            for idx, line_text in enumerate(js_file.read_text(encoding="utf-8").splitlines(), start=1):
+                if root_rel_re.search(line_text):
+                    issues.append(
+                        AuditIssue(
+                            severity="ERROR",
+                            category="PATH",
+                            file=js_file.relative_to(repo_root).as_posix(),
+                            line=idx,
+                            message="Forbidden root-relative path string in JS module; use `./...` relative path.",
+                        )
+                    )
+
+    # Zero-emoji enforcement across UI HTML & Cockpit JS modules (whitelist scientific glyphs)
+    emoji_targets: list[Path] = [index_state.file_path, cockpit_state.file_path]
+    cockpit_js_dir = repo_root / "js" / "cockpit"
+    if cockpit_js_dir.exists():
+        emoji_targets.extend(sorted(cockpit_js_dir.glob("*.js")))
+    for target_path in emoji_targets:
+        if not target_path.exists():
+            continue
+        rel_name = target_path.relative_to(repo_root).as_posix() if target_path.is_relative_to(repo_root) else target_path.name
+        for idx, line_text in enumerate(target_path.read_text(encoding="utf-8").splitlines(), start=1):
+            bad_chars = [ch for ch in EMOJI_CODEPOINT_RE.findall(line_text) if ch not in SCIENTIFIC_GLYPH_WHITELIST]
+            if bad_chars:
+                issues.append(
+                    AuditIssue(
+                        severity="ERROR",
+                        category="PARITY",
+                        file=rel_name,
+                        line=idx,
+                        message=f"Disallowed UI emoji character(s) {bad_chars} detected; use monochrome SVG iconography.",
+                    )
+                )
 
     return issues
 
