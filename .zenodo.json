@@ -27,7 +27,7 @@
   ],
   "related_identifiers": [
     {
-      "identifier": "https://github.com/Jorwalzzz/bionemo-agentic-scientist",
+      "identifier": "https://github.com/Jorwalzzz/bionemo-nim-benchmark",
       "relation": "isSupplementTo",
       "scheme": "url"
     }

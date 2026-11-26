@@ -46,8 +46,11 @@
 !data/pdbs/*.pdb
 !results/
 !results/benchmark_summary.json
-!results/screened_candidates_summary.csv
 !results/CANDIDATE_SELECTION_DOSSIER.md
+!results/FDA_IND_Section2_Briefing_KRAS_G12D.pdf
+!results/ot2_synthesis_protocol_KRAS_G12D.py
+!results/top_leads_docked.sdf
+!results/wetlab_sop_card_KRAS_G12D.md
 !results/assets/
 !results/assets/**
 
@@ -67,8 +70,6 @@ data/feedback_submissions.json
 data/*.db*
 data/*.sqlite*
 scratch/
-Lenia/
-jidu6411_flash/
 dist_npm/
 node_modules/
 .git/

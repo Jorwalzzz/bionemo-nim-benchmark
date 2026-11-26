@@ -5,14 +5,28 @@ Target: https://jorwalzzz.github.io/bionemo-nim-benchmark/cockpit.html
 
 from __future__ import annotations
 
+import re
 import sys
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 LIVE_URL = "https://jorwalzzz.github.io/bionemo-nim-benchmark/cockpit.html"
+LOCAL_COCKPIT = Path(__file__).resolve().parent.parent / "cockpit.html"
+
+
+def get_expected_cache_buster() -> str:
+    """Parse canonical ?v=<token> cache-buster tag from local cockpit.html."""
+    if LOCAL_COCKPIT.is_file():
+        match = re.search(r"\?v=([A-Za-z0-9._-]+)", LOCAL_COCKPIT.read_text(encoding="utf-8"))
+        if match:
+            return match.group(1)
+    return ""
+
 
 def verify_live():
     results = {}
+    expected_v = get_expected_cache_buster()
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
@@ -26,10 +40,10 @@ def verify_live():
         # 1. HTTP 200 & Asset Version Tag
         status = resp.status if resp else 0
         html = page.content()
-        has_v = "?v=20261121" in html
+        has_v = (f"?v={expected_v}" in html) if expected_v else bool(re.search(r"\?v=[A-Za-z0-9._-]+", html))
         results["HTTP_200"] = status == 200
         results["ASSET_VERSION_TAG"] = has_v
-        print(f"HTTP Status: {status}, Version Tag present: {has_v}")
+        print(f"HTTP Status: {status}, Version Tag (?v={expected_v or 'any'}) present: {has_v}")
 
         # 2. Initial KPI cards render '—' and empty state visible
         kpi_aff = page.locator("#kpiAffinity").inner_text().strip()

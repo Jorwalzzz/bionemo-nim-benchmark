@@ -34,7 +34,7 @@ description: Scientific integrity, epistemic tagging (Measured vs. Illustrative)
   - The repository and web cockpit are licensed under the GNU Affero General Public License v3.0 (`AGPL-3.0-only`).
   - The license reference and source repository link (`https://github.com/Jorwalzzz/bionemo-nim-benchmark`) must remain visible in all public web footers, CLI help strings, and exported dossiers.
 - **Hermetic Test Suite Status:**
-  - Preserve the hermetic test count reference (`145/145 HERMETIC TESTS PASSING`) across headers and badges. Any change to test counts must match actual passing test outputs.
+  - Preserve the hermetic test badge across headers and badges, matching 100% of the collected hermetic pytest suite passing (without stale hardcoded counts).
 - **Mandatory NVIDIA Non-Affiliation Disclaimer:**
   - The complete legal notice must appear prominently on all public entrypoints (`index.html`, `cockpit.html`, `README.md`, exported reports):
   > **NVIDIA Trademark & Non-Affiliation Notice:** NVIDIA, BioNeMo, NIM, TensorRT, and Hopper are trademarks and/or registered trademarks of NVIDIA Corporation in the United States and other jurisdictions. This open-source benchmark suite, web interface, and research evaluation are independently developed by Aarav Jorwal and are not sponsored, endorsed, certified, or affiliated with NVIDIA Corporation.

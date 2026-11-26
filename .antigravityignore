@@ -1,0 +1,23 @@
+# Antigravity Context & Indexing Exclusions (Quota & Latency Hygiene)
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+dist_npm/
+dist/
+build/
+*.log
+*.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+uv.lock
+results/*.png
+results/*.csv
+audit/
+scratch/

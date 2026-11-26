@@ -122,13 +122,9 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 ├── data/
 │   ├── pdbs/                   # Experimental crystallographic PDB targets (10 structures)
 │   └── sample_complexes.json   # Diverse protein-ligand targets (76 - 932 aa + FDA drugs)
-├── docs/
-│   ├── guides/                 # Comprehensive blueprints and architecture guides
-│   └── reports/                # Benchmark scaling analyses & DevRel submissions
 ├── scripts/
 │   ├── installers/             # Universal deployment installers (bat, ps1, sh, cs)
-│   ├── audit/                  # Live HTTP and endpoint security audit scripts
-│   └── ops/                    # Maintenance and operational tooling
+│   └── audit/                  # Release, viewport, and live-site audit scripts
 ├── src/
 │   ├── __init__.py             # Backward-compatibility import shim
 │   └── bionemo_benchmark/      # Domain-driven modular package

@@ -109,5 +109,5 @@ ignore = [
 "tests/test_mcp_server.py" = ["E402"]
 
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", "Lenia", "scratch", "node_modules", "jidu6411_flash"]
+exclude_dirs = ["tests", ".venv", "scratch", "node_modules"]
 skips = []
