@@ -503,6 +503,11 @@
 }
 
 .drawer-header-bar {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid transparent;
+  text-align: left;
+  font: inherit;
   padding: 1.25rem 1.75rem;
   display: flex;
   justify-content: space-between;
@@ -510,7 +515,6 @@
   cursor: pointer;
   user-select: none;
   background: var(--color-surface-sunken);
-  border-bottom: 1px solid transparent;
   transition: background 0.2s ease;
 }
 

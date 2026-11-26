@@ -9,24 +9,14 @@
  * 4. Sortable table columns and one-click CSV / JSON export engines.
  */
 
-(function () {
-  'use strict';
-
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+import { escapeHtml, toCsvCell, downloadBlob } from './shared/dom-utils.js';
 
   let benchmarkData = null;
   let activeFilter = 'all';
   let searchTerm = '';
   let sortColumn = 'speedup_multiplier';
   let sortAscending = false;
+  let listenersBound = false;
 
   // Logarithmic scale parameters (0.05s to 200s)
   const MIN_VAL = 0.05;
@@ -136,14 +126,20 @@
       const item = benchmarks.find(b => b.id === id);
       if (!item) return;
 
-      row.addEventListener('mouseenter', (e) => {
-        showChartTooltip(e, item);
+      row.addEventListener('mouseenter', (e) => showChartTooltip(e, item));
+      row.addEventListener('mousemove', (e) => positionChartTooltip(e));
+      row.addEventListener('mouseleave', hideChartTooltip);
+      row.addEventListener('focus', () => {
+        const rect = row.getBoundingClientRect();
+        showChartTooltip({ clientX: rect.left + rect.width * 0.5, clientY: rect.top + 10 }, item);
       });
-      row.addEventListener('mousemove', (e) => {
-        positionChartTooltip(e);
-      });
-      row.addEventListener('mouseleave', () => {
-        hideChartTooltip();
+      row.addEventListener('blur', hideChartTooltip);
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const rect = row.getBoundingClientRect();
+          showChartTooltip({ clientX: rect.left + rect.width * 0.5, clientY: rect.top + 10 }, item);
+        }
       });
     });
   }
@@ -287,19 +283,19 @@
    */
   function exportCSV(benchmarks) {
     const headers = ["ID", "Target Complex", "UniProt", "NIM Service", "Task Type", "CPU Latency (s)", "H100 GPU Latency (s)", "Speedup Multiplier", "Output Parity"];
-    const rows = benchmarks.map(b => [
-      b.id,
-      `"${b.target_complex}"`,
-      b.uniprot_id,
-      `"${b.nim_service}"`,
-      `"${b.task_type}"`,
-      b.cpu_latency_s,
-      b.gpu_latency_s,
-      b.speedup_multiplier,
-      `"${b.output_parity_metric}"`
+    const rows = (benchmarks || []).map(b => [
+      toCsvCell(b.id),
+      toCsvCell(b.target_complex),
+      toCsvCell(b.uniprot_id),
+      toCsvCell(b.nim_service),
+      toCsvCell(b.task_type),
+      toCsvCell(b.cpu_latency_s),
+      toCsvCell(b.gpu_latency_s),
+      toCsvCell(b.speedup_multiplier),
+      toCsvCell(b.output_parity_metric)
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csvContent = [headers.map(toCsvCell).join(','), ...rows.map(r => r.join(','))].join('\n');
     downloadBlob(csvContent, 'bionemo_benchmark_summary.csv', 'text/csv;charset=utf-8;');
   }
 
@@ -308,35 +304,10 @@
     downloadBlob(jsonStr, 'bionemo_benchmark_summary.json', 'application/json;charset=utf-8;');
   }
 
-  function downloadBlob(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
+  function bindEventListeners() {
+    if (listenersBound) return;
+    listenersBound = true;
 
-  /**
-   * Setup interactive listeners and DOM bindings
-   */
-  function setupComponent() {
-    const data = window.BioNeMoData || (window.BioNeMoHydrator ? window.BioNeMoHydrator.getFallbackData() : null);
-    if (!data) return;
-
-    benchmarkData = data;
-    const benchmarks = data.benchmarks || [];
-
-    // Render Dumbbell Chart
-    const chartContainer = document.getElementById('dumbbell-chart-container');
-    if (chartContainer) {
-      renderDumbbellChart(chartContainer, benchmarks);
-    }
-
-    // Drawer Toggle
     const drawerHeader = document.getElementById('drawer-header');
     const drawerChevron = document.getElementById('drawer-chevron');
     const drawerContent = document.getElementById('drawer-content');
@@ -345,37 +316,31 @@
       drawerHeader.addEventListener('click', () => {
         const isOpen = drawerContent.classList.toggle('open');
         drawerHeader.classList.toggle('open', isOpen);
+        drawerHeader.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         if (drawerChevron) drawerChevron.classList.toggle('open', isOpen);
       });
     }
 
-    // Table Body
-    const tbody = document.getElementById('matrix-table-body');
-    if (tbody) {
-      renderMatrixTable(tbody, benchmarks);
-    }
-
-    // Search Input (strict 2.5rem padding ensures zero icon collision)
     const searchInput = document.getElementById('table-search-input');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         searchTerm = e.target.value;
-        renderMatrixTable(tbody, benchmarks);
+        const tbody = document.getElementById('matrix-table-body');
+        if (tbody && benchmarkData) renderMatrixTable(tbody, benchmarkData.benchmarks || []);
       });
     }
 
-    // Model Filter Pills
     const filterPills = document.querySelectorAll('.matrix-filter-pill');
     filterPills.forEach((pill) => {
       pill.addEventListener('click', () => {
         filterPills.forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
         activeFilter = pill.getAttribute('data-filter') || 'all';
-        renderMatrixTable(tbody, benchmarks);
+        const tbody = document.getElementById('matrix-table-body');
+        if (tbody && benchmarkData) renderMatrixTable(tbody, benchmarkData.benchmarks || []);
       });
     });
 
-    // Sortable Headers
     const sortHeaders = document.querySelectorAll('.sortable-th');
     sortHeaders.forEach((th) => {
       th.addEventListener('click', () => {
@@ -386,23 +351,46 @@
           sortColumn = col;
           sortAscending = false;
         }
-        renderMatrixTable(tbody, benchmarks);
+        const tbody = document.getElementById('matrix-table-body');
+        if (tbody && benchmarkData) renderMatrixTable(tbody, benchmarkData.benchmarks || []);
       });
     });
 
-    // Export Buttons
     const btnCsv = document.getElementById('btn-export-csv');
     const btnJson = document.getElementById('btn-export-json');
 
     if (btnCsv) {
-      btnCsv.addEventListener('click', () => exportCSV(benchmarks));
+      btnCsv.addEventListener('click', () => {
+        if (benchmarkData) exportCSV(benchmarkData.benchmarks || []);
+      });
     }
     if (btnJson) {
-      btnJson.addEventListener('click', () => exportJSON(benchmarkData));
+      btnJson.addEventListener('click', () => {
+        if (benchmarkData) exportJSON(benchmarkData);
+      });
     }
   }
 
-  // Bind to DOM ready or data ready
+  function setupComponent() {
+    const data = window.BioNeMoData || (window.BioNeMoHydrator ? window.BioNeMoHydrator.getFallbackData() : null);
+    if (!data) return;
+
+    benchmarkData = data;
+    const benchmarks = data.benchmarks || [];
+
+    const chartContainer = document.getElementById('dumbbell-chart-container');
+    if (chartContainer) {
+      renderDumbbellChart(chartContainer, benchmarks);
+    }
+
+    const tbody = document.getElementById('matrix-table-body');
+    if (tbody) {
+      renderMatrixTable(tbody, benchmarks);
+    }
+
+    bindEventListeners();
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupComponent);
   } else {
@@ -413,4 +401,3 @@
     benchmarkData = e.detail;
     setupComponent();
   });
-})();

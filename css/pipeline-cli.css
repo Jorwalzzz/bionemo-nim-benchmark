@@ -33,6 +33,9 @@
 }
 
 .pipeline-node-card {
+  width: 100%;
+  text-align: left;
+  font: inherit;
   background: var(--color-surface-elevated);
   border: 1px solid var(--border-hairline);
   border-radius: 12px;

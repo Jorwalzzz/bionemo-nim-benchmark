@@ -50,15 +50,15 @@
   <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
   <script src="./js/data-hydrator.js" defer></script>
   <script src="./js/race-scroll.js" defer></script>
-  <script src="./js/charts.js" defer></script>
+  <script type="module" src="./js/charts.js"></script>
   <script src="./js/calculator.js" defer></script>
   <!-- Stage C: 3D Pose Lab, Discovery Studio, and Lead Evaluator -->
-  <script src="./js/molviewer.js" defer></script>
-  <script src="./js/studio.js" defer></script>
-  <script src="./js/lead-evaluator.js" defer></script>
+  <script type="module" src="./js/molviewer.js"></script>
+  <script type="module" src="./js/studio.js"></script>
+  <script type="module" src="./js/lead-evaluator.js"></script>
   <!-- Stage D: Pipeline Flow Diagram & Two-Pane CLI Builder -->
-  <script src="./js/pipeline.js" defer></script>
-  <script src="./js/cli-builder.js" defer></script>
+  <script type="module" src="./js/pipeline.js"></script>
+  <script type="module" src="./js/cli-builder.js"></script>
 </head>
 
 <body data-cursor="lab">
@@ -99,7 +99,7 @@
       <!-- Action Cluster -->
       <div class="nav-actions">
         <!-- Light / Dark Theme Toggle -->
-        <button id="themeToggleBtn" class="btn-theme-toggle" aria-label="Toggle Warm Paper Light / Dark Theme" title="Toggle Light/Dark Theme">
+        <button type="button" id="themeToggleBtn" class="btn-theme-toggle" aria-label="Toggle Warm Paper Light / Dark Theme" title="Toggle Light/Dark Theme">
           <span id="themeToggleIcon" style="display:flex;align-items:center;justify-content:center;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           </span>
@@ -174,11 +174,11 @@
       </div>
 
       <!-- Tactile Terminal Pill -->
-      <div class="hero-terminal-pill" data-action="copy-hero-terminal" role="button" tabindex="0" title="Click to copy repository clone command" aria-label="Terminal command: git clone repository">
+      <button type="button" class="hero-terminal-pill" data-action="copy-hero-terminal" title="Click to copy repository clone command" aria-label="Terminal command: git clone repository">
         <span class="text-slate-500">$</span>
         <span class="hero-terminal-cmd">git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git</span>
-        <svg class="hero-terminal-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-      </div>
+        <svg class="hero-terminal-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+      </button>
     </div>
   </section>
 
@@ -233,11 +233,11 @@
             Select Target Workload
           </div>
           <div id="race-pills" class="workload-pills-wrap">
-            <button class="workload-pill-btn active" data-workload="diffdock" title="DiffDock on BCR-ABL1 Kinase (2HYY)">DiffDock (2HYY)</button>
-            <button class="workload-pill-btn" data-workload="esmfold" title="ESMFold on DHFR (1DHF)">ESMFold (1DHF)</button>
-            <button class="workload-pill-btn" data-workload="esm2" title="ESM-2 650M on Ubiquitin (1UBQ)">ESM-2 (1UBQ)</button>
-            <button class="workload-pill-btn" data-workload="molmim" title="MolMIM 70M on EGFR (1M17)">MolMIM (1M17)</button>
-            <button class="workload-pill-btn" data-workload="openfold" title="OpenFold on SARS-CoV-2 RdRp (7BV2)">OpenFold (7BV2)</button>
+            <button type="button" class="workload-pill-btn active" data-workload="diffdock" title="DiffDock on BCR-ABL1 Kinase (2HYY)">DiffDock (2HYY)</button>
+            <button type="button" class="workload-pill-btn" data-workload="esmfold" title="ESMFold on DHFR (1DHF)">ESMFold (1DHF)</button>
+            <button type="button" class="workload-pill-btn" data-workload="esm2" title="ESM-2 650M on Ubiquitin (1UBQ)">ESM-2 (1UBQ)</button>
+            <button type="button" class="workload-pill-btn" data-workload="molmim" title="MolMIM 70M on EGFR (1M17)">MolMIM (1M17)</button>
+            <button type="button" class="workload-pill-btn" data-workload="openfold" title="OpenFold on SARS-CoV-2 RdRp (7BV2)">OpenFold (7BV2)</button>
           </div>
 
           <div style="font-size:0.8rem;color:var(--color-ink-secondary);line-height:1.5;margin-top:1rem;">
@@ -302,7 +302,7 @@
 
               <!-- Action Bar -->
               <div class="race-actions-bar">
-                <button id="btn-replay-flash" class="btn-race-action" title="Replay real-time race simulation">
+                <button type="button" id="btn-replay-flash" class="btn-race-action" title="Replay real-time race simulation">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                   <span>Replay Flash</span>
                 </button>
@@ -379,28 +379,28 @@
 
       <!-- Expandable Full Telemetry Matrix Drawer -->
       <div class="telemetry-drawer-container">
-        <div id="drawer-header" class="drawer-header-bar" role="button" tabindex="0" aria-expanded="false">
+        <button type="button" id="drawer-header" class="drawer-header-bar" aria-expanded="false">
           <div class="drawer-toggle-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <span>Inspect Full Telemetry Matrix (5 Microservice Records)</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <span class="badge-measured">100% HERMETIC DATA</span>
-            <svg id="drawer-chevron" class="drawer-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            <svg id="drawer-chevron" class="drawer-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
           </div>
-        </div>
+        </button>
 
         <div id="drawer-content" class="drawer-content">
           <!-- Filter & Search Controls Bar -->
           <div class="drawer-filter-bar">
             <!-- Filter Pills -->
             <div class="workload-pills-wrap" style="margin-bottom:0;">
-              <button class="workload-pill-btn matrix-filter-pill active" data-filter="all">All Modalities</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="ESM-2">ESM-2 (650M)</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="ESMFold">ESMFold</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="DiffDock">DiffDock</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="MolMIM">MolMIM</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="OpenFold">OpenFold</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill active" data-filter="all">All Modalities</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="ESM-2">ESM-2 (650M)</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="ESMFold">ESMFold</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="DiffDock">DiffDock</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="MolMIM">MolMIM</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="OpenFold">OpenFold</button>
             </div>
 
             <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
@@ -413,11 +413,11 @@
 
               <!-- Export Buttons -->
               <div class="table-export-actions">
-                <button id="btn-export-csv" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download CSV dataset">
+                <button type="button" id="btn-export-csv" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download CSV dataset">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                   <span>CSV</span>
                 </button>
-                <button id="btn-export-json" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download JSON dataset">
+                <button type="button" id="btn-export-json" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download JSON dataset">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                   <span>JSON</span>
                 </button>
@@ -470,10 +470,10 @@
             <div class="calc-slider-wrap">
               <input id="calc-slider" type="range" min="0" max="100" value="50" class="calc-slider" aria-label="Library size logarithmic slider"/>
               <div class="calc-chips-wrap">
-                <button class="calc-chip-btn" data-count="1000">1k (Pilot)</button>
-                <button class="calc-chip-btn active" data-count="10000">10k (Standard)</button>
-                <button class="calc-chip-btn" data-count="100000">100k (Focused)</button>
-                <button class="calc-chip-btn" data-count="1000000">1M (Mega-Screen)</button>
+                <button type="button" class="calc-chip-btn" data-count="1000">1k (Pilot)</button>
+                <button type="button" class="calc-chip-btn active" data-count="10000">10k (Standard)</button>
+                <button type="button" class="calc-chip-btn" data-count="100000">100k (Focused)</button>
+                <button type="button" class="calc-chip-btn" data-count="1000000">1M (Mega-Screen)</button>
               </div>
             </div>
           </div>
@@ -569,7 +569,7 @@
             <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">Tap to Interact in 3D</div>
             <div style="font-size:0.8rem;color:var(--color-ink-muted);">Prevents canvas touch from trapping vertical page scrolling</div>
           </div>
-          <button id="btn-mobile-exit-3d" class="btn-mobile-exit-3d" aria-label="Exit 3D Interaction">
+          <button type="button" id="btn-mobile-exit-3d" class="btn-mobile-exit-3d" aria-label="Exit 3D Interaction">
             <span>&times; Exit 3D</span>
           </button>
 
@@ -578,26 +578,26 @@
             <div id="pose-source-badge" style="margin-right:0.25rem;">
               <span class="badge-measured">RCSB Live PDB</span>
             </div>
-            <button class="hud-pill-button target-switch-pill active" data-target-pdb="8AZV" title="KRAS G12D Switch-II Pocket">KRAS G12D (8AZV)</button>
-            <button class="hud-pill-button target-switch-pill" data-target-pdb="4MNE" title="BRAF V600E Kinase Domain">BRAF V600E (4MNE)</button>
-            <button class="hud-pill-button target-switch-pill" data-target-pdb="7BQY" title="SARS-CoV-2 Mpro Catalytic Dyad">Mpro (7BQY)</button>
+            <button type="button" class="hud-pill-button target-switch-pill active" data-target-pdb="8AZV" title="KRAS G12D Switch-II Pocket">KRAS G12D (8AZV)</button>
+            <button type="button" class="hud-pill-button target-switch-pill" data-target-pdb="4MNE" title="BRAF V600E Kinase Domain">BRAF V600E (4MNE)</button>
+            <button type="button" class="hud-pill-button target-switch-pill" data-target-pdb="7BQY" title="SARS-CoV-2 Mpro Catalytic Dyad">Mpro (7BQY)</button>
           </div>
 
           <!-- Bottom-Left Camera & Representation Dock -->
           <div class="pose-hud-bottom-left">
-            <button id="btn-pose-rotate" class="hud-pill-button" title="Toggle Auto-Rotation">
+            <button type="button" id="btn-pose-rotate" class="hud-pill-button" title="Toggle Auto-Rotation">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
               <span>Auto-Rotate</span>
             </button>
-            <button id="btn-pose-focus" class="hud-pill-button" title="Focus Camera on Active Pocket">
+            <button type="button" id="btn-pose-focus" class="hud-pill-button" title="Focus Camera on Active Pocket">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
               <span>Focus Pocket</span>
             </button>
-            <button id="btn-pose-surface" class="hud-pill-button" title="Toggle Translucent Binding Surface">
+            <button type="button" id="btn-pose-surface" class="hud-pill-button" title="Toggle Translucent Binding Surface">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
               <span>Molecular Surface</span>
             </button>
-            <button id="btn-pose-reset" class="hud-pill-button" title="Reset Viewport Framing">
+            <button type="button" id="btn-pose-reset" class="hud-pill-button" title="Reset Viewport Framing">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
               <span>Reset View</span>
             </button>
@@ -621,9 +621,9 @@
                 Lead Series Candidate
               </div>
               <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                <button class="hud-pill-button lead-series-pill" data-series="lead_01">Lead 01 Core</button>
-                <button class="hud-pill-button lead-series-pill active" data-series="lead_02">Lead 02 +F (Nominated)</button>
-                <button class="hud-pill-button lead-series-pill" data-series="lead_03">Lead 03 Evolved</button>
+                <button type="button" class="hud-pill-button lead-series-pill" data-series="lead_01">Lead 01 Core</button>
+                <button type="button" class="hud-pill-button lead-series-pill active" data-series="lead_02">Lead 02 +F (Nominated)</button>
+                <button type="button" class="hud-pill-button lead-series-pill" data-series="lead_03">Lead 03 Evolved</button>
               </div>
             </div>
 
@@ -633,10 +633,10 @@
                 In-Silico R-Group Tweaks
               </div>
               <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
-                <button class="hud-pill-button lead-mod-chip" data-mod="f">+F (C5)</button>
-                <button class="hud-pill-button lead-mod-chip" data-mod="cf3">+CF3</button>
-                <button class="hud-pill-button lead-mod-chip" data-mod="me">+Me (N4)</button>
-                <button class="hud-pill-button lead-mod-chip" data-mod="pyridine">Swap Pyridine</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="f">+F (C5)</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="cf3">+CF3</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="me">+Me (N4)</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="pyridine">Swap Pyridine</button>
               </div>
             </div>
 
@@ -796,11 +796,12 @@
           </p>
         </div>
         <div style="margin-top:1.25rem;">
-          <button id="btn-load-sample-batch" class="btn-race-action" style="position:relative;z-index:10;pointer-events:auto;" title="Load complete 4-lead sample batch">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <button type="button" id="btn-load-sample-batch" class="btn-race-action" style="position:relative;z-index:10;pointer-events:auto;" title="Load complete 4-lead sample batch">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             <span>Load Sample Multi-Candidate Batch</span>
           </button>
         </div>
+        <div id="lead-dropzone-status" role="status" aria-live="polite" class="hidden" style="margin-top:0.75rem;font-family:var(--font-mono);font-size:0.75rem;"></div>
       </div>
     </section>
 
@@ -840,7 +841,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;">
               <span class="badge-measured">JSON-SCHEMA v7</span>
-              <button id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
+              <button type="button" id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
                 <span>Copy Payload</span>
               </button>
@@ -940,9 +941,9 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
             <div class="font-display font-bold text-base" style="color:var(--color-ink-primary);">CLI Configuration Flags</div>
             <div style="display:flex;gap:0.35rem;">
-              <button class="calc-chip-btn cli-preset-btn active" data-preset="mock">Mock Dry-Run</button>
-              <button class="calc-chip-btn cli-preset-btn" data-preset="kras">KRAS Screen</button>
-              <button class="calc-chip-btn cli-preset-btn" data-preset="full">Full Suite</button>
+              <button type="button" class="calc-chip-btn cli-preset-btn active" data-preset="mock">Mock Dry-Run</button>
+              <button type="button" class="calc-chip-btn cli-preset-btn" data-preset="kras">KRAS Screen</button>
+              <button type="button" class="calc-chip-btn cli-preset-btn" data-preset="full">Full Suite</button>
             </div>
           </div>
 
@@ -1032,7 +1033,7 @@
             <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);">
               Zero external dependencies required. Verified in Python 3.12 virtualenv.
             </span>
-            <button id="btn-copy-cli-command" class="btn-race-action" title="Copy command to clipboard">
+            <button type="button" id="btn-copy-cli-command" class="btn-race-action" title="Copy command to clipboard">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
               <span>Copy Command</span>
             </button>
@@ -1096,7 +1097,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <span class="badge-illustrative">Illustrative Synthesis Protocol</span>
-            <button id="btn-copy-ot2-code" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy Python protocol">
+            <button type="button" id="btn-copy-ot2-code" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy Python protocol">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
               <span>Copy Protocol</span>
             </button>

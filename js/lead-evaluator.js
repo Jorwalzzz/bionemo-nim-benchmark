@@ -10,22 +10,11 @@
  * 5. In-browser Drag-and-Drop CSV / JSON parser with instant re-rendering.
  */
 
-(function () {
-  'use strict';
+import { escapeHtml } from './shared/dom-utils.js';
 
   // Security & Upload DoS Guard limits
   const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
   const MAX_ROWS = 5000;
-
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 
   // Ground-truth dataset from results/screened_candidates_summary.csv & DOSSIER
   const DEFAULT_CANDIDATES = [
@@ -251,11 +240,15 @@
     const points = container.querySelectorAll('.pareto-point');
     points.forEach(pt => {
       const id = pt.getAttribute('data-id');
-      pt.addEventListener('mouseenter', () => {
-        setHoveredCandidate(id);
-      });
-      pt.addEventListener('mouseleave', () => {
-        setHoveredCandidate(null);
+      pt.addEventListener('mouseenter', () => setHoveredCandidate(id));
+      pt.addEventListener('mouseleave', () => setHoveredCandidate(null));
+      pt.addEventListener('focus', () => setHoveredCandidate(id));
+      pt.addEventListener('blur', () => setHoveredCandidate(null));
+      pt.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setHoveredCandidate(hoveredCandidateId === id ? null : id);
+        }
       });
     });
   }
@@ -342,6 +335,97 @@
     }
   }
 
+  function showUploadNotice(message, level = 'info') {
+    const statusEl = document.getElementById('lead-dropzone-status');
+    if (!statusEl) return;
+    statusEl.classList.remove('hidden');
+    statusEl.style.color =
+      level === 'error' ? '#EF4444' : level === 'warn' ? '#F59E0B' : 'var(--color-signal-green)';
+    statusEl.textContent = message;
+  }
+
+  /**
+   * RFC-4180 CSV parser supporting quoted fields containing commas and escaped quotes.
+   */
+  function parseCsvRows(text) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"' && text[i + 1] === '"') {
+          field += '"';
+          i += 1;
+        } else if (ch === '"') {
+          inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        row.push(field.trim());
+        field = '';
+      } else if (ch === '\r' || ch === '\n') {
+        if (ch === '\r' && text[i + 1] === '\n') i += 1;
+        row.push(field.trim());
+        if (row.some(cell => cell.length > 0)) rows.push(row);
+        row = [];
+        field = '';
+      } else {
+        field += ch;
+      }
+    }
+    row.push(field.trim());
+    if (row.some(cell => cell.length > 0)) rows.push(row);
+    return rows;
+  }
+
+  function toFiniteNumber(val, fallback) {
+    if (val === '' || val == null) return fallback;
+    const n = Number(val);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function mapCsvRowByHeaders(headers, cols, rowIdx) {
+    const indexOf = (...patterns) =>
+      headers.findIndex(h => patterns.some(p => h.includes(p)));
+
+    const iId = indexOf('candidate', 'id', 'name');
+    const iSmiles = indexOf('smiles');
+    const iAff = indexOf('binding_affinity', 'affinity', 'deltag');
+    const iMm = indexOf('mmgbsa', 'rescore');
+    const iQed = indexOf('qed');
+    const iMw = indexOf('mw', 'molwt');
+    const iLogp = indexOf('logp', 'clogp');
+    const iSa = indexOf('sascore', 'sa_score', 'sa');
+
+    const pick = (mappedIdx, fallbackPos) => {
+      const idx = mappedIdx >= 0 ? mappedIdx : fallbackPos;
+      return idx >= 0 && idx < cols.length ? cols[idx] : '';
+    };
+
+    const mw = toFiniteNumber(pick(iMw, 5), 500);
+    const logp = toFiniteNumber(pick(iLogp, 6), 5.0);
+    const computedRo5 = (mw > 500 ? 1 : 0) + (logp > 5 ? 1 : 0);
+
+    return {
+      id: pick(iId, 0) || `LEAD-${rowIdx}`,
+      smiles: pick(iSmiles, 1) || 'C',
+      affinity: toFiniteNumber(pick(iAff, 2), -4.5),
+      mmgbsa: toFiniteNumber(pick(iMm, 3), -10.0),
+      qed: toFiniteNumber(pick(iQed, 4), 0.35),
+      mw,
+      logp,
+      sascore: toFiniteNumber(pick(iSa, 7), 6.0),
+      ro5Violations: computedRo5,
+      verdict: 'CUSTOM UPLOAD'
+    };
+  }
+
   /**
    * Parse Client-Side CSV / JSON Upload
    */
@@ -349,7 +433,7 @@
     if (!file) return;
 
     if (file.size > MAX_FILE_BYTES) {
-      alert(`File size (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds maximum allowed limit of 5 MB.`);
+      showUploadNotice(`File size (${(file.size / (1024 * 1024)).toFixed(2)} MB) exceeds the 5 MB limit.`, 'error');
       return;
     }
 
@@ -357,55 +441,41 @@
 
     reader.onload = (e) => {
       try {
-        const text = e.target.result;
+        const text = String(e.target.result || '');
         let parsed = [];
+        let truncated = false;
 
-        if (file.name.endsWith('.json')) {
+        if (file.name.toLowerCase().endsWith('.json')) {
           const raw = JSON.parse(text);
           let items = Array.isArray(raw) ? raw : (raw.candidates || raw.leads || []);
           if (items.length > MAX_ROWS) {
-            alert(`File contains ${items.length} records. Limiting to first ${MAX_ROWS} candidates to prevent UI freezing.`);
+            truncated = true;
             items = items.slice(0, MAX_ROWS);
           }
           parsed = items.map((c, i) => ({
             id: String(c.id || `LEAD-${i + 1}`).trim(),
             smiles: String(c.smiles || 'C').trim(),
-            affinity: parseFloat(c.affinity) || -4.5,
-            mmgbsa: c.mmgbsa ? parseFloat(c.mmgbsa) : -10.0,
-            qed: c.qed != null ? parseFloat(c.qed) : 0.35,
-            mw: c.mw != null ? parseFloat(c.mw) : 500,
-            logp: c.logp != null ? parseFloat(c.logp) : 5.0,
-            sascore: c.sascore != null ? parseFloat(c.sascore) : 6.0,
-            pains: c.pains != null ? parseInt(c.pains, 10) : 0,
-            ro5Violations: c.ro5Violations != null ? parseInt(c.ro5Violations, 10) : 1,
+            affinity: toFiniteNumber(c.affinity, -4.5),
+            mmgbsa: toFiniteNumber(c.mmgbsa, -10.0),
+            qed: toFiniteNumber(c.qed, 0.35),
+            mw: toFiniteNumber(c.mw, 500),
+            logp: toFiniteNumber(c.logp, 5.0),
+            sascore: toFiniteNumber(c.sascore, 6.0),
+            pains: Number.isFinite(Number(c.pains)) ? parseInt(c.pains, 10) : 0,
+            ro5Violations: Number.isFinite(Number(c.ro5Violations)) ? parseInt(c.ro5Violations, 10) : 1,
             verdict: String(c.verdict || 'CUSTOM UPLOAD').trim()
           }));
         } else {
-          // Parse CSV
-          let lines = text.trim().split(/\r?\n/);
-          if (lines.length < 2) throw new Error("CSV has insufficient rows.");
-          const totalRows = lines.length - 1;
-          if (totalRows > MAX_ROWS) {
-            alert(`CSV contains ${totalRows} data rows. Limiting to first ${MAX_ROWS} candidates to prevent UI freezing.`);
-            lines = lines.slice(0, MAX_ROWS + 1);
-          }
-          const headers = lines[0].split(',').map(h => h.trim());
+          const rows = parseCsvRows(text);
+          if (rows.length < 2) throw new Error('CSV must contain a header row and at least one candidate row.');
+          const headers = rows[0].map(h => h.toLowerCase().replace(/\s+/g, '_'));
+          const dataRows = rows.slice(1);
+          const cappedRows = dataRows.length > MAX_ROWS ? (truncated = true, dataRows.slice(0, MAX_ROWS)) : dataRows;
 
-          for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-            if (cols.length >= 4) {
-              parsed.push({
-                id: cols[0] || `LEAD-${i}`,
-                smiles: cols[1] || 'C',
-                affinity: parseFloat(cols[2]) || -4.5,
-                mmgbsa: cols[3] ? parseFloat(cols[3]) : -10.0,
-                qed: cols[4] ? parseFloat(cols[4]) : 0.35,
-                mw: cols[5] ? parseFloat(cols[5]) : 500,
-                logp: cols[6] ? parseFloat(cols[6]) : 5.0,
-                sascore: cols[7] ? parseFloat(cols[7]) : 6.0,
-                ro5Violations: 1,
-                verdict: "CUSTOM UPLOAD"
-              });
+          for (let i = 0; i < cappedRows.length; i++) {
+            const cols = cappedRows[i];
+            if (cols.length >= 3) {
+              parsed.push(mapCsvRowByHeaders(headers, cols, i + 1));
             }
           }
         }
@@ -415,10 +485,17 @@
           currentCandidates = parsed;
           renderLeadTable(tableBodyEl, currentCandidates);
           renderParetoScatter(paretoContainerEl, currentCandidates);
-          console.log(`[Lead Evaluator] Loaded ${parsed.length} custom candidates.`);
+          showUploadNotice(
+            truncated
+              ? `Loaded first ${MAX_ROWS} candidates from ${file.name} (row cap enforced).`
+              : `Loaded ${parsed.length} candidates from ${file.name}.`,
+            truncated ? 'warn' : 'info'
+          );
+        } else {
+          showUploadNotice('No valid candidate rows detected in uploaded file.', 'error');
         }
       } catch (err) {
-        alert("Failed to parse file: " + err.message);
+        showUploadNotice(`Failed to parse file: ${err.message}`, 'error');
       }
     };
 
@@ -493,4 +570,3 @@
       renderParetoScatter(paretoContainerEl, currentCandidates);
     }
   };
-})();
