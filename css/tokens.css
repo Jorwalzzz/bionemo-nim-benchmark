@@ -3,8 +3,6 @@
    Creative Direction: "Time Collapsing" (32.4s CPU Ember -> 0.55s NIM Flash)
    ============================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
-
 :root {
   /* -------------------------------------------------------------------------
      DARK THEME (Default Architectural Palette)
@@ -15,8 +13,13 @@
   --color-canvas: #05070A;
   --color-surface: #0B0F14;
   --color-surface-elevated: #11171E;
-  --color-surface-glass: rgba(11, 15, 20, 0.78);
+  --color-surface-sunken: #070A0F;
+  --color-surface-glass: rgba(11, 15, 20, 0.82);
+  --color-hud-glass: rgba(5, 7, 10, 0.86);
   --color-input: #070A0F;
+  --color-code-bg: #040609;
+  --color-code-ink: #E2E8F0;
+  --color-code-muted: #94A3B8;
 
   /* Scientific Precision Hairline Borders */
   --border-hairline: rgba(255, 255, 255, 0.08);
@@ -33,6 +36,7 @@
   --color-signal-green: #76F5A2;
   --color-signal-green-bright: #3DDC84;
   --color-signal-green-tint: rgba(118, 245, 162, 0.12);
+  --color-signal-green-dim: rgba(118, 245, 162, 0.12);
   --color-signal-green-border: rgba(118, 245, 162, 0.35);
 
   --color-cold-cyan: #5CE1FF;
@@ -60,6 +64,7 @@
   /* Typography System */
   --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: var(--font-sans);
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Scale Contrast (Dramatic Ratios) */
@@ -91,24 +96,30 @@
 
   --color-canvas: #F6F5F1;
   --color-surface: #FFFFFF;
-  --color-surface-elevated: #EDECE7;
-  --color-surface-glass: rgba(255, 255, 255, 0.85);
+  --color-surface-elevated: #F1F0EB;
+  --color-surface-sunken: #E7E5DE;
+  --color-surface-glass: rgba(255, 255, 255, 0.90);
+  --color-hud-glass: rgba(255, 255, 255, 0.92);
   --color-input: #FFFFFF;
+  --color-code-bg: #0B1018;
+  --color-code-ink: #E2E8F0;
+  --color-code-muted: #94A3B8;
 
-  --border-hairline: rgba(14, 17, 22, 0.10);
-  --border-hairline-bright: rgba(14, 17, 22, 0.22);
+  --border-hairline: rgba(14, 17, 22, 0.12);
+  --border-hairline-bright: rgba(14, 17, 22, 0.24);
   --border-hairline-glow: rgba(15, 118, 110, 0.35);
 
   --color-ink-primary: #0E1116;
-  --color-ink-secondary: #475569;
-  --color-ink-muted: #64748B;
-  --color-ink-dim: #94A3B8;
+  --color-ink-secondary: #334155;
+  --color-ink-muted: #475569;
+  --color-ink-dim: #64748B;
 
   /* Darkened AA-Safe Accents for Warm Paper */
   --color-signal-green: #0F766E;
   --color-signal-green-bright: #15803D;
-  --color-signal-green-tint: rgba(15, 118, 110, 0.08);
-  --color-signal-green-border: rgba(15, 118, 110, 0.30);
+  --color-signal-green-tint: rgba(15, 118, 110, 0.10);
+  --color-signal-green-dim: rgba(15, 118, 110, 0.10);
+  --color-signal-green-border: rgba(15, 118, 110, 0.32);
 
   --color-cold-cyan: #0284C7;
   --color-cold-cyan-bright: #0369A1;

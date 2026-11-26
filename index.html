@@ -16,15 +16,23 @@
   <meta property="og:description" content="54.8x per-model speedup. Empirical latency, atomic RMSD parity, and autonomous lead screening."/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
-  <meta property="og:image" content="https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/results/throughput_comparison.png"/>
+  <meta property="og:image" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/assets/img/throughput_comparison.png"/>
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/results/throughput_comparison.png"/>
+  <meta name="twitter:image" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/assets/img/throughput_comparison.png"/>
   <meta name="twitter:title" content="NVIDIA BioNeMo & NIM Inference Benchmark"/>
   <meta name="twitter:description" content="Empirical computational biology benchmark comparing NVIDIA BioNeMo microservices against CPU baselines."/>
   <link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg"/>
+
+  <!-- Preconnect & Font Stylesheets (Non-Blocking) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"/>
+
+  <!-- Pre-Paint Theme Initializer (Synchronous Classic Script, Zero FOUC) -->
+  <script src="./js/theme-init.js"></script>
 
   <!-- Design System Stylesheets -->
   <link rel="stylesheet" href="./css/tokens.css"/>
@@ -33,8 +41,8 @@
   <link rel="stylesheet" href="./css/pose-lab.css"/>
   <link rel="stylesheet" href="./css/pipeline-cli.css"/>
 
-  <!-- Theme Engine (Executes immediately for zero FOUC) -->
-  <script src="./js/theme.js"></script>
+  <!-- Theme Toggle & Micro-Interactions -->
+  <script src="./js/theme.js" defer></script>
   <!-- Hero WebGL Canvas Ribbon -->
   <script src="./js/hero-webgl.js" defer></script>
   <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback & SRI) -->
@@ -53,7 +61,7 @@
   <script src="./js/cli-builder.js" defer></script>
 </head>
 
-<body>
+<body data-cursor="lab">
   <!-- Accessibility skip link -->
   <a href="#hero" class="sr-only focus:not-sr-only">Skip to Hero Content</a>
   <a href="#benchmarks" class="sr-only focus:not-sr-only">Skip to Benchmark Explorer</a>
@@ -1056,7 +1064,7 @@
           </div>
         </a>
 
-        <a href="./results/screened_candidates_summary.csv" download class="deliverable-card" title="Download Screened Candidates CSV">
+        <a href="./data/screened_candidates_summary.csv" download class="deliverable-card" title="Download Screened Candidates CSV">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span class="badge-measured">CSV DATASET</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -1270,7 +1278,7 @@ def run(protocol: protocol_api.ProtocolContext):
       </div>
 
       <!-- Scope & Scientific Limitations Box -->
-      <div style="background:#040609;border:1px solid var(--border-hairline);border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem;font-size:0.78rem;color:var(--color-ink-muted);line-height:1.6;">
+      <div style="background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem;font-size:0.78rem;color:var(--color-ink-muted);line-height:1.6;">
         <div>
           <strong style="color:var(--color-ink-primary);">Benchmark Scope &amp; Scientific Limitations:</strong> This benchmark suite evaluates warm-container inference latency and structural output parity on standardized target complexes. Reported accelerations represent empirical hardware runtimes comparing an NVIDIA H100 80GB SXM5 GPU against an AMD EPYC 7763 64-core processor with 16 physical cores pinned for process isolation. Cold-start container initializations and wide-area network latency are omitted. In-silico docking scores and ADMET predictions represent computational hypotheses that require independent biophysical assay confirmation (SPR/MST) before clinical progression.
         </div>
@@ -1282,7 +1290,7 @@ def run(protocol: protocol_api.ProtocolContext):
       <!-- Bottom Bar -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;font-size:0.8rem;color:var(--color-ink-muted);">
         <div>
-          &copy; 2026 Aarav Jorwal (<a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);text-decoration:none;">@Jorwalzzz</a>). Licensed under <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-primary);">GNU AGPLv3</a>. All worldwide trademark rights reserved.
+          &copy; 2026 Aarav Jorwal (<a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);text-decoration:none;">@Jorwalzzz</a>). Licensed under <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-primary);">GNU AGPLv3</a>. Independent open-source scientific benchmark.
         </div>
         <div style="display:flex;gap:1.5rem;">
           <a href="./index.html" style="color:var(--color-ink-secondary);text-decoration:none;">Studio Home</a>

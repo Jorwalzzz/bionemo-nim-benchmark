@@ -35,10 +35,13 @@
   color: #ffffff !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
-  outline: none !important;
+}
+:focus-visible {
+  outline: 2px solid var(--color-signal-green, #76F5A2);
+  outline-offset: 2px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--surface-base); color: #e6edf3; min-height: 100vh; overflow-x: hidden; position: relative; }
+body { font-family: var(--font-sans, 'Inter Tight', sans-serif); background: var(--surface-base); color: var(--color-ink-primary, #e6edf3); min-height: 100vh; overflow-x: hidden; position: relative; transition: background-color 0.25s ease, color 0.25s ease; }
 body.modal-open { overflow: hidden; }
 
 /* Ambient background glow layer */
@@ -59,8 +62,8 @@ body::before {
   100% { opacity: 1.0; }
 }
 
-h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
-.font-mono { font-family: 'JetBrains Mono', monospace; }
+h1, h2, h3, h4, .font-heading { font-family: var(--font-display, 'Space Grotesk', sans-serif); }
+.font-mono { font-family: var(--font-mono, 'JetBrains Mono', monospace); font-variant-numeric: tabular-nums; }
 
 /* Glassmorphism 2.0 (Optimized 10px blur + GPU Compositing) */
 .glass {
@@ -207,11 +210,7 @@ h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
   background-clip: text;
 }
 
-/* Anti-Lag & Hardware GPU Compositing */
-.lead-card, .modal-card, #molViewer3D, #modalMolViewer3D, #paretoChart, #workbenchCard {
-  will-change: transform;
-  transform: translateZ(0);
-}
+/* GPU hint intentionally omitted to avoid sticky-layer overflow & fixed descendant clipping */
 
 /* Workbench & In Silico Badges */
 .badge-valence-valid {
@@ -272,6 +271,9 @@ h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
     height: calc(100vh - 56px) !important;
     overflow: hidden !important;
   }
+  #main-content > * {
+    min-height: 0;
+  }
 }
 
 /* ═══════════════════════════════════════════════ VISUAL OVERHAUL LAYER ══════ */
@@ -331,6 +333,108 @@ h1, h2, h3, h4, .font-heading { font-family: 'Outfit', sans-serif; }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Warm Paper Light Theme Overrides for Cockpit Workstation */
+[data-theme="light"] body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink-primary);
+}
+[data-theme="light"] .bg-grid {
+  background-image:
+    linear-gradient(rgba(15, 118, 110, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 118, 110, 0.05) 1px, transparent 1px);
+}
+[data-theme="light"] .glass,
+[data-theme="light"] .glass-bright {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: var(--border-hairline);
+  box-shadow: var(--shadow-surface);
+}
+[data-theme="light"] .modal-card,
+[data-theme="light"] dialog.modal-dialog {
+  background: #FFFFFF !important;
+  color: var(--color-ink-primary) !important;
+  border-color: var(--border-hairline-bright) !important;
+  box-shadow: 0 24px 60px rgba(14, 17, 22, 0.16) !important;
+}
+[data-theme="light"] .modal-header-band {
+  background: #F1F0EB !important;
+  border-bottom-color: var(--border-hairline) !important;
+}
+[data-theme="light"] .lead-card {
+  background: #FFFFFF;
+  border-color: var(--border-hairline);
+}
+[data-theme="light"] .lead-card:hover {
+  background: rgba(15, 118, 110, 0.06);
+  border-color: var(--color-signal-green);
+}
+[data-theme="light"] .lead-card.selected {
+  background: rgba(15, 118, 110, 0.10);
+  border-color: var(--color-signal-green);
+}
+[data-theme="light"] .tab-btn:not(.active) {
+  color: var(--color-ink-secondary);
+}
+[data-theme="light"] .tab-btn:not(.active):hover {
+  color: var(--color-ink-primary);
+  background: rgba(14, 17, 22, 0.06);
+}
+[data-theme="light"] .wb-preset-pill {
+  background: var(--color-surface-elevated);
+  border-color: var(--border-hairline);
+  color: var(--color-ink-secondary);
+}
+[data-theme="light"] .wb-preset-pill:hover {
+  color: var(--color-ink-primary);
+  border-color: var(--color-signal-green);
+  background: var(--color-signal-green-tint);
+}
+[data-theme="light"] .text-white:not(.btn-cta):not(.btn-emerald) {
+  color: var(--color-ink-primary) !important;
+}
+[data-theme="light"] .text-gray-200,
+[data-theme="light"] .text-gray-300 {
+  color: var(--color-ink-secondary) !important;
+}
+[data-theme="light"] .text-gray-400,
+[data-theme="light"] .text-gray-500 {
+  color: var(--color-ink-muted) !important;
+}
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background-color: #FFFFFF !important;
+  color: var(--color-ink-primary) !important;
+  border-color: var(--border-hairline-bright) !important;
+}
+
+/* Native dialog & popover top-layer support */
+dialog.modal-dialog {
+  margin: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  max-width: 95vw;
+  max-height: 92vh;
+  overflow: visible;
+}
+dialog.modal-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.76);
+  backdrop-filter: blur(4px);
+}
+dialog#tourCardModal {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+#toast[popover] {
+  inset: auto;
+  bottom: 24px;
+  right: 24px;
+  margin: 0;
 }
 
 /* Accessibility: Respect Reduced Motion */

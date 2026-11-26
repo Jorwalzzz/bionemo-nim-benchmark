@@ -9,9 +9,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-        heading: ['Outfit', 'sans-serif']
+        sans: ['Inter Tight', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        heading: ['Space Grotesk', 'sans-serif'],
+        display: ['Space Grotesk', 'sans-serif']
       },
       colors: {
         nvidia: { green: '#76b900', bright: '#a3e635' },

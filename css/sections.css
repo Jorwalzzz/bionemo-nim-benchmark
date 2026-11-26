@@ -267,7 +267,6 @@
   height: 6px;
   background: var(--color-surface-sunken);
   border-radius: 3px;
-  outline: none;
   cursor: ew-resize;
 }
 
@@ -583,12 +582,13 @@
   font-family: var(--font-body);
   font-size: 0.85rem;
   color: var(--color-ink-primary);
-  outline: none;
   transition: border-color 0.2s ease;
 }
 
-.table-search-input:focus {
+.table-search-input:focus-visible {
   border-color: var(--color-signal-green);
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: 1px;
 }
 
 .table-export-actions {
@@ -687,7 +687,6 @@
   color: var(--color-ink-primary);
   font-family: var(--font-body);
   font-size: 0.9rem;
-  outline: none;
   cursor: pointer;
 }
 
@@ -704,7 +703,6 @@
   height: 8px;
   background: var(--color-surface-sunken);
   border-radius: 4px;
-  outline: none;
   cursor: pointer;
 }
 
