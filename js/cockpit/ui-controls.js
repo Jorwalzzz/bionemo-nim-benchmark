@@ -3,7 +3,7 @@
  * logs, lead rendering, and tab navigation.
  */
 
-import { state, TARGETS, ESMFOLD_PRESETS, PRESET_INHIBITORS } from './state.js';
+import { state, probeBackendHealth, TARGETS, ESMFOLD_PRESETS, PRESET_INHIBITORS } from './state.js';
 import { loadPdb, render3DComplex, updateLead3DView, evaluateClientRedock } from './viewer3d.js';
 import { renderPareto } from './charts.js';
 import { escapeHtml } from './api.js';
@@ -15,6 +15,8 @@ import {
 } from '../shared/dom-utils.js';
 
 let wbDebounceTimer = null;
+let wbSvgDebounceTimer = null;
+let wbSvgAbortController = null;
 
 export function setRounds(r) {
   state.selectedRounds = r;
@@ -115,6 +117,76 @@ export function onWorkbenchInput(val) {
     const sasEl = document.getElementById('wbLiveSas');
     if (sasEl) sasEl.textContent = metrics.sascore.toFixed(2);
   }, 120);
+
+  clearTimeout(wbSvgDebounceTimer);
+  wbSvgDebounceTimer = setTimeout(() => {
+    updateWorkbench2dPreview((val || '').trim());
+  }, 250);
+}
+
+export async function updateWorkbench2dPreview(smiles) {
+  const imgEl = document.getElementById('wb2dPreviewImg');
+  const metaEl = document.getElementById('wb2dPreviewMeta');
+  if (!imgEl || !metaEl) return;
+
+  const clean = (smiles || '').trim();
+  if (!clean) {
+    imgEl.classList.add('hidden');
+    metaEl.textContent = 'Enter a SMILES string for 2D preview.';
+    return;
+  }
+
+  const heteroCount = (clean.match(/[NOSPFClBrI]/gi) || []).length;
+  const ringMarkers = Math.floor((clean.match(/\d/g) || []).length / 2);
+  const staticSummary = `${clean.length} chars · ~${ringMarkers} ring(s) · ${heteroCount} heteroatom token(s) · 2D SVG requires local backend`;
+
+  if (wbSvgAbortController) {
+    wbSvgAbortController.abort();
+    wbSvgAbortController = null;
+  }
+
+  const backendUp = await probeBackendHealth();
+  if (!backendUp) {
+    if (state.wb2dPreviewUrl) {
+      URL.revokeObjectURL(state.wb2dPreviewUrl);
+      state.wb2dPreviewUrl = null;
+    }
+    imgEl.classList.add('hidden');
+    metaEl.textContent = staticSummary;
+    metaEl.classList.remove('hidden');
+    return;
+  }
+
+  const controller = new AbortController();
+  wbSvgAbortController = controller;
+  const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  try {
+    const res = await fetch('./api/molecule/svg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
+      body: JSON.stringify({ smiles: clean.slice(0, 512), theme }),
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const svgText = await res.text();
+    const nextUrl = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+    if (state.wb2dPreviewUrl) {
+      URL.revokeObjectURL(state.wb2dPreviewUrl);
+    }
+    state.wb2dPreviewUrl = nextUrl;
+    imgEl.src = nextUrl;
+    imgEl.classList.remove('hidden');
+    metaEl.classList.add('hidden');
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    imgEl.classList.add('hidden');
+    metaEl.textContent = staticSummary;
+    metaEl.classList.remove('hidden');
+  } finally {
+    if (wbSvgAbortController === controller) {
+      wbSvgAbortController = null;
+    }
+  }
 }
 
 export function loadWorkbenchPreset(key) {
@@ -690,6 +762,11 @@ export function selectLead(i) {
           <button type="button" data-action="load-wb-preset" data-arg="her2" class="wb-preset-pill">Tucatinib (HER2)</button>
         </div>
 
+        <div id="wb2dPreviewBox" class="mb-1.5 rounded border border-surface-border bg-surface-card p-1.5 flex items-center justify-center min-h-[56px]">
+          <img id="wb2dPreviewImg" alt="2D chemical structure preview" class="hidden max-h-[120px] w-auto object-contain"/>
+          <span id="wb2dPreviewMeta" class="text-[10px] font-mono text-gray-400 text-center"></span>
+        </div>
+
         <input type="text" id="workbenchSmilesInput" data-input-action="workbench-input" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-surface-card border border-surface-border text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
         
         <!-- Live Biophysical Metric Tile Readout -->
@@ -766,7 +843,90 @@ export function selectLead(i) {
   if (state.leadBaselines instanceof Map && state.leadBaselines.has(lead.id)) {
     renderRedockDeltaStrip(lead);
   }
+  updateWorkbench2dPreview(lead.smiles || '');
   setTimeout(() => updateLead3DView(lead), 40);
+}
+
+export function pushRunHistory(runResult) {
+  if (!runResult || !runResult.runId) return;
+  const topAff = typeof runResult.topLead?.affinity === 'number'
+    ? runResult.topLead.affinity.toFixed(1)
+    : '—';
+  const snapshot = {
+    runId: runResult.runId,
+    label: runResult.pdbId || runResult.target || 'RUN',
+    pdbId: runResult.pdbId || '',
+    topAffinity: topAff,
+    runResult: structuredClone(runResult),
+    targetPdbText: state.currentTargetPdbText || null,
+    provenance: runResult.provenance || 'SIMULATED',
+    timestamp: runResult.timestamp || new Date().toISOString()
+  };
+
+  state.runHistory = [snapshot, ...(state.runHistory || []).filter(r => r.runId !== snapshot.runId)].slice(0, 3);
+
+  try {
+    const lite = state.runHistory.map(r => ({
+      runId: r.runId,
+      label: r.label,
+      pdbId: r.pdbId,
+      topAffinity: r.topAffinity,
+      provenance: r.provenance,
+      timestamp: r.timestamp
+    }));
+    sessionStorage.setItem('bionemo_run_history_lite', JSON.stringify(lite));
+  } catch (_) {}
+}
+
+export function renderRunHistoryStrip() {
+  const strip = document.getElementById('runHistoryStrip');
+  if (!strip) return;
+  const list = state.runHistory || [];
+  if (list.length === 0) {
+    strip.classList.add('hidden');
+    strip.textContent = '';
+    return;
+  }
+  strip.classList.remove('hidden');
+  strip.textContent = '';
+  for (const item of list) {
+    const isActive = item.runId === state.runId;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-action', 'restore-run-history');
+    btn.setAttribute('data-arg', item.runId);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    btn.className = `px-2 py-0.5 rounded text-[10px] font-mono tabular-nums border transition-colors ${
+      isActive
+        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
+        : 'bg-white/5 border-surface-border text-gray-300 hover:border-cyan-500/50'
+    }`;
+    btn.textContent = `${item.label} · ${item.topAffinity}`;
+    strip.appendChild(btn);
+  }
+}
+
+export function restoreRunFromHistory(runId) {
+  const entry = (state.runHistory || []).find(r => r.runId === runId);
+  if (!entry || !entry.runResult) return;
+
+  state.runId = entry.runId;
+  state.activeRunResult = structuredClone(entry.runResult);
+  if (typeof window !== 'undefined') window.activeRunResult = state.activeRunResult;
+  state.currentLeads = state.activeRunResult.leads || [];
+  state.currentTargetPdbText = entry.targetPdbText || state.currentTargetPdbText;
+  state.leadBaselines.clear();
+  state.selectedLeadId = state.currentLeads[0]?.id || null;
+  state.selectedPoseIndex = 0;
+  state.leadRevision = 0;
+
+  updateKpisFromLeads(state.currentLeads);
+  renderLeads();
+  try {
+    renderPareto();
+  } catch (_) {}
+  renderRunHistoryStrip();
+  showToast(`Restored run ${entry.label} (${entry.topAffinity} kcal/mol).`);
 }
 
 if (typeof window !== 'undefined') {

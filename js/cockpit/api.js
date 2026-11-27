@@ -5,7 +5,7 @@
 
 import { isStaticHost, probeBackendHealth, state, TARGETS } from './state.js';
 import { TARGET_PRESETS } from '../data/target-presets.js';
-import { renderLeads, setAgent, resetAgents, logEntry, showToast, sleep, updateProvenanceBanner } from './ui-controls.js';
+import { renderLeads, pushRunHistory, renderRunHistoryStrip, setAgent, resetAgents, logEntry, showToast, sleep, updateProvenanceBanner } from './ui-controls.js';
 import { renderPareto } from './charts.js';
 import { openAuthModal, openQuotaModal } from './modals.js';
 
@@ -1303,6 +1303,8 @@ export async function runDiscovery() {
   if (kpiPar) kpiPar.textContent = runResult.paretoCount;
 
   renderLeads();
+  pushRunHistory(runResult);
+  renderRunHistoryStrip();
   try {
     renderPareto();
   } catch (chartErr) {

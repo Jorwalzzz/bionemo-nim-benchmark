@@ -83,6 +83,7 @@ import {
   renderLeads,
   selectLead,
   revertSelectedLead,
+  restoreRunFromHistory,
   switchTab,
   copyCode,
   showToast,
@@ -323,6 +324,7 @@ function dispatchAction(action, el, event) {
     case 'tweak-smiles': return tweakSmiles(el.dataset.arg);
     case 'trigger-redock': return triggerRedockFromWorkbench();
     case 'revert-lead': return revertSelectedLead();
+    case 'restore-run-history': return restoreRunFromHistory(el.dataset.arg);
     default: return undefined;
   }
 }
@@ -386,5 +388,44 @@ window.addEventListener('keydown', (e) => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target?.getAttribute?.('data-action') === 'select-lead') {
     e.preventDefault();
     selectLead(parseInt(e.target.getAttribute('data-lead-index') || '0', 10));
+    return;
+  }
+
+  const openDialog = document.querySelector('dialog[open]');
+  if (openDialog) return;
+
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && e.target?.closest?.('#leadsContainer')) {
+    const cards = Array.from(document.querySelectorAll('#leadsContainer .lead-card'));
+    if (cards.length === 0) return;
+    const currentCard = e.target.closest('.lead-card');
+    const curIdx = currentCard ? cards.indexOf(currentCard) : 0;
+    const delta = e.key === 'ArrowDown' ? 1 : -1;
+    const nextIdx = Math.max(0, Math.min(cards.length - 1, curIdx + delta));
+    if (nextIdx !== curIdx) {
+      e.preventDefault();
+      selectLead(nextIdx);
+      const updatedCards = document.querySelectorAll('#leadsContainer .lead-card');
+      const targetCard = updatedCards[nextIdx];
+      if (targetCard) {
+        targetCard.focus();
+        targetCard.scrollIntoView({ block: 'nearest' });
+      }
+    }
+    return;
+  }
+
+  if (
+    /^[1-5]$/.test(e.key) &&
+    !e.ctrlKey &&
+    !e.metaKey &&
+    !e.altKey &&
+    !e.target?.closest?.('input, textarea, select, [contenteditable]')
+  ) {
+    const poseIdx = parseInt(e.key, 10) - 1;
+    const poses = state.currentSelectedLead?.poses || [];
+    if (poseIdx >= 0 && poseIdx < poses.length) {
+      e.preventDefault();
+      selectDockedPose(poseIdx);
+    }
   }
 });
