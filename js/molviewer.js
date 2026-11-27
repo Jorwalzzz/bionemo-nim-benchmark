@@ -295,6 +295,9 @@ function renderComplex(pdbText, target) {
 
   viewer.zoomTo();
   viewer.render();
+  if (containerEl) {
+    containerEl.classList.add('is-ready');
+  }
 
   if (isRotating) {
     viewer.spin('y', 1);
@@ -359,6 +362,9 @@ export function resetCamera() {
   if (!viewer) return;
   viewer.zoomTo();
   viewer.render();
+  if (containerEl) {
+    containerEl.classList.add('is-ready');
+  }
 }
 
 async function init() {

@@ -359,7 +359,9 @@ class SafeSanitizer:
         Raises ValueError if path traversal is detected.
         """
         resolved_base = Path(base_dir).resolve()
-        resolved_path = (resolved_base / path).resolve() if not Path(path).is_absolute() else Path(path).resolve()
+        normalized = str(path).replace("\\", "/")
+        candidate = Path(normalized)
+        resolved_path = (resolved_base / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
         if not resolved_path.is_relative_to(resolved_base):
             raise ValueError(
                 f"Path traversal detected: '{path}' resolves outside allowed base directory '{resolved_base}'."

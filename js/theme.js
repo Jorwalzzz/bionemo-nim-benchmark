@@ -115,6 +115,12 @@
       syncScrollProgress();
     }
 
+    var syncVisibilityClass = function () {
+      document.body.classList.toggle('page-hidden', Boolean(document.hidden));
+    };
+    document.addEventListener('visibilitychange', syncVisibilityClass);
+    syncVisibilityClass();
+
     // Native OS cursor enforced across all pages; custom dual-cursor RAF loop removed.
     window.copyHeroTerminal = function (btn) {
       var text = 'git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git';

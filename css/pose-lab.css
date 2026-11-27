@@ -36,6 +36,17 @@
   cursor: grab;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .mol-viewport-canvas {
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+
+  .mol-viewport-canvas.is-ready {
+    opacity: 1;
+  }
+}
+
 .mol-viewport-canvas:active {
   cursor: grabbing;
 }
@@ -61,14 +72,23 @@
   visibility: hidden;
 }
 
+.pose-scan-overlay.hidden .pose-scan-spinner {
+  animation: none;
+}
+
 .pose-scan-spinner {
   width: 48px;
   height: 48px;
   border: 3px solid rgba(118, 245, 162, 0.2);
   border-top-color: var(--color-signal-green);
   border-radius: 50%;
-  animation: spin 0.9s linear infinite;
   margin-bottom: 1rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pose-scan-spinner {
+    animation: spin 0.9s linear infinite;
+  }
 }
 
 @keyframes spin {
