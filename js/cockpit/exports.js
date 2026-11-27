@@ -5,8 +5,32 @@
 import { state, probeBackendHealth } from './state.js';
 import { showToast } from './ui-controls.js';
 import { escapeHtml } from './api.js';
-import { copyToClipboard, downloadBlob, toCsvCell } from '../shared/dom-utils.js';
+import { copyToClipboard, downloadBlob, toCsvCell, buildExportFilename } from '../shared/dom-utils.js';
 import { openRobotModal, openResistanceModal, closeResistanceModal } from './modals.js';
+
+const LEGAL_NOTICE_TEXT =
+  'NVIDIA Trademark & Non-Affiliation Notice: NVIDIA, BioNeMo, NIM, TensorRT, and Hopper are trademarks ' +
+  'and/or registered trademarks of NVIDIA Corporation. This open-source benchmark suite (AGPL-3.0-only) ' +
+  'is independently developed by Aarav Jorwal (@Jorwalzzz) and is not sponsored, endorsed, or affiliated with NVIDIA Corporation.';
+
+function finiteOrNull(val) {
+  if (typeof val !== 'number') return val ?? null;
+  return Number.isFinite(val) ? val : null;
+}
+
+function sanitizeLeadForExport(lead) {
+  if (!lead || typeof lead !== 'object') return null;
+  const copy = {};
+  for (const [k, v] of Object.entries(lead)) {
+    if (k === '_baseline' || k.startsWith('__')) continue;
+    if (typeof v === 'number') {
+      copy[k] = Number.isFinite(v) ? v : null;
+    } else {
+      copy[k] = v;
+    }
+  }
+  return copy;
+}
 
 export function buildExportContext() {
   const currentTargetTab = state.currentTargetTab || 'presets';
@@ -15,14 +39,55 @@ export function buildExportContext() {
   else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'RCSB Target';
 
   const runResult = state.activeRunResult || null;
-  const leads = Array.isArray(state.currentLeads) && state.currentLeads.length > 0
+  const rawLeads = Array.isArray(state.currentLeads) && state.currentLeads.length > 0
     ? state.currentLeads
     : (Array.isArray(runResult?.leads) ? runResult.leads : []);
-  const selectedLead = state.currentSelectedLead || leads[0] || null;
+  const leads = rawLeads.map(sanitizeLeadForExport).filter(Boolean);
+  const selectedLead = sanitizeLeadForExport(state.currentSelectedLead || rawLeads[0] || null);
   const pdbId = runResult?.pdbId || document.getElementById('targetPdb')?.textContent || target;
-  const rawProv = String(runResult?.provenance || '').toUpperCase();
-  const isLive = rawProv === 'LIVE' || rawProv === 'MEASURED';
+  const rawProv = String(
+    typeof runResult?.provenance === 'string'
+      ? runResult.provenance
+      : (runResult?.provenance?.overall_mode || '')
+  ).toUpperCase();
+  const isLive = rawProv === 'LIVE' || rawProv === 'MEASURED' || rawProv === 'LIVE_NIM';
   const provenance = isLive ? 'Measured / Live Backend' : 'Illustrative / Static Demo';
+
+  let bestAff = null;
+  let bestQed = null;
+  let paretoCount = 0;
+  for (const l of leads) {
+    if (typeof l.affinity === 'number' && Number.isFinite(l.affinity)) {
+      bestAff = bestAff === null ? l.affinity : Math.min(bestAff, l.affinity);
+    }
+    if (typeof l.qed === 'number' && Number.isFinite(l.qed)) {
+      bestQed = bestQed === null ? l.qed : Math.max(bestQed, l.qed);
+    }
+    if (l.pareto) paretoCount += 1;
+  }
+
+  const baseline_diffs = [];
+  if (state.leadBaselines instanceof Map) {
+    for (const [leadId, base] of state.leadBaselines.entries()) {
+      const cur = leads.find(l => l.id === leadId);
+      if (cur && base) {
+        baseline_diffs.push({
+          lead_id: leadId,
+          original_affinity: finiteOrNull(base.affinity),
+          current_affinity: finiteOrNull(cur.affinity),
+          delta_affinity: (typeof cur.affinity === 'number' && typeof base.affinity === 'number')
+            ? Number((cur.affinity - base.affinity).toFixed(3))
+            : null,
+          original_qed: finiteOrNull(base.qed),
+          current_qed: finiteOrNull(cur.qed),
+          original_sascore: finiteOrNull(base.sascore),
+          current_sascore: finiteOrNull(cur.sascore),
+          original_smiles: base.smiles || null,
+          current_smiles: cur.smiles || null
+        });
+      }
+    }
+  }
 
   const retrosynthesis = runResult?.retrosynthesis || {
     num_steps: 2,
@@ -34,18 +99,42 @@ export function buildExportContext() {
     ]
   };
 
+  const runId = state.runId || runResult?.runId || 'static-demo';
+  const pdbBytes = typeof state.currentTargetPdbText === 'string' ? state.currentTargetPdbText.length : 0;
+
   return {
-    runId: state.runId || runResult?.runId || 'static-demo',
+    schema_version: '2.3.0',
+    software_version: '2.3.0',
+    exported_at: new Date().toISOString(),
+    run_id: runId,
+    runId,
     target: runResult?.target || target,
     pdbId,
+    target_metadata: {
+      target_name: runResult?.target || target,
+      pdb_id: pdbId,
+      source: currentTargetTab,
+      residue_count: (state.currentTargetPocketResidues || []).length ? state.currentTargetPocketResidues.length * 28 : 188,
+      pdb_byte_length: pdbBytes
+    },
     provenance,
+    is_static_demo: !isLive,
     isStaticDemo: !isLive,
+    kpis: {
+      top_affinity_kcal_mol: bestAff,
+      top_qed: bestQed,
+      screened_count: runResult?.screenedCount || leads.length,
+      pareto_count: paretoCount
+    },
     runResult,
     leads,
     selectedLead,
+    selected_lead: selectedLead,
     selectedLeadId: state.selectedLeadId || selectedLead?.id || 'LEAD-001',
     leadRevision: state.leadRevision || 0,
-    retrosynthesis
+    retrosynthesis,
+    baseline_diffs,
+    legal_notice: LEGAL_NOTICE_TEXT
   };
 }
 

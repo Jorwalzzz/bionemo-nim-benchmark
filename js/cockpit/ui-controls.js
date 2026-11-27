@@ -9,10 +9,13 @@ import { renderPareto } from './charts.js';
 import { escapeHtml } from './api.js';
 import {
   copyToClipboard,
+  downloadBlob,
+  buildExportFilename,
   openModalDialog,
   closeModalDialog,
   showPopoverToast
 } from '../shared/dom-utils.js';
+import { buildExportContext } from './exports.js';
 
 let wbDebounceTimer = null;
 let wbSvgDebounceTimer = null;
@@ -1122,28 +1125,30 @@ export async function copyRawReceiptJson() {
 }
 
 export function exportActiveRunJson() {
-  const resultToExport = state.activeRunResult || {
-    status: 'completed',
-    target: state.currentTargetTab === 'presets' ? (document.getElementById('targetSelect')?.value || '7RPZ') : 'Target',
-    leads: state.currentLeads || [],
-    provenance: lastProvenanceReceipt || {
-      mode: 'OFFLINE_DEMO',
-      provenance: 'SIMULATED',
-      timestamp_utc: new Date().toISOString()
-    },
-    timestamp: new Date().toISOString()
+  const ctx = buildExportContext();
+  const payload = {
+    schema_version: ctx.schema_version,
+    software_version: ctx.software_version,
+    exported_at: ctx.exported_at,
+    run_id: ctx.run_id,
+    target_metadata: ctx.target_metadata,
+    provenance: ctx.provenance,
+    is_static_demo: ctx.is_static_demo,
+    kpis: ctx.kpis,
+    selected_lead_id: ctx.selectedLeadId,
+    lead_revision: ctx.leadRevision,
+    leads: ctx.leads,
+    retrosynthesis: ctx.retrosynthesis,
+    baseline_diffs: ctx.baseline_diffs,
+    legal_notice: ctx.legal_notice
   };
 
-  const jsonStr = JSON.stringify(resultToExport, null, 2);
-  const blob = new Blob([jsonStr], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const targetName = (resultToExport.pdbId || resultToExport.target || 'target').replace(/[^a-zA-Z0-9_-]/g, '_');
-  a.href = url;
-  a.download = `bionemo_${targetName}_discovery_run.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('Exported discovery run JSON.');
+  const jsonStr = JSON.stringify(
+    payload,
+    (_k, v) => (typeof v === 'number' && !Number.isFinite(v) ? null : v),
+    2
+  );
+  const filename = buildExportFilename(ctx, 'run', 'json');
+  downloadBlob(jsonStr, filename, 'application/json');
+  showToast('Exported v2.3.0 discovery run JSON.');
 }
