@@ -154,8 +154,8 @@ def test_playwright_all_six_export_formats_round_trip(tmp_path: Path) -> None:
                 viewport={"width": 1440, "height": 900}, accept_downloads=True
             )
             page = context.new_page()
+            page.add_init_script("localStorage.setItem('bionemo_guide_seen', 'true');")
             page.goto(base_url, wait_until="networkidle")
-            page.wait_for_timeout(400)
             page.evaluate("document.querySelectorAll('dialog[open]').forEach(d => d.close())")
 
             page.evaluate(

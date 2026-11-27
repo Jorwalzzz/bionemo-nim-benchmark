@@ -35,6 +35,7 @@ def test_cockpit_postrun_state_csv_pose_history_and_keyboard() -> None:
             browser = pw.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
             page = context.new_page()
+            page.add_init_script("localStorage.setItem('bionemo_guide_seen', 'true');")
 
             console_errors: list[str] = []
             http_404s: list[str] = []
