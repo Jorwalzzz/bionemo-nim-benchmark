@@ -184,40 +184,63 @@ export async function downloadInstaller(type) {
 
 export async function downloadDossier() {
   const ctx = buildExportContext();
-  const backendUp = await probeBackendHealth();
-  if (backendUp) {
-    try {
-      const res = await fetch('./api/dossier');
-      if (res.ok) {
-        const text = await res.text();
-        downloadBlob(text, 'CANDIDATE_SELECTION_DOSSIER.md', 'text/markdown');
-        showToast('Dossier (.md) downloaded.');
-        return;
-      }
-    } catch (_) {}
-  }
-
   if (ctx.leads.length > 0 || ctx.runResult) {
-    const leadRows = ctx.leads.map(l =>
-      `| ${escapeMdCell(l.id)} | \`${escapeMdCell(l.smiles)}\` | ${typeof l.affinity === 'number' ? l.affinity.toFixed(2) : '—'} | ${typeof l.qed === 'number' ? l.qed.toFixed(3) : '—'} | ${typeof l.sascore === 'number' ? l.sascore.toFixed(2) : '—'} | ${escapeMdCell(l.verdict || '—')} |`
-    ).join('\n');
+    const leadRows = ctx.leads.map(l => {
+      const painsCnt = Array.isArray(l.pains_alerts) ? l.pains_alerts.length : Number(l.pains_count || 0);
+      const brenkCnt = Array.isArray(l.brenk_alerts) ? l.brenk_alerts.length : Number(l.brenk_count || 0);
+      const gi = typeof l.gi_absorption_high === 'boolean' ? (l.gi_absorption_high ? 'High' : 'Low') : '—';
+      const bbb = typeof l.bbb_permeable === 'boolean' ? (l.bbb_permeable ? 'Yes' : 'No') : '—';
+      const diff = (ctx.baseline_diffs || []).find(d => d.lead_id === l.id);
+      const ddg = diff && typeof diff.delta_affinity === 'number'
+        ? `${diff.delta_affinity > 0 ? '+' : ''}${diff.delta_affinity.toFixed(2)}`
+        : '—';
+      return `| ${escapeMdCell(l.id)} | \`${escapeMdCell(l.smiles)}\` | ${typeof l.affinity === 'number' ? l.affinity.toFixed(2) : '—'} | ${ddg} | ${typeof l.qed === 'number' ? l.qed.toFixed(3) : '—'} | ${typeof l.sascore === 'number' ? l.sascore.toFixed(2) : '—'} | ${typeof l.mw === 'number' ? l.mw.toFixed(1) : '—'} | ${gi}/${bbb} | ${painsCnt}/${brenkCnt} | ${escapeMdCell(l.admet_verdict || l.verdict || '—')} |`;
+    }).join('\n');
+
+    const sel = ctx.selectedLead || {};
+    const pv = sel.pose_validation && typeof sel.pose_validation === 'object' ? sel.pose_validation : null;
+    const contacts = Array.isArray(sel.interaction_contacts) ? sel.interaction_contacts : [];
+    const retroSteps = Array.isArray(ctx.retrosynthesis?.steps) ? ctx.retrosynthesis.steps : [];
+
     const md = [
       `# BioNeMo NIM Benchmark Suite — Candidate Selection Dossier`,
       ``,
-      `- **Target:** ${escapeMdCell(ctx.target)} (\`${escapeMdCell(ctx.pdbId)}\`)`,
-      `- **Provenance:** ${ctx.provenance}`,
-      `- **Nominated Lead:** ${escapeMdCell(ctx.selectedLeadId)} (Rev ${ctx.leadRevision})`,
-      `- **Retrosynthesis:** ${escapeMdCell(ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent')}`,
+      `> **Provenance:** ${ctx.provenance} | **Run ID:** \`${escapeMdCell(ctx.run_id)}\` | **Exported:** \`${ctx.exported_at}\``,
       ``,
-      `## Screened Leads`,
-      `| ID | SMILES | ΔG (kcal/mol) | QED | SAScore | Verdict |`,
-      `| :--- | :--- | :---: | :---: | :---: | :---: |`,
+      `## 1. Executive KPIs & Target Metadata`,
+      `- **Target:** ${escapeMdCell(ctx.target)} (\`${escapeMdCell(ctx.pdbId)}\`, source: \`${escapeMdCell(ctx.target_metadata?.source)}\`)`,
+      `- **Top Affinity:** ${ctx.kpis.top_affinity_kcal_mol !== null ? ctx.kpis.top_affinity_kcal_mol.toFixed(2) + ' kcal/mol' : '—'} | **Top QED:** ${ctx.kpis.top_qed !== null ? ctx.kpis.top_qed.toFixed(3) : '—'}`,
+      `- **Screened:** ${ctx.kpis.screened_count} | **Pareto Optimal:** ${ctx.kpis.pareto_count} | **Selected Lead:** \`${escapeMdCell(ctx.selectedLeadId)}\` (Rev ${ctx.leadRevision})`,
+      ``,
+      `## 2. Screened Cohort & MedChem Profile`,
+      `| ID | SMILES | ΔG | ΔΔG | QED | SA | MW | GI/BBB | PAINS/BRENK | Verdict |`,
+      `| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |`,
       leadRows,
       ``,
-      `> Independently developed by Aarav Jorwal (@Jorwalzzz) · AGPL-3.0-only`
+      `## 3. Selected Lead 3D Pose Plausibility & Binding Contacts`,
+      pv
+        ? `- **Status:** ${pv.passes_all ? 'PLAUSIBLE' : 'REVIEW'} | **Bonds:** ${pv.bond_geometry_pass ? 'PASS' : 'FAIL'} | **Clashes:** ${pv.receptor_clash_count ?? 0} | **Planarity:** ${pv.planarity_pass ? 'PASS' : 'FAIL'} | **Strain ΔE:** ${typeof pv.strain_energy_kcal_mol === 'number' ? pv.strain_energy_kcal_mol.toFixed(2) + ' kcal/mol' : 'N/A'}`
+        : `- **Status:** No 3D plausibility telemetry attached for this lead.`,
+      contacts.length > 0
+        ? `- **Contacts:** ${contacts.map(c => `${escapeMdCell(c.type || 'Contact')}: ${escapeMdCell(c.residue || '')} (${Number(c.distance_a || 0).toFixed(2)} Å)`).join('; ')}`
+        : `- **Contacts:** None recorded.`,
+      ``,
+      `## 4. Retrosynthesis Plan (${escapeMdCell(ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent')})`,
+      retroSteps.length > 0
+        ? retroSteps.map((s, idx) => `${idx + 1}. **${escapeMdCell(s.reaction_type || 'Step')}** — Reagents: ${escapeMdCell((s.reagents || []).join(', ') || 'Standard')} | Est. Yield: ${Number(s.yield_pct || 80).toFixed(0)}% (${escapeMdCell(s.difficulty || 'Heuristic')})`).join('\n')
+        : `1. Heuristic BRICS / Literature Precedent (no multi-step breakdown attached).`,
+      ``,
+      `## 5. Re-Dock Baseline Diffs`,
+      ctx.baseline_diffs.length > 0
+        ? ctx.baseline_diffs.map(d => `- **${escapeMdCell(d.lead_id)}:** ΔG ${d.original_affinity} → ${d.current_affinity} kcal/mol (ΔΔG ${d.delta_affinity}) | SMILES: \`${escapeMdCell(d.current_smiles)}\``).join('\n')
+        : `- No post-run modifications from baseline.`,
+      ``,
+      `## 6. License & Legal Attribution`,
+      `- **License:** AGPL-3.0-only`,
+      `- ${ctx.legal_notice}`
     ].join('\n');
-    const safeSlug = String(ctx.pdbId || 'target').replace(/[^a-zA-Z0-9_-]/g, '_');
-    downloadBlob(md, `DOSSIER_${safeSlug}.md`, 'text/markdown');
+
+    downloadBlob(md, buildExportFilename(ctx, 'dossier', 'md'), 'text/markdown');
     showToast(`Dossier (${ctx.pdbId}) downloaded.`);
     return;
   }
@@ -227,7 +250,7 @@ export async function downloadDossier() {
     const res = await fetch(fallbackUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
-    downloadBlob(text, 'CANDIDATE_SELECTION_DOSSIER.md', 'text/markdown');
+    downloadBlob(text, buildExportFilename(ctx, 'dossier', 'md'), 'text/markdown');
     showToast('Dossier (.md) downloaded.');
   } catch (e) {
     window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
@@ -436,6 +459,88 @@ export function downloadSMI() {
   showToast(`Exported ${lines.length} deduplicated SMILES (.smi).`);
 }
 
+export function generateStaticHtmlDossier(ctx) {
+  const lead = ctx.selectedLead || {};
+  const pv = lead.pose_validation && typeof lead.pose_validation === 'object' ? lead.pose_validation : null;
+  const contacts = Array.isArray(lead.interaction_contacts) ? lead.interaction_contacts : [];
+  const retroSteps = Array.isArray(ctx.retrosynthesis?.steps) ? ctx.retrosynthesis.steps : [];
+
+  const leadRowsHtml = (ctx.leads || []).map(l => `
+    <tr>
+      <td><code>${escapeHtml(l.id)}</code></td>
+      <td><code>${escapeHtml(l.smiles)}</code></td>
+      <td>${typeof l.affinity === 'number' ? l.affinity.toFixed(2) : '—'}</td>
+      <td>${typeof l.qed === 'number' ? l.qed.toFixed(3) : '—'}</td>
+      <td>${typeof l.sascore === 'number' ? l.sascore.toFixed(2) : '—'}</td>
+      <td>${typeof l.mw === 'number' ? l.mw.toFixed(1) : '—'}</td>
+      <td>${escapeHtml(l.admet_verdict || l.verdict || '—')}</td>
+    </tr>`).join('');
+
+  const retroHtml = retroSteps.length > 0
+    ? `<ol>${retroSteps.map(s => `<li><strong>${escapeHtml(s.reaction_type || 'Step')}</strong> — Reagents: ${escapeHtml((s.reagents || []).join(', ') || 'Standard')} (${Number(s.yield_pct || 80).toFixed(0)}%)</li>`).join('')}</ol>`
+    : `<p>Heuristic BRICS / Literature Precedent</p>`;
+
+  const diffHtml = (ctx.baseline_diffs || []).length > 0
+    ? `<ul>${ctx.baseline_diffs.map(d => `<li><code>${escapeHtml(d.lead_id)}</code>: ${escapeHtml(d.original_affinity)} → ${escapeHtml(d.current_affinity)} kcal/mol (ΔΔG ${escapeHtml(d.delta_affinity)})</li>`).join('')}</ul>`
+    : `<p>No post-run baseline modifications recorded.</p>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Pre-Clinical Candidate Dossier — ${escapeHtml(ctx.target)}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  body { font-family: system-ui, -apple-system, sans-serif; color: #111827; max-width: 880px; margin: 1.5rem auto; padding: 0 1.25rem; line-height: 1.5; }
+  h1, h2 { color: #0f172a; margin-top: 1.1rem; margin-bottom: 0.4rem; }
+  section { break-inside: avoid; margin-bottom: 1rem; }
+  .no-print { background: #ecfeff; border: 1px solid #06b6d4; color: #155e75; padding: 0.6rem 0.9rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; }
+  .banner { border: 2px dashed #ea580c; background: #fff7ed; color: #9a3412; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.88rem; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin: 0.6rem 0; font-size: 0.82rem; }
+  th, td { border: 1px solid #cbd5e1; padding: 0.4rem 0.55rem; text-align: left; }
+  th { background: #f1f5f9; }
+  code { background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 4px; word-break: break-all; }
+  .footer { margin-top: 1.5rem; border-top: 1px solid #cbd5e1; padding-top: 0.75rem; font-size: 0.78rem; color: #475569; }
+  @media print { .no-print { display: none; } body { margin: 0; padding: 0; } }
+</style>
+</head>
+<body>
+  <div class="no-print">Printable Dossier Ready — Press <strong>Ctrl+P / Cmd+P</strong> to save as PDF.</div>
+  <h1>Pre-Clinical Candidate Selection Dossier</h1>
+  <div class="banner">Provenance: ${escapeHtml(ctx.provenance)} | Run ID: <code>${escapeHtml(ctx.run_id)}</code> | Research summary only; not a regulatory IND submission under 21 CFR 312.</div>
+  <section>
+    <h2>1. Executive KPIs &amp; Target Metadata</h2>
+    <table>
+      <tr><th>Target</th><td>${escapeHtml(ctx.target)}</td><th>PDB ID</th><td>${escapeHtml(ctx.pdbId)}</td></tr>
+      <tr><th>Top Affinity</th><td>${ctx.kpis.top_affinity_kcal_mol !== null ? ctx.kpis.top_affinity_kcal_mol.toFixed(2) + ' kcal/mol' : '—'}</td><th>Top QED</th><td>${ctx.kpis.top_qed !== null ? ctx.kpis.top_qed.toFixed(3) : '—'}</td></tr>
+      <tr><th>Screened / Pareto</th><td>${ctx.kpis.screened_count} / ${ctx.kpis.pareto_count}</td><th>Selected Lead</th><td><code>${escapeHtml(ctx.selectedLeadId)}</code> (Rev ${ctx.leadRevision})</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>2. Full Screened Cohort</h2>
+    <table>
+      <tr><th>ID</th><th>SMILES</th><th>ΔG</th><th>QED</th><th>SA</th><th>MW</th><th>Verdict</th></tr>
+      ${leadRowsHtml}
+    </table>
+  </section>
+  <section>
+    <h2>3. 3D Pose Plausibility &amp; Binding Contacts</h2>
+    <p>${pv ? `Status: <strong>${pv.passes_all ? 'PLAUSIBLE' : 'REVIEW'}</strong> · Clashes: ${pv.receptor_clash_count ?? 0} · Strain ΔE: ${typeof pv.strain_energy_kcal_mol === 'number' ? pv.strain_energy_kcal_mol.toFixed(2) + ' kcal/mol' : 'N/A'}` : 'No 3D plausibility telemetry recorded.'}</p>
+    <p>${contacts.length ? contacts.map(c => `${escapeHtml(c.type || 'Contact')}: ${escapeHtml(c.residue || '')} (${Number(c.distance_a || 0).toFixed(2)} Å)`).join(' · ') : 'No binding contacts recorded.'}</p>
+  </section>
+  <section>
+    <h2>4. Retrosynthesis Route (${escapeHtml(ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent')})</h2>
+    ${retroHtml}
+  </section>
+  <section>
+    <h2>5. Re-Dock Baseline Diffs</h2>
+    ${diffHtml}
+  </section>
+  <div class="footer"><strong>AGPL-3.0-only</strong> · ${escapeHtml(ctx.legal_notice)}</div>
+</body>
+</html>`;
+}
+
 export async function generateINDPdf() {
   showToast('Compiling Pre-Clinical Candidate Summary Dossier...');
 
@@ -451,25 +556,31 @@ export async function generateINDPdf() {
     verdict: 'PASS'
   };
 
-  const pocketRes = state.currentTargetPocketResidues || [];
   const payload = {
     dossier: {
+      schema_version: ctx.schema_version,
+      run_id: ctx.run_id,
       target: ctx.target,
       pdb_id: ctx.pdbId,
+      target_metadata: ctx.target_metadata,
       provenance: ctx.provenance,
+      kpis: ctx.kpis,
       nominated_lead: lead.id,
       binding_affinity: lead.affinity,
-      residue_count: pocketRes.length ? pocketRes.length * 28 : 188,
-      screened: ctx.leads.length || 10,
-      pareto_count: ctx.leads.filter(l => l.pareto).length || 1,
-      leads: [lead],
+      residue_count: ctx.target_metadata.residue_count,
+      screened: ctx.kpis.screened_count || 10,
+      pareto_count: ctx.kpis.pareto_count || 1,
+      leads: ctx.leads.length > 0 ? ctx.leads : [lead],
+      pose_validation: lead.pose_validation || null,
+      interaction_contacts: lead.interaction_contacts || [],
+      baseline_diffs: ctx.baseline_diffs,
       retrosynthesis: ctx.retrosynthesis
     }
   };
 
   try {
     const backendUp = await probeBackendHealth();
-    if (!backendUp) throw new Error('Static/offline mode: use print-styled HTML dossier');
+    if (!backendUp) throw new Error('Static/offline mode: generate printable HTML dossier');
     const res = await fetch('./api/dossier/pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
@@ -479,52 +590,13 @@ export async function generateINDPdf() {
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
     const blob = await res.blob();
-    downloadBlob(blob, `FDA_IND_Section2_Briefing_${target.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`, 'application/pdf');
+    downloadBlob(blob, buildExportFilename(ctx, 'dossier', 'pdf'), 'application/pdf');
     showToast('Pre-Clinical Candidate Summary PDF downloaded.');
   } catch (err) {
     console.warn('Backend PDF endpoint unavailable in static mode. Generating print-styled HTML dossier:', err);
-    const provMode = state.activeRunResult?.provenance?.overall_mode || 'OFFLINE_DEMO_SIMULATION';
-    const htmlDossier = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<title>Pre-Clinical Candidate Dossier — ${escapeHtml(target)}</title>
-<style>
-  body { font-family: system-ui, -apple-system, sans-serif; color: #111827; max-width: 820px; margin: 2rem auto; padding: 0 1.5rem; line-height: 1.55; }
-  h1, h2 { color: #0f172a; margin-bottom: 0.4rem; }
-  .banner { border: 2px dashed #ea580c; background: #fff7ed; color: #9a3412; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; font-size: 0.9rem; font-weight: 600; }
-  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-  th, td { border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.9rem; }
-  th { background: #f1f5f9; }
-  code { background: #f1f5f9; padding: 0.15rem 0.35rem; border-radius: 4px; word-break: break-all; }
-  .footer { margin-top: 2rem; border-top: 1px solid #cbd5e1; padding-top: 0.75rem; font-size: 0.8rem; color: #475569; }
-</style>
-</head>
-<body>
-  <h1>Pre-Clinical Candidate Selection Dossier</h1>
-  <div class="banner">SIMULATED / ILLUSTRATIVE STATIC PREVIEW (${escapeHtml(provMode)}) — Research summary only; not a regulatory IND submission under 21 CFR 312. Execute backend <code>POST ./api/dossier/pdf</code> for ReportLab PDF output.</div>
-  <table>
-    <tr><th>Target</th><td>${escapeHtml(target)}</td><th>PDB ID</th><td>${escapeHtml(pdbIdVal)}</td></tr>
-    <tr><th>Nominated Lead</th><td>${escapeHtml(lead.id)}</td><th>Binding Affinity</th><td>${escapeHtml(lead.affinity)} kcal/mol</td></tr>
-    <tr><th>QED / SAScore</th><td>${escapeHtml(lead.qed)} / ${escapeHtml(lead.sascore)}</td><th>ADMET Verdict</th><td>${escapeHtml(lead.verdict || 'PASS')}</td></tr>
-  </table>
-  <h2>Candidate SMILES</h2>
-  <p><code>${escapeHtml(lead.smiles)}</code></p>
-  <div class="footer">NVIDIA BioNeMo &amp; NIM Benchmark Suite (AGPL-3.0-only) · Print this page or save as PDF from your browser.</div>
-</body>
-</html>`;
-    try {
-      const printWin = window.open('', '_blank', 'noopener,noreferrer');
-      if (printWin) {
-        printWin.document.open();
-        printWin.document.write(htmlDossier);
-        printWin.document.close();
-        printWin.focus();
-        printWin.print();
-      }
-    } catch (_) {}
-    downloadBlob(htmlDossier, `PreClinical_Dossier_${target.replace(/[^a-zA-Z0-9]/g, '_')}.html`, 'text/html;charset=utf-8');
-    showToast('Print-ready HTML dossier generated (Print to PDF).');
+    const htmlDossier = generateStaticHtmlDossier(ctx);
+    downloadBlob(htmlDossier, buildExportFilename(ctx, 'dossier', 'html'), 'text/html;charset=utf-8');
+    showToast('Print-ready HTML dossier downloaded (Press Ctrl+P / Cmd+P for PDF).');
   }
 }
 

@@ -7,6 +7,7 @@ Powered by NVIDIA BioNeMo & NIM Inference.
 import datetime
 from io import BytesIO
 from typing import Any
+from xml.sax.saxutils import escape as xml_escape
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -932,9 +933,9 @@ def generate_ind_pdf(
     for d in recent_dialogues:
         audit_rows.append(
             [
-                Paragraph(f"<b>{d.get('persona', 'Agent')}</b>", table_cell),
-                Paragraph(d.get("intent", "ACTION"), table_cell),
-                Paragraph(d.get("content", ""), table_cell),
+                Paragraph(f"<b>{xml_escape(str(d.get('persona', 'Agent')))}</b>", table_cell),
+                Paragraph(xml_escape(str(d.get("intent", "ACTION"))), table_cell),
+                Paragraph(xml_escape(str(d.get("content", ""))), table_cell),
             ]
         )
 
@@ -956,6 +957,37 @@ def generate_ind_pdf(
         )
     )
     story.append(t_audit)
+
+    # 3D Pose Plausibility, Binding Contacts, & Baseline Diffs (v2.3.0)
+    pv = dossier_data.get("pose_validation")
+    contacts = dossier_data.get("interaction_contacts") or []
+    diffs = dossier_data.get("baseline_diffs") or []
+    if isinstance(pv, dict) or contacts or diffs:
+        story.append(Spacer(1, 8))
+        story.append(Paragraph("3D Pose Plausibility, Binding Contacts &amp; Baseline Diffs", h1_style))
+        if isinstance(pv, dict):
+            pv_txt = (
+                f"<b>Status:</b> {'PLAUSIBLE' if pv.get('passes_all') else 'REVIEW'} | "
+                f"<b>Clashes:</b> {int(pv.get('receptor_clash_count') or 0)} | "
+                f"<b>Strain dE:</b> {pv.get('strain_energy_kcal_mol', 'N/A')} kcal/mol"
+            )
+            story.append(Paragraph(pv_txt, body_style))
+        if isinstance(contacts, list) and contacts:
+            c_str = "; ".join(
+                f"{xml_escape(str(c.get('type', 'Contact')))}: {xml_escape(str(c.get('residue', '')))} ({float(c.get('distance_a') or 0.0):.2f} A)"
+                for c in contacts[:8]
+                if isinstance(c, dict)
+            )
+            if c_str:
+                story.append(Paragraph(f"<b>Contacts:</b> {c_str}", body_style))
+        if isinstance(diffs, list) and diffs:
+            d_str = "; ".join(
+                f"{xml_escape(str(d.get('lead_id', '')))}: {d.get('original_affinity')} -&gt; {d.get('current_affinity')} kcal/mol"
+                for d in diffs
+                if isinstance(d, dict)
+            )
+            if d_str:
+                story.append(Paragraph(f"<b>Baseline Diffs:</b> {d_str}", body_style))
 
     story.append(Spacer(1, 10))
     story.append(
