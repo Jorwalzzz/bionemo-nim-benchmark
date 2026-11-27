@@ -149,6 +149,8 @@ export async function probeBackendHealth(timeoutMs = 1500, force = false) {
 
 export function openModalDialog(dialogEl, { nonModal = false } = {}) {
   if (!dialogEl) return;
+  dialogEl.classList.remove('hidden');
+  dialogEl.style.removeProperty('display');
   if (typeof dialogEl.showModal === 'function' && !nonModal) {
     if (!dialogEl.open) {
       dialogEl.showModal();
@@ -162,13 +164,14 @@ export function openModalDialog(dialogEl, { nonModal = false } = {}) {
     return;
   }
   dialogEl.style.display = 'flex';
-  dialogEl.classList.remove('hidden');
 }
 
 export function closeModalDialog(dialogEl) {
   if (!dialogEl) return;
-  if (typeof dialogEl.close === 'function' && dialogEl.open) {
-    dialogEl.close();
+  if (typeof dialogEl.close === 'function') {
+    if (dialogEl.open) {
+      dialogEl.close();
+    }
     return;
   }
   dialogEl.style.display = 'none';
