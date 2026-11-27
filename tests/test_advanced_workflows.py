@@ -158,8 +158,8 @@ def test_lab_card_markdown():
     )
 
     card = generate_lab_card(plan, "LEAD-002")
-    assert "# 🧪 Wet-Lab Protocol Card — LEAD-002" in card
-    assert "Starting Materials Required" in card
+    assert "# Wet-Lab Protocol Card -- LEAD-002" in card
+    assert "Heuristic Terminal Fragments" in card
     assert "Opentrons OT-2" in card
 
 

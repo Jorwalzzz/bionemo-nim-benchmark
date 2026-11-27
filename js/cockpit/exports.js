@@ -602,9 +602,76 @@ export async function generateINDPdf() {
 
 export const downloadIndPdf = generateINDPdf;
 
+export function buildStaticOt2Script(ctx) {
+  const lead = ctx.selectedLead || { id: 'LEAD-001', smiles: 'CC(=O)N1CCNCC1' };
+  const steps = Array.isArray(ctx.retrosynthesis?.steps) && ctx.retrosynthesis.steps.length > 0
+    ? ctx.retrosynthesis.steps
+    : [{ step: 1, reaction_type: 'Stock Plate Setup', reagents: ['DMSO', 'Buffer'], yield_pct: 80, difficulty: 'Heuristic' }];
+
+  const specLiteral = JSON.stringify({
+    run_id: ctx.run_id,
+    target: ctx.target,
+    pdb_id: ctx.pdbId,
+    candidate_id: lead.id,
+    lead_revision: ctx.leadRevision,
+    provenance: ctx.provenance,
+    feasibility: ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent'
+  });
+
+  const stepsLiteral = JSON.stringify(
+    steps.map((s, idx) => ({
+      step_number: Number(s.step || idx + 1),
+      reaction_type: String(s.reaction_type || 'Step'),
+      reagents: Array.isArray(s.reagents) ? s.reagents.map(String) : ['Standard'],
+      dest_well: `A${Math.min(24, idx + 1)}`
+    }))
+  );
+
+  return [
+    `"""`,
+    `Liquid-Handling Plate Setup Only -- Dry-Run Simulation Required`,
+    `Dry-run via opentrons_simulate and manual labware/volume verification required`,
+    `before hardware execution. Thermal, inert-atmosphere, and purification steps`,
+    `are performed off-deck. (${ctx.provenance})`,
+    `"""`,
+    ``,
+    `from opentrons import protocol_api`,
+    ``,
+    `metadata = {`,
+    `    "protocolName": ${JSON.stringify(`BioNeMo Plate Setup: ${lead.id}`)},`,
+    `    "author": "Aarav Jorwal (@Jorwalzzz)",`,
+    `    "description": ${JSON.stringify(`Plate setup for ${lead.id} (${ctx.pdbId})`)},`,
+    `    "apiLevel": "2.15"`,
+    `}`,
+    ``,
+    `CAMPAIGN_SPEC = ${specLiteral}`,
+    `SYNTHESIS_STEPS = ${stepsLiteral}`,
+    ``,
+    `def run(protocol: protocol_api.ProtocolContext):`,
+    `    tips_300 = protocol.load_labware("opentrons_96_tiprack_300ul", 1)`,
+    `    reagents = protocol.load_labware("nest_12_reservoir_15ml", 2)`,
+    `    temp_mod = protocol.load_module("temperature module gen2", 3)`,
+    `    rxn_block = temp_mod.load_labware("opentrons_24_aluminumblock_nest_1.5ml_snapcap")`,
+    `    p300 = protocol.load_instrument("p300_single_gen2", "left", tip_racks=[tips_300])`,
+    `    temp_mod.set_temperature(celsius=25)`,
+    `    for step in SYNTHESIS_STEPS:`,
+    `        dest = rxn_block[step["dest_well"]]`,
+    `        protocol.comment(f"Step {step['step_number']}: {step['reaction_type']}")`,
+    `        for r_idx, _reagent in enumerate(step["reagents"], start=1):`,
+    `            well = f"A{min(12, r_idx)}"`,
+    `            p300.pick_up_tip()`,
+    `            p300.aspirate(50, reagents[well])`,
+    `            p300.dispense(50, dest)`,
+    `            p300.mix(3, 40, dest)`,
+    `            p300.drop_tip()`,
+    `    temp_mod.set_temperature(celsius=4)`,
+    `    protocol.comment("Plate setup complete for " + CAMPAIGN_SPEC["candidate_id"])`,
+    ``
+  ].join('\n');
+}
+
 export async function generateRobotProtocol() {
   const ctx = buildExportContext();
-  const targetVal = ctx.target || '7RPZ';
   const lead = ctx.selectedLead || {
     id: 'LEAD-001',
     smiles: 'CC(=O)N1CCNCC1'
@@ -619,7 +686,8 @@ export async function generateRobotProtocol() {
       headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
       body: JSON.stringify({
         lead_id: lead.id,
-        smiles: lead.smiles || 'CC(=O)N1CCNCC1'
+        smiles: lead.smiles || 'CC(=O)N1CCNCC1',
+        retrosynthesis: ctx.retrosynthesis
       })
     });
 
@@ -638,10 +706,8 @@ export async function generateRobotProtocol() {
     openRobotModal();
     showToast('Opentrons OT-2 Protocol generated.');
   } catch (err) {
-    const sampleScript = `"""\nOT-2 AUTOMATED DILUTION PROTOCOL (${ctx.provenance} / UNVALIDATED)\nWARNING: Auto-generated for illustrative purposes only.\nNOT reviewed by a qualified chemist. DO NOT use in wet lab without expert review.\nTarget Complex: ${targetVal} (${ctx.pdbId})\nTarget Candidate: ${lead.id} (Rev ${ctx.leadRevision})\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "${targetVal} serial dilution (${lead.id})",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 ${targetVal} serial dilution protocol complete.")\n`;
-    state.currentOt2Code = sampleScript;
+    state.currentOt2Code = buildStaticOt2Script(ctx);
     state.currentOt2Key = revisionKey;
-    state.currentLabCardMd = `# Wet-Lab Protocol Card — ${lead.id} (${targetVal})\n> **Generated for BioNeMo NIM Benchmark Suite (${ctx.provenance})**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Assay & Dilution Overview\n- Format: Corning 96-well flat-bottom plate (360 µL/well)\n- Gradient: 2-fold serial dilution down Row A (columns 1 to 12)\n- Fluidics: Throttled aspiration (25 µL/s) for DMSO compatibility\n`;
     const codeEl = document.getElementById('ot2CodeContent');
     if (codeEl) codeEl.textContent = state.currentOt2Code;
     const leadEl = document.getElementById('robotModalLeadId');
@@ -665,16 +731,33 @@ export async function generateLabCard() {
     const res = await fetch('./api/robot/protocol', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
-      body: JSON.stringify({ lead_id: lead.id, smiles: lead.smiles })
+      body: JSON.stringify({ lead_id: lead.id, smiles: lead.smiles, retrosynthesis: ctx.retrosynthesis })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    downloadBlob(data.lab_card_md, `WetLab_Card_${lead.id}.md`, 'text/markdown');
+    downloadBlob(data.lab_card_md, buildExportFilename(ctx, 'wetlab_sop', 'md'), 'text/markdown');
     showToast('Wet-Lab SOP Card (.md) downloaded.');
   } catch (err) {
     const retroFeasibility = ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent';
-    const cardContent = state.currentLabCardMd || `# Wet-Lab Protocol Card — ${lead.id} (${ctx.target})\n> **Generated by BioNeMo NIM Benchmark Suite (Illustrative / Unvalidated)**\n> **Provenance:** ${ctx.provenance}\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Route Overview\n- Retrosynthetic Assessment: ${retroFeasibility}\n- Independently developed by Aarav Jorwal (@Jorwalzzz) · AGPL-3.0-only\n`;
-    downloadBlob(cardContent, `WetLab_Card_${lead.id}.md`, 'text/markdown');
+    const steps = Array.isArray(ctx.retrosynthesis?.steps) ? ctx.retrosynthesis.steps : [];
+    const stepLines = steps.length > 0
+      ? steps.map((s, idx) => `### Step ${s.step || idx + 1}: ${escapeMdCell(s.reaction_type || 'Step')}\n- **Reagents:** ${escapeMdCell((s.reagents || []).join(', ') || 'Standard')}\n- **Est. Yield:** ${Number(s.yield_pct || 80).toFixed(0)}% (${escapeMdCell(s.difficulty || 'Heuristic')})`).join('\n\n')
+      : `- Heuristic BRICS / Literature Precedent`;
+    const cardContent = [
+      `# Wet-Lab Protocol Card -- ${escapeMdCell(lead.id)} (${escapeMdCell(ctx.target)})`,
+      `> **Generated by BioNeMo NIM Benchmark Suite (Illustrative / Unvalidated)**`,
+      `> **Provenance:** ${ctx.provenance} | **Target Scaffold:** \`${escapeMdCell(lead.smiles || 'CC(=O)N1CCNCC1')}\``,
+      ``,
+      `## 1. Route Overview`,
+      `- **Retrosynthetic Assessment:** ${escapeMdCell(retroFeasibility)}`,
+      ``,
+      `## 2. Step-by-Step Conditions`,
+      stepLines,
+      ``,
+      `## 3. License & Legal Notice`,
+      `- **AGPL-3.0-only** · ${ctx.legal_notice}`
+    ].join('\n');
+    downloadBlob(cardContent, buildExportFilename(ctx, 'wetlab_sop', 'md'), 'text/markdown');
     showToast('Wet-Lab SOP Card (.md) downloaded.');
   }
 }

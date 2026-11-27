@@ -11,63 +11,76 @@ from bionemo_benchmark.core.models import RetrosynthesisPlan, RetrosynthesisStep
 
 OT2_TEMPLATE = '''"""
 ================================================================================
-⚠️  UNVALIDATED COMPUTATIONAL PROTOCOL FOR RESEARCH USE ONLY
+UNVALIDATED COMPUTATIONAL PROTOCOL FOR RESEARCH USE ONLY
+Liquid-Handling Plate Setup Only -- Dry-Run Simulation Required
 Generated algorithmically by the BioNeMo NIM Benchmark Suite (Open Source).
-This liquid handling protocol has NOT been wet-lab validated. Users must verify
-deck layouts, pipetting volumes, chemical compatibility with polypropylene/plastic
-ware, and safety datasheets (SDS) before loading reagents on an Opentrons OT-2.
+Dry-run via `opentrons_simulate` and manual labware/volume verification are
+required before hardware execution. Thermal reaction, inert-atmosphere, and
+purification steps are performed off-deck.
 ================================================================================
-Opentrons OT-2 Automated Synthesis & Screening Protocol
-Target Candidate: {candidate_id}
-Synthetic Route: {num_steps} Steps ({feasibility})
+Opentrons OT-2 Automated Liquid-Handling Plate Setup Protocol
+Target Candidate: {candidate_id_safe}
+Synthetic Route: {num_steps} Steps ({feasibility_safe})
 Generated: {timestamp}
 """
 
 from opentrons import protocol_api
 
 metadata = {{
-    "protocolName": "BioNeMo Automated Synthesis: {candidate_id}",
+    "protocolName": {protocol_name_repr},
     "author": "BioNeMo NIM Benchmark Suite (Open Source)",
-    "description": "Computational liquid handling protocol for candidate {candidate_id} (Unvalidated)",
+    "description": {description_repr},
     "apiLevel": "2.15"
 }}
 
+CAMPAIGN_SPEC = {{
+    "candidate_id": {candidate_id_repr},
+    "feasibility": {feasibility_repr},
+    "num_steps": {num_steps},
+}}
+
+SYNTHESIS_STEPS = {steps_repr}
+
+
 def run(protocol: protocol_api.ProtocolContext):
     # ================= DECK SETUP =================
-    # Slot 1: 300 uL Opentrons Tip Rack
     tips_300 = protocol.load_labware("opentrons_96_tiprack_300ul", 1)
-    
-    # Slot 2: 12-channel reagent reservoir (15 mL wells)
     reagents = protocol.load_labware("nest_12_reservoir_15ml", 2)
-    
-    # Slot 3: Reaction incubation block with temperature module
     temp_mod = protocol.load_module("temperature module gen2", 3)
     rxn_block = temp_mod.load_labware("opentrons_24_aluminumblock_nest_1.5ml_snapcap")
-    
-    # Slot 4: 96-well collection / analytical plate
     collection_plate = protocol.load_labware("nest_96_wellplate_200ul_flat", 4)
-    
-    # Slot 5: 1000 uL Tip Rack for bulk solvent transfer
     tips_1000 = protocol.load_labware("opentrons_96_tiprack_1000ul", 5)
 
-    # Instruments
     p300 = protocol.load_instrument("p300_single_gen2", "left", tip_racks=[tips_300])
     p1000 = protocol.load_instrument("p1000_single_gen2", "right", tip_racks=[tips_1000])
 
-    protocol.comment("======================================================")
-    protocol.comment("Starting Automated Synthesis Protocol for {candidate_id}")
-    protocol.comment("Synthetic Feasibility: {feasibility}")
-    protocol.comment("======================================================")
-
-    # Pre-heat temperature block to 25 deg C baseline
+    protocol.comment("Starting Plate Setup for " + CAMPAIGN_SPEC["candidate_id"])
+    protocol.comment("Route Assessment: " + CAMPAIGN_SPEC["feasibility"])
     temp_mod.set_temperature(celsius=25)
-    protocol.comment("Temperature module equilibrated to 25 C.")
-{step_commands}
 
-    # Protocol completion and safe standby
-    temp_mod.set_temperature(celsius=4)  # Chill reaction product for preservation
-    protocol.comment("Synthesis protocol completed. Holding product at 4 C.")
-    protocol.comment("Remove reaction block from Slot 3 for LC-MS verification.")
+    for step in SYNTHESIS_STEPS:
+        dest_well = rxn_block[step["dest_well"]]
+        protocol.comment(f"Step {{step['step_number']}}: {{step['reaction_type']}}")
+        for well_id in step["reactant_wells"]:
+            p300.pick_up_tip()
+            p300.aspirate(120, reagents[well_id])
+            p300.dispense(120, dest_well)
+            p300.mix(3, 80, dest_well)
+            p300.drop_tip()
+        for well_id in step["reagent_wells"]:
+            p300.pick_up_tip()
+            p300.aspirate(50, reagents[well_id])
+            p300.dispense(50, dest_well)
+            p300.mix(4, 100, dest_well)
+            p300.drop_tip()
+
+    p1000.pick_up_tip()
+    p1000.aspirate(200, rxn_block["A1"])
+    p1000.dispense(200, collection_plate["A1"])
+    p1000.drop_tip()
+
+    temp_mod.set_temperature(celsius=4)
+    protocol.comment("Plate setup complete. Holding at 4 C for off-deck processing.")
 '''
 
 
@@ -79,8 +92,7 @@ def generate_ot2_protocol(
     **kwargs,
 ) -> str:
     """
-    Generates fully compliant Opentrons Python protocol string.
-    Accepts a RetrosynthesisPlan object, or direct lead_id / lead_smiles / synthesis_steps kwargs.
+    Generates CWE-94-safe Opentrons API v2.15 Python protocol string.
     """
     if plan is None:
         cid = lead_id or kwargs.get("candidate_id", "LEAD-001")
@@ -100,91 +112,65 @@ def generate_ot2_protocol(
                         reagents=s.get("reagents", ["DIPEA", "DMF"]),
                         product_smiles=sm,
                         estimated_yield_pct=float(s.get("yield_pct", 85.0)),
-                        difficulty=s.get("difficulty", "Routine"),
+                        difficulty=s.get("difficulty", "Heuristic"),
                     )
                 )
         plan = RetrosynthesisPlan(
             candidate_id=cid,
             target_smiles=sm,
             num_steps=len(parsed_steps) or 1,
-            overall_feasibility="Commercially Accessible"
+            overall_feasibility="Heuristic BRICS / Literature Precedent"
             if len(parsed_steps) <= 2
-            else "Multi-Step Custom",
+            else "Multi-Step Heuristic Route",
             steps=parsed_steps,
-            starting_materials=["Precursor Scaffold A", "Commercial Reagent B"],
+            starting_materials=["Heuristic Terminal Fragment A", "Heuristic Terminal Fragment B"],
         )
 
     from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
-    safe_candidate_id = SafeSanitizer.sanitize_code_literal(plan.candidate_id, 40)
-    safe_feasibility = SafeSanitizer.sanitize_code_literal(plan.overall_feasibility, 60)
+    safe_candidate_id = SafeSanitizer.sanitize_code_literal(plan.candidate_id, 40) or "LEAD-001"
+    raw_feasibility = str(plan.overall_feasibility).replace("Commercially Accessible", "Heuristic BRICS / Literature Precedent")
+    safe_feasibility = SafeSanitizer.sanitize_code_literal(raw_feasibility, 60) or "Heuristic"
 
-    step_blocks = []
-
+    steps_payload: list[dict[str, Any]] = []
     for idx, step in enumerate(plan.steps, start=1):
-        safe_rxn_type = SafeSanitizer.sanitize_code_literal(step.reaction_type, 60)
-        safe_difficulty = SafeSanitizer.sanitize_code_literal(step.difficulty, 40)
-
-        lines = []
-        lines.append("\n    # ----------------------------------------------------")
-        lines.append(f"    # STEP {step.step_number}: {safe_rxn_type.upper()}")
-        lines.append(
-            f"    # Difficulty: {safe_difficulty} | Expected Yield: {step.estimated_yield_pct:.0f}%"
-        )
-        lines.append("    # ----------------------------------------------------")
-        lines.append(
-            f"    protocol.comment('Executing Step {step.step_number}: {safe_rxn_type}')"
-        )
-
-        # Add reactants
-        for r_idx, reactant in enumerate(step.reactants, start=1):
-            raw_r_name = reactant.get("name", f"Reactant_{r_idx}")
-            r_name = SafeSanitizer.sanitize_code_literal(raw_r_name, 50)
-            res_well = f"A{((idx - 1) * 2 + r_idx) % 12 + 1}"
-            lines.append(f"    # Liquid addition: {r_name} from Reservoir {res_well}")
-            lines.append("    p300.pick_up_tip()")
-            lines.append(f"    p300.aspirate(120, reagents['{res_well}'])")
-            lines.append(f"    p300.dispense(120, rxn_block['A{idx}'])")
-            lines.append(f"    p300.mix(3, 80, rxn_block['A{idx}'])")
-            lines.append("    p300.drop_tip()")
-
-        # Add reagents
-        for rg_idx, reagent in enumerate(step.reagents, start=1):
-            safe_reagent = SafeSanitizer.sanitize_code_literal(reagent, 50)
-            lines.append(f"    # Catalyst/Reagent dosing: {safe_reagent}")
-            lines.append("    p300.pick_up_tip()")
-            lines.append(f"    p300.aspirate(50, reagents['A{min(12, rg_idx + 6)}'])")
-            lines.append(f"    p300.dispense(50, rxn_block['A{idx}'])")
-            lines.append(f"    p300.mix(4, 100, rxn_block['A{idx}'])")
-            lines.append("    p300.drop_tip()")
-
-        # Incubation or reaction delay
-        lines.append(
-            f"    protocol.comment('Step {step.step_number} incubation initiated...')"
-        )
-        lines.append(
-            "    protocol.delay(minutes=15)  # Automated mixing incubation cycle"
-        )
-        lines.append(
-            f"    protocol.comment('Step {step.step_number} completed. Ready for next transformation.')"
+        safe_rxn_type = SafeSanitizer.sanitize_code_literal(step.reaction_type, 60) or "Step"
+        safe_difficulty = SafeSanitizer.sanitize_code_literal(step.difficulty, 40) or "Heuristic"
+        reactant_wells = [f"A{((idx - 1) * 2 + r_idx) % 12 + 1}" for r_idx, _ in enumerate(step.reactants, start=1)]
+        reagent_wells = [f"A{min(12, rg_idx + 6)}" for rg_idx, _ in enumerate(step.reagents, start=1)]
+        steps_payload.append(
+            {
+                "step_number": int(step.step_number),
+                "reaction_type": safe_rxn_type,
+                "difficulty": safe_difficulty,
+                "dest_well": f"A{min(24, idx)}",
+                "reactant_wells": reactant_wells or ["A1"],
+                "reagent_wells": reagent_wells or ["A7"],
+            }
         )
 
-        step_blocks.append("\n".join(lines))
-
-    all_steps_text = "\n".join(step_blocks)
-    if not all_steps_text:
-        all_steps_text = (
-            "    protocol.comment('Single-step verified commercial precursor ready.')"
+    if not steps_payload:
+        steps_payload.append(
+            {
+                "step_number": 1,
+                "reaction_type": "Stock Plate Setup",
+                "difficulty": "Heuristic",
+                "dest_well": "A1",
+                "reactant_wells": ["A1"],
+                "reagent_wells": ["A7"],
+            }
         )
 
     return OT2_TEMPLATE.format(
-        candidate_id=safe_candidate_id,
+        candidate_id_safe=safe_candidate_id,
         num_steps=plan.num_steps,
-        feasibility=safe_feasibility,
-        timestamp=datetime.datetime.now(datetime.UTC).strftime(
-            "%Y-%m-%d %H:%M UTC"
-        ),
-        step_commands=all_steps_text,
+        feasibility_safe=safe_feasibility,
+        timestamp=datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M UTC"),
+        protocol_name_repr=repr(f"BioNeMo Plate Setup: {safe_candidate_id}"),
+        description_repr=repr(f"Liquid-handling plate setup for {safe_candidate_id} (Unvalidated)"),
+        candidate_id_repr=repr(safe_candidate_id),
+        feasibility_repr=repr(safe_feasibility),
+        steps_repr=repr(steps_payload),
     )
 
 
@@ -197,7 +183,6 @@ def generate_lab_card(
 ) -> str:
     """
     Generates standard markdown wet-lab card with reagent requirements and safety precautions.
-    Supports either RetrosynthesisPlan or direct kwargs.
     """
     cid = lead_id or (plan.candidate_id if plan else "LEAD-001")
     if plan is None:
@@ -216,77 +201,65 @@ def generate_lab_card(
                         reagents=s.get("reagents", ["DIPEA", "DMF"]),
                         product_smiles="CC(=O)N1CCNCC1",
                         estimated_yield_pct=float(s.get("yield_pct", 85.0)),
-                        difficulty=s.get("difficulty", "Routine"),
+                        difficulty=s.get("difficulty", "Heuristic"),
                     )
                 )
         plan = RetrosynthesisPlan(
             candidate_id=cid,
             target_smiles=kwargs.get("lead_smiles", "CC(=O)N1CCNCC1"),
             num_steps=len(parsed_steps) or 1,
-            overall_feasibility="Commercially Accessible",
+            overall_feasibility="Heuristic BRICS / Literature Precedent",
             steps=parsed_steps,
-            starting_materials=["Precursor Scaffold A", "Commercial Reagent B"],
+            starting_materials=["Heuristic Terminal Fragment A", "Heuristic Terminal Fragment B"],
         )
 
-    now_str = datetime.datetime.now(datetime.UTC).strftime(
-        "%Y-%m-%d %H:%M UTC"
-    )
+    now_str = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M UTC")
+    feas_str = str(plan.overall_feasibility).replace("Commercially Accessible", "Heuristic BRICS / Literature Precedent")
     lines = [
-        f"# 🧪 Wet-Lab Protocol Card — {cid}",
+        f"# Wet-Lab Protocol Card -- {cid}",
         "> [!WARNING]",
-        "> **UNVALIDATED COMPUTATIONAL PROTOCOL — RESEARCH USE ONLY**",
+        "> **UNVALIDATED COMPUTATIONAL PROTOCOL -- RESEARCH USE ONLY**",
         "> This protocol was algorithmically generated by the open-source BioNeMo NIM Benchmark Suite.",
         "> It has not undergone empirical wet-lab validation. Verify chemical compatibility, solvent volatility, and PPE requirements before execution.",
         "",
         f"> **Generated:** {now_str} | **Target Scaffold:** `{plan.target_smiles}`",
         "",
         "## 1. Route Overview",
-        f"- **Synthetic Complexity:** {plan.overall_feasibility}",
+        f"- **Synthetic Complexity:** {feas_str}",
         f"- **Total Transformations:** {plan.num_steps} Steps",
         f"- **Estimated Turnaround Time:** {plan.estimated_turnaround_days} Days",
         "",
-        "## 2. Commercial Starting Materials Required",
+        "## 2. Heuristic Terminal Fragments",
     ]
 
     for sm in plan.starting_materials:
-        lines.append(
-            f"- [ ] **Precursor:** `{sm}` (Available in Sigma-Aldrich / Enamine catalog)"
-        )
+        lines.append(f"- [ ] **Fragment:** `{sm}` (Heuristic Terminal Fragment)")
 
-    lines.extend(
-        [
-            "",
-            "## 3. Step-by-Step Reaction Conditions",
-        ]
-    )
+    lines.extend(["", "## 3. Step-by-Step Reaction Conditions"])
 
     for step in plan.steps:
         lines.append(f"### Step {step.step_number}: {step.reaction_type}")
         lines.append(f"- **Difficulty:** {step.difficulty}")
-        lines.append(
-            f"- **Anticipated Isolated Yield:** {step.estimated_yield_pct:.0f}%"
-        )
+        lines.append(f"- **Anticipated Isolated Yield:** {step.estimated_yield_pct:.0f}%")
         lines.append(f"- **Reagents / Catalysts:** {', '.join(step.reagents)}")
         if step.reactants:
             r_names = [f"`{r.get('name', 'Compound')}`" for r in step.reactants]
             lines.append(f"- **Reactants:** {', '.join(r_names)}")
-        lines.append(
-            "- **Quality Control:** Analyze aliquot by LC-MS (ESI+) to confirm product mass before downstream step."
-        )
+        lines.append("- **Quality Control:** Analyze aliquot by LC-MS (ESI+) to confirm product mass before downstream step.")
         lines.append("")
 
     lines.extend(
         [
             "## 4. Robotic Automation Instructions (Opentrons OT-2)",
-            "1. Load `BioNeMo_Synthesis_Protocol.py` into the Opentrons App or web controller.",
-            "2. Place 300 µL tip rack in **Slot 1** and 1000 µL tip rack in **Slot 5**.",
+            "1. Simulate the protocol via `opentrons_simulate` before hardware execution.",
+            "2. Place 300 uL tip rack in **Slot 1** and 1000 uL tip rack in **Slot 5**.",
             "3. Prime Reagent Reservoir in **Slot 2** with stock solutions as outlined in deck map.",
             "4. Mount Temperature Module Gen2 in **Slot 3** with 24-well 1.5 mL aluminum block.",
-            "5. Execute automated protocol. Yield product held at 4°C upon completion.",
+            "5. Thermal reaction, inert-atmosphere, and purification steps are performed off-deck.",
             "",
             "---",
-            "*Safety & Regulatory Notice: This protocol is provided for educational and research exploration only. "
-            "Chemical handling, catalyst preparation, and biological assays must be conducted in an authorized laboratory under a certified chemical fume hood with appropriate personal protective equipment (PPE).*",
+            "*Safety & Regulatory Notice (AGPL-3.0-only): Provided for research exploration only. "
+            "NVIDIA, BioNeMo, NIM, TensorRT, and Hopper are trademarks of NVIDIA Corporation; independently developed by Aarav Jorwal (@Jorwalzzz).*",
         ]
     )
 
