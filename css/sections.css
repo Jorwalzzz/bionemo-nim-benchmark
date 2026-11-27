@@ -13,6 +13,8 @@
   max-width: 1280px;
   margin: 0 auto;
   border-bottom: 1px solid var(--border-hairline);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
 }
 
 @media (max-width: 768px) {

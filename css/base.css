@@ -102,6 +102,49 @@ table th {
   color: var(--color-signal-green);
 }
 
+/* Zero-JS Native Hardware-Compositor SVG Reticle Cursor (Welcome Page) */
+@media (hover: hover) and (pointer: fine) {
+  body[data-cursor="lab"] {
+    cursor: url('../assets/cursors/reticle-dark.svg') 12 12, crosshair;
+  }
+
+  body[data-cursor="lab"] a,
+  body[data-cursor="lab"] button,
+  body[data-cursor="lab"] summary,
+  body[data-cursor="lab"] [role="button"],
+  body[data-cursor="lab"] select,
+  body[data-cursor="lab"] input[type="range"],
+  body[data-cursor="lab"] input[type="checkbox"],
+  body[data-cursor="lab"] input[type="radio"],
+  body[data-cursor="lab"] label[for] {
+    cursor: url('../assets/cursors/pointer-dark.svg') 12 12, pointer;
+  }
+
+  body[data-cursor="lab"] input[type="text"],
+  body[data-cursor="lab"] input[type="search"],
+  body[data-cursor="lab"] textarea,
+  body[data-cursor="lab"] pre,
+  body[data-cursor="lab"] code {
+    cursor: text;
+  }
+
+  [data-theme="light"] body[data-cursor="lab"] {
+    cursor: url('../assets/cursors/reticle-light.svg') 12 12, crosshair;
+  }
+
+  [data-theme="light"] body[data-cursor="lab"] a,
+  [data-theme="light"] body[data-cursor="lab"] button,
+  [data-theme="light"] body[data-cursor="lab"] summary,
+  [data-theme="light"] body[data-cursor="lab"] [role="button"],
+  [data-theme="light"] body[data-cursor="lab"] select,
+  [data-theme="light"] body[data-cursor="lab"] input[type="range"],
+  [data-theme="light"] body[data-cursor="lab"] input[type="checkbox"],
+  [data-theme="light"] body[data-cursor="lab"] input[type="radio"],
+  [data-theme="light"] body[data-cursor="lab"] label[for] {
+    cursor: url('../assets/cursors/pointer-light.svg') 12 12, pointer;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--color-signal-green);
   outline-offset: 2px;
@@ -186,8 +229,6 @@ table th {
   align-items: center;
   gap: 8px;
   background: var(--color-surface-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--border-hairline);
   box-shadow: var(--shadow-glass-nav);
   border-radius: 9999px;
@@ -195,6 +236,7 @@ table th {
   max-width: 1200px;
   width: auto;
   position: relative;
+  contain: layout style;
   transition: border-color var(--dur-fast) var(--ease-precision), box-shadow var(--dur-fast) var(--ease-precision);
 }
 
@@ -353,9 +395,11 @@ table th {
 
 .nav-progress-bar {
   height: 100%;
-  width: 0%;
+  width: 100%;
   background: var(--gradient-nim-flash);
-  transition: width 80ms linear;
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
 }
 
 /* -----------------------------------------------------------------------------

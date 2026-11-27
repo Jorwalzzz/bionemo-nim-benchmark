@@ -93,16 +93,26 @@
 
     var progressBar = document.getElementById('navProgressBar');
     if (progressBar) {
+      var scrollTicking = false;
+      var syncScrollProgress = function () {
+        scrollTicking = false;
+        var winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+        var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        var ratio = height > 0 ? winScroll / height : 0;
+        var clamped = Math.min(1, Math.max(0, ratio));
+        progressBar.style.transform = 'scaleX(' + clamped.toFixed(4) + ')';
+      };
       window.addEventListener(
         'scroll',
         function () {
-          var winScroll = document.documentElement.scrollTop || document.body.scrollTop;
-          var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-          var scrolled = height > 0 ? (winScroll / height) * 100 : 0;
-          progressBar.style.width = Math.min(100, Math.max(0, scrolled)) + '%';
+          if (!scrollTicking) {
+            scrollTicking = true;
+            window.requestAnimationFrame(syncScrollProgress);
+          }
         },
         { passive: true }
       );
+      syncScrollProgress();
     }
 
     // Native OS cursor enforced across all pages; custom dual-cursor RAF loop removed.
