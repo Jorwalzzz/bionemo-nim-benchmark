@@ -4,7 +4,7 @@
  */
 
 import { state, probeBackendHealth, TARGETS } from './state.js';
-import { showToast, renderLeads } from './ui-controls.js';
+import { showToast, renderLeads, updateKpisFromLeads, renderRedockDeltaStrip } from './ui-controls.js';
 import { clientAuth } from './api.js';
 import { openAuthModal } from './modals.js';
 import { renderPareto } from './charts.js';
@@ -261,12 +261,13 @@ export function focusContactIn3D(contactIndex) {
   showToast(`Focused ${targetContact.type || 'contact'} with ${targetContact.residue || 'pocket'} (${distTxt}${angTxt})`);
 }
 
-export function selectDockedPose(poseIndex) {
+export function selectDockedPose(poseIndex, options = {}) {
   const lead = state.currentSelectedLead;
   if (!lead) return;
   const poses = Array.isArray(lead.poses) ? lead.poses : [];
   const idx = Math.max(0, Math.min(poses.length - 1, Number(poseIndex) || 0));
   state.activePoseIndex = idx;
+  state.selectedPoseIndex = idx;
   const chosenPose = poses[idx];
   if (!chosenPose) return;
 
@@ -275,7 +276,12 @@ export function selectDockedPose(poseIndex) {
     ? chosenPose.interaction_contacts
     : (lead.interaction_contacts || []);
 
+  const savedView = !options.resetCamera && primaryViewer && typeof primaryViewer.getView === 'function'
+    ? primaryViewer.getView()
+    : null;
+
   state.currentPoseSdf = sdf;
+  clearContactOverlays();
   render3DComplex(
     state.currentTargetPdbText,
     sdf || null,
@@ -284,12 +290,20 @@ export function selectDockedPose(poseIndex) {
     state.currentTargetMeanPlddt,
     contacts
   );
-  document.querySelectorAll('[data-action="select-docked-pose"]').forEach((btn, bIdx) => {
-    const active = bIdx === idx;
-    btn.classList.toggle('bg-cyan-500/20', active);
-    btn.classList.toggle('border-cyan-400', active);
-    btn.classList.toggle('text-cyan-300', active);
-  });
+  if (savedView && primaryViewer && typeof primaryViewer.setView === 'function') {
+    try {
+      primaryViewer.setView(savedView);
+      primaryViewer.render();
+    } catch (_) {}
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('bionemo:pose-changed', {
+        detail: { leadId: lead.id, poseIndex: idx, pose: chosenPose }
+      })
+    );
+  }
   showToast(`Loaded Pose #${chosenPose.rank || idx + 1} (${chosenPose.provenance || 'SIMULATED'})`);
 }
 
@@ -1059,14 +1073,41 @@ export async function redockModifiedLead(smiles, targetName) {
   }
 
   if (state.currentSelectedLead) {
-    state.currentSelectedLead.affinity = data.binding_affinity_kcal_mol;
-    state.currentSelectedLead.qed = data.qed;
-    state.currentSelectedLead.sascore = data.sascore;
-    state.currentSelectedLead.smiles = smiles;
-    if (data.mw) state.currentSelectedLead.mw = data.mw;
-    if (data.admet_verdict) state.currentSelectedLead.verdict = data.admet_verdict;
+    const lead = state.currentSelectedLead;
+    if (!state.leadBaselines.has(lead.id)) {
+      state.leadBaselines.set(lead.id, structuredClone({
+        affinity: lead.affinity,
+        qed: lead.qed,
+        sascore: lead.sascore,
+        mw: lead.mw,
+        smiles: lead.smiles,
+        verdict: lead.verdict,
+        admet_verdict: lead.admet_verdict,
+        pains_alerts: lead.pains_alerts || [],
+        brenk_alerts: lead.brenk_alerts || [],
+        pose_sdf: lead.pose_sdf || '',
+        poses: lead.poses || [],
+        pose_validation: lead.pose_validation || null,
+        interaction_contacts: lead.interaction_contacts || []
+      }));
+    }
+    state.selectedLeadId = lead.id;
+    lead.affinity = data.binding_affinity_kcal_mol;
+    lead.qed = data.qed;
+    lead.sascore = data.sascore;
+    lead.smiles = smiles;
+    if (data.mw) lead.mw = data.mw;
+    if (data.admet_verdict) {
+      lead.verdict = data.admet_verdict;
+      lead.admet_verdict = data.admet_verdict;
+    }
+    state.leadRevision = (state.leadRevision || 0) + 1;
+    updateKpisFromLeads(state.currentLeads);
     renderLeads();
-    renderPareto();
+    try {
+      renderPareto();
+    } catch (_) {}
+    renderRedockDeltaStrip(lead);
   }
 
   showToast(`Re-dock complete: ${data.binding_affinity_kcal_mol} kcal/mol.`);

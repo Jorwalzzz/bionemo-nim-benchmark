@@ -535,3 +535,56 @@ async def api_resistance_evolve(request: Request) -> Response:
             "verdict": "RESISTANCE BYPASSED" if scan.resistance_detected else "STABLE LEAD",
         }
     )
+
+
+@router.post("/api/molecule/svg")
+async def render_molecule_svg(request: Request) -> Response:
+    """Render a 2D RDKit SVG depiction for a validated SMILES string."""
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "FORBIDDEN_ORIGIN"})
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "INVALID_JSON"})
+
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "INVALID_PAYLOAD"})
+
+    raw_smiles = body.get("smiles", "")
+    if not isinstance(raw_smiles, str):
+        return JSONResponse(status_code=400, content={"error": "INVALID_SMILES"})
+
+    smiles = raw_smiles.strip()
+    if not smiles or len(smiles) > 512:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "SMILES must be between 1 and 512 characters."},
+        )
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in smiles):
+        return JSONResponse(status_code=400, content={"error": "INVALID_CONTROL_CHARS"})
+
+    theme = str(body.get("theme", "dark")).lower()
+
+    try:
+        from rdkit import Chem
+        from rdkit.Chem import rdDepictor
+        from rdkit.Chem.Draw import rdMolDraw2D
+
+        mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            return JSONResponse(status_code=400, content={"error": "UNPARSEABLE_SMILES"})
+
+        rdDepictor.Compute2DCoords(mol)
+        drawer = rdMolDraw2D.MolDraw2DSVG(260, 150)
+        opts = drawer.drawOptions()
+        opts.clearBackground = False
+        if theme == "dark":
+            opts.setBackgroundColour((0.043, 0.055, 0.078, 0.0))
+        drawer.DrawMolecule(mol)
+        drawer.FinishDrawing()
+        svg = drawer.GetDrawingText()
+        return Response(content=svg, media_type="image/svg+xml")
+    except Exception as exc:
+        logger.warning("2D SVG render failed: %s", SecretScrubber.redact(str(exc)))
+        return JSONResponse(status_code=500, content={"error": "SVG_RENDER_FAILED"})

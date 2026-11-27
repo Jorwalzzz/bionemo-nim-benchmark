@@ -3,8 +3,9 @@
  * logs, lead rendering, and tab navigation.
  */
 
-import { state, TARGETS, ESMFOLD_PRESETS, PRESET_INHIBITORS } from './state.js';
+import { state, probeBackendHealth, TARGETS, ESMFOLD_PRESETS, PRESET_INHIBITORS } from './state.js';
 import { loadPdb, render3DComplex, updateLead3DView, evaluateClientRedock } from './viewer3d.js';
+import { renderPareto } from './charts.js';
 import { escapeHtml } from './api.js';
 import {
   copyToClipboard,
@@ -14,6 +15,8 @@ import {
 } from '../shared/dom-utils.js';
 
 let wbDebounceTimer = null;
+let wbSvgDebounceTimer = null;
+let wbSvgAbortController = null;
 
 export function setRounds(r) {
   state.selectedRounds = r;
@@ -114,6 +117,76 @@ export function onWorkbenchInput(val) {
     const sasEl = document.getElementById('wbLiveSas');
     if (sasEl) sasEl.textContent = metrics.sascore.toFixed(2);
   }, 120);
+
+  clearTimeout(wbSvgDebounceTimer);
+  wbSvgDebounceTimer = setTimeout(() => {
+    updateWorkbench2dPreview((val || '').trim());
+  }, 250);
+}
+
+export async function updateWorkbench2dPreview(smiles) {
+  const imgEl = document.getElementById('wb2dPreviewImg');
+  const metaEl = document.getElementById('wb2dPreviewMeta');
+  if (!imgEl || !metaEl) return;
+
+  const clean = (smiles || '').trim();
+  if (!clean) {
+    imgEl.classList.add('hidden');
+    metaEl.textContent = 'Enter a SMILES string for 2D preview.';
+    return;
+  }
+
+  const heteroCount = (clean.match(/[NOSPFClBrI]/gi) || []).length;
+  const ringMarkers = Math.floor((clean.match(/\d/g) || []).length / 2);
+  const staticSummary = `${clean.length} chars · ~${ringMarkers} ring(s) · ${heteroCount} heteroatom token(s) · 2D SVG requires local backend`;
+
+  if (wbSvgAbortController) {
+    wbSvgAbortController.abort();
+    wbSvgAbortController = null;
+  }
+
+  const backendUp = await probeBackendHealth();
+  if (!backendUp) {
+    if (state.wb2dPreviewUrl) {
+      URL.revokeObjectURL(state.wb2dPreviewUrl);
+      state.wb2dPreviewUrl = null;
+    }
+    imgEl.classList.add('hidden');
+    metaEl.textContent = staticSummary;
+    metaEl.classList.remove('hidden');
+    return;
+  }
+
+  const controller = new AbortController();
+  wbSvgAbortController = controller;
+  const theme = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  try {
+    const res = await fetch('./api/molecule/svg', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' },
+      body: JSON.stringify({ smiles: clean.slice(0, 512), theme }),
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const svgText = await res.text();
+    const nextUrl = URL.createObjectURL(new Blob([svgText], { type: 'image/svg+xml' }));
+    if (state.wb2dPreviewUrl) {
+      URL.revokeObjectURL(state.wb2dPreviewUrl);
+    }
+    state.wb2dPreviewUrl = nextUrl;
+    imgEl.src = nextUrl;
+    imgEl.classList.remove('hidden');
+    metaEl.classList.add('hidden');
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    imgEl.classList.add('hidden');
+    metaEl.textContent = staticSummary;
+    metaEl.classList.remove('hidden');
+  } finally {
+    if (wbSvgAbortController === controller) {
+      wbSvgAbortController = null;
+    }
+  }
 }
 
 export function loadWorkbenchPreset(key) {
@@ -379,6 +452,101 @@ export function logEntry(labelTag, agent, role, text, color) {
   log.scrollTop = log.scrollHeight;
 }
 
+export function updateKpisFromLeads(leads) {
+  const list = Array.isArray(leads) ? leads : [];
+  if (list.length === 0) return;
+
+  let bestAff = Infinity;
+  let bestQed = -Infinity;
+  let paretoCount = 0;
+  for (const item of list) {
+    if (typeof item.affinity === 'number' && item.affinity < bestAff) bestAff = item.affinity;
+    if (typeof item.qed === 'number' && item.qed > bestQed) bestQed = item.qed;
+    if (item.pareto) paretoCount += 1;
+  }
+
+  const kpiAff = document.getElementById('kpiAffinity');
+  if (kpiAff && Number.isFinite(bestAff)) kpiAff.textContent = bestAff.toFixed(2);
+  const kpiQed = document.getElementById('kpiQed');
+  if (kpiQed && Number.isFinite(bestQed)) kpiQed.textContent = bestQed.toFixed(3);
+  const kpiSc = document.getElementById('kpiScreened');
+  if (kpiSc) kpiSc.textContent = String(state.activeRunResult?.screenedCount || list.length);
+  const kpiPar = document.getElementById('kpiPareto');
+  if (kpiPar) kpiPar.textContent = String(paretoCount);
+}
+
+export function renderRedockDeltaStrip(lead) {
+  const affBox = document.getElementById('redockAffinityDisplay');
+  if (!affBox || !lead) return;
+  const base = state.leadBaselines instanceof Map ? state.leadBaselines.get(lead.id) : null;
+  if (!base) {
+    affBox.textContent = '';
+    return;
+  }
+
+  affBox.textContent = '';
+  const row = document.createElement('div');
+  row.className = 'flex flex-wrap items-center justify-center gap-1.5 text-[10px] font-mono tabular-nums';
+
+  const makeDeltaPill = (label, delta, lowerIsBetter, decimals, unit) => {
+    const improved = lowerIsBetter ? delta < -1e-6 : delta > 1e-6;
+    const worsened = lowerIsBetter ? delta > 1e-6 : delta < -1e-6;
+    const tone = improved
+      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+      : worsened
+        ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+        : 'bg-slate-800 text-gray-300 border-white/10';
+    const sign = delta > 0 ? '+' : '';
+    const pill = document.createElement('span');
+    pill.className = `px-1.5 py-0.5 rounded border ${tone}`;
+    pill.textContent = `${label} ${sign}${delta.toFixed(decimals)}${unit ? ' ' + unit : ''}`;
+    return pill;
+  };
+
+  if (typeof lead.affinity === 'number' && typeof base.affinity === 'number') {
+    row.appendChild(makeDeltaPill('ΔΔG', lead.affinity - base.affinity, true, 2, 'kcal/mol'));
+  }
+  if (typeof lead.qed === 'number' && typeof base.qed === 'number') {
+    row.appendChild(makeDeltaPill('ΔQED', lead.qed - base.qed, false, 3, ''));
+  }
+  if (typeof lead.sascore === 'number' && typeof base.sascore === 'number') {
+    row.appendChild(makeDeltaPill('ΔSA', lead.sascore - base.sascore, true, 2, ''));
+  }
+
+  const revertBtn = document.createElement('button');
+  revertBtn.type = 'button';
+  revertBtn.setAttribute('data-action', 'revert-lead');
+  revertBtn.className = 'px-2 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 font-semibold';
+  revertBtn.textContent = 'Revert to Original';
+  row.appendChild(revertBtn);
+
+  affBox.appendChild(row);
+}
+
+export function revertSelectedLead() {
+  const lead = state.currentSelectedLead;
+  if (!lead || !(state.leadBaselines instanceof Map) || !state.leadBaselines.has(lead.id)) return;
+  const base = state.leadBaselines.get(lead.id);
+  Object.assign(lead, structuredClone(base));
+  state.leadBaselines.delete(lead.id);
+  state.selectedPoseIndex = 0;
+  state.activePoseIndex = 0;
+  state.leadRevision = (state.leadRevision || 0) + 1;
+
+  updateKpisFromLeads(state.currentLeads);
+  renderLeads();
+  try {
+    renderPareto();
+  } catch (_) {}
+  showToast(`Reverted ${lead.id} to original baseline.`);
+}
+
+export function selectLeadById(leadId) {
+  const leads = state.currentLeads || [];
+  const idx = leads.findIndex(l => l.id === leadId);
+  if (idx >= 0) selectLead(idx);
+}
+
 export function renderLeads() {
   const container = document.getElementById('leadsContainer');
   if (!container) return;
@@ -387,6 +555,7 @@ export function renderLeads() {
   if (countEl) countEl.textContent = `${leads.length} candidates`;
 
   if (leads.length === 0) {
+    state.selectedLeadId = null;
     container.innerHTML = `
       <div id="emptyLeadsState" class="flex flex-col items-center justify-center p-8 text-center text-gray-500">
         <svg class="w-7 h-7 mb-2 text-emerald-400/70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3v6l-4 7a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-4-7V3m-6 0h6"/></svg>
@@ -407,10 +576,16 @@ export function renderLeads() {
     return;
   }
 
+  let selectedIdx = state.selectedLeadId ? leads.findIndex(l => l.id === state.selectedLeadId) : -1;
+  if (selectedIdx < 0) {
+    selectedIdx = 0;
+    state.selectedLeadId = leads[0].id;
+  }
+
   container.innerHTML = leads.map((lead, i) => {
     const isSimulated = Boolean(lead.is_simulated || lead.provenance === 'SIMULATED');
     return `
-      <div class="lead-card ${i === 0 ? 'selected' : ''}" data-action="select-lead" data-lead-index="${i}" role="button" tabindex="0">
+      <div class="lead-card ${i === selectedIdx ? 'selected' : ''}" data-action="select-lead" data-lead-id="${escapeHtml(lead.id)}" data-lead-index="${i}" role="button" tabindex="0">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
             <span class="font-mono font-bold text-xs text-white">${escapeHtml(lead.id)}</span>
@@ -428,7 +603,7 @@ export function renderLeads() {
       </div>
     `;
   }).join('');
-  if (leads.length > 0) selectLead(0);
+  selectLead(selectedIdx);
 }
 
 export function selectLead(i) {
@@ -437,7 +612,9 @@ export function selectLead(i) {
   const lead = leads[i];
   if (!lead) return;
   state.currentSelectedLead = lead;
+  state.selectedLeadId = lead.id;
   state.activePoseIndex = 0;
+  state.selectedPoseIndex = 0;
   state.currentOt2Code = '';
   state.currentOt2Key = '';
   state.latestResistanceData = null;
@@ -504,7 +681,7 @@ export function selectLead(i) {
         </div>
         <div class="flex flex-wrap gap-1">
           ${lead.poses.map((p, pIdx) => `
-            <button type="button" data-action="select-docked-pose" data-arg="${pIdx}" class="px-2 py-0.5 text-[10px] font-mono rounded border ${pIdx === 0 ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-white/5 border-surface-border text-gray-300 hover:border-cyan-500/50'} transition-colors">
+            <button type="button" data-action="select-docked-pose" data-arg="${pIdx}" aria-pressed="${pIdx === 0 ? 'true' : 'false'}" class="px-2 py-0.5 text-[10px] font-mono rounded border ${pIdx === 0 ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-white/5 border-surface-border text-gray-300 hover:border-cyan-500/50'} transition-colors">
               Pose #${Number(p.rank || pIdx + 1)} (${typeof p.predicted_affinity_kcal_mol === 'number' ? p.predicted_affinity_kcal_mol.toFixed(1) : '—'})
             </button>
           `).join('')}
@@ -526,7 +703,7 @@ export function selectLead(i) {
       </div>
 
       ${lead.pose_validation && typeof lead.pose_validation === 'object' ? `
-      <div class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
+      <div id="posePlausibilityContainer" class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
         <div class="flex items-center justify-between font-bold text-gray-300 uppercase tracking-wider">
           <span>3D Pose Plausibility</span>
           <span class="font-mono text-[9px] ${lead.pose_validation.passes_all ? 'text-emerald-400' : 'text-amber-400'}">${lead.pose_validation.passes_all ? 'PLAUSIBLE' : 'REVIEW'}</span>
@@ -541,7 +718,7 @@ export function selectLead(i) {
       </div>` : ''}
 
       ${Array.isArray(lead.interaction_contacts) && lead.interaction_contacts.length > 0 ? `
-      <div class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
+      <div id="contactsContainer" class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
         <div class="font-bold text-gray-300 uppercase tracking-wider">3D Binding Contacts (Click to Focus)</div>
         <div class="flex flex-wrap gap-1">
           ${lead.interaction_contacts.slice(0, 8).map((c, cIdx) => `
@@ -583,6 +760,11 @@ export function selectLead(i) {
           <button type="button" data-action="load-wb-preset" data-arg="egfr" class="wb-preset-pill">Osimertinib (EGFR)</button>
           <button type="button" data-action="load-wb-preset" data-arg="mpro" class="wb-preset-pill">Nirmatrelvir (Mpro)</button>
           <button type="button" data-action="load-wb-preset" data-arg="her2" class="wb-preset-pill">Tucatinib (HER2)</button>
+        </div>
+
+        <div id="wb2dPreviewBox" class="mb-1.5 rounded border border-surface-border bg-surface-card p-1.5 flex items-center justify-center min-h-[56px]">
+          <img id="wb2dPreviewImg" alt="2D chemical structure preview" class="hidden max-h-[120px] w-auto object-contain"/>
+          <span id="wb2dPreviewMeta" class="text-[10px] font-mono text-gray-400 text-center"></span>
         </div>
 
         <input type="text" id="workbenchSmilesInput" data-input-action="workbench-input" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-surface-card border border-surface-border text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
@@ -648,6 +830,9 @@ export function selectLead(i) {
         <button type="button" data-action="download-dossier" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">
           Export Dossier (.md)
         </button>
+        <button type="button" data-action="export-leads-csv" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">
+          Export Leads (.csv)
+        </button>
         <button type="button" data-action="download-sdf" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5" style="border-color: rgba(0,241,253,0.3); color: #00f1fd;">
           Export Poses (.sdf)
         </button>
@@ -655,7 +840,162 @@ export function selectLead(i) {
     </div>
   `;
 
+  if (state.leadBaselines instanceof Map && state.leadBaselines.has(lead.id)) {
+    renderRedockDeltaStrip(lead);
+  }
+  updateWorkbench2dPreview(lead.smiles || '');
   setTimeout(() => updateLead3DView(lead), 40);
+}
+
+export function pushRunHistory(runResult) {
+  if (!runResult || !runResult.runId) return;
+  const topAff = typeof runResult.topLead?.affinity === 'number'
+    ? runResult.topLead.affinity.toFixed(1)
+    : '—';
+  const snapshot = {
+    runId: runResult.runId,
+    label: runResult.pdbId || runResult.target || 'RUN',
+    pdbId: runResult.pdbId || '',
+    topAffinity: topAff,
+    runResult: structuredClone(runResult),
+    targetPdbText: state.currentTargetPdbText || null,
+    provenance: runResult.provenance || 'SIMULATED',
+    timestamp: runResult.timestamp || new Date().toISOString()
+  };
+
+  state.runHistory = [snapshot, ...(state.runHistory || []).filter(r => r.runId !== snapshot.runId)].slice(0, 3);
+
+  try {
+    const lite = state.runHistory.map(r => ({
+      runId: r.runId,
+      label: r.label,
+      pdbId: r.pdbId,
+      topAffinity: r.topAffinity,
+      provenance: r.provenance,
+      timestamp: r.timestamp
+    }));
+    sessionStorage.setItem('bionemo_run_history_lite', JSON.stringify(lite));
+  } catch (_) {}
+}
+
+export function renderRunHistoryStrip() {
+  const strip = document.getElementById('runHistoryStrip');
+  if (!strip) return;
+  const list = state.runHistory || [];
+  if (list.length === 0) {
+    strip.classList.add('hidden');
+    strip.textContent = '';
+    return;
+  }
+  strip.classList.remove('hidden');
+  strip.textContent = '';
+  for (const item of list) {
+    const isActive = item.runId === state.runId;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.setAttribute('data-action', 'restore-run-history');
+    btn.setAttribute('data-arg', item.runId);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    btn.className = `px-2 py-0.5 rounded text-[10px] font-mono tabular-nums border transition-colors ${
+      isActive
+        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold'
+        : 'bg-white/5 border-surface-border text-gray-300 hover:border-cyan-500/50'
+    }`;
+    btn.textContent = `${item.label} · ${item.topAffinity}`;
+    strip.appendChild(btn);
+  }
+}
+
+export function restoreRunFromHistory(runId) {
+  const entry = (state.runHistory || []).find(r => r.runId === runId);
+  if (!entry || !entry.runResult) return;
+
+  state.runId = entry.runId;
+  state.activeRunResult = structuredClone(entry.runResult);
+  if (typeof window !== 'undefined') window.activeRunResult = state.activeRunResult;
+  state.currentLeads = state.activeRunResult.leads || [];
+  state.currentTargetPdbText = entry.targetPdbText || state.currentTargetPdbText;
+  state.leadBaselines.clear();
+  state.selectedLeadId = state.currentLeads[0]?.id || null;
+  state.selectedPoseIndex = 0;
+  state.leadRevision = 0;
+
+  updateKpisFromLeads(state.currentLeads);
+  renderLeads();
+  try {
+    renderPareto();
+  } catch (_) {}
+  renderRunHistoryStrip();
+  showToast(`Restored run ${entry.label} (${entry.topAffinity} kcal/mol).`);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('bionemo:pose-changed', (ev) => {
+    const detail = ev?.detail || {};
+    const idx = Number(detail.poseIndex || 0);
+    const pose = detail.pose || null;
+    const lead = state.currentSelectedLead;
+    if (!lead || detail.leadId !== lead.id) return;
+
+    document.querySelectorAll('[data-action="select-docked-pose"]').forEach((btn, bIdx) => {
+      const active = bIdx === idx;
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.classList.toggle('bg-cyan-500/20', active);
+      btn.classList.toggle('border-cyan-400', active);
+      btn.classList.toggle('text-cyan-300', active);
+    });
+
+    const contactsEl = document.getElementById('contactsContainer');
+    const poseContacts = Array.isArray(pose?.interaction_contacts)
+      ? pose.interaction_contacts
+      : (lead.interaction_contacts || []);
+    if (contactsEl && Array.isArray(poseContacts)) {
+      const chipWrap = contactsEl.querySelector('.flex.flex-wrap');
+      if (chipWrap) {
+        chipWrap.textContent = '';
+        poseContacts.slice(0, 8).forEach((c, cIdx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.setAttribute('data-action', 'focus-contact');
+          btn.setAttribute('data-arg', String(cIdx));
+          btn.setAttribute('data-contact-index', String(cIdx));
+          btn.className = 'px-1.5 py-0.5 text-[9px] font-mono rounded bg-white/5 hover:bg-cyan-500/15 border border-surface-border text-gray-200 transition-colors';
+          btn.textContent = `${c.type || 'Contact'}: ${c.residue || ''} (${Number(c.distance_a || 0).toFixed(2)}Å)`;
+          chipWrap.appendChild(btn);
+        });
+      }
+    }
+
+    const plausEl = document.getElementById('posePlausibilityContainer');
+    const pv = pose?.pose_validation && typeof pose.pose_validation === 'object' ? pose.pose_validation : lead.pose_validation;
+    if (plausEl && pv && typeof pv === 'object') {
+      const statusSpan = plausEl.querySelector('span.font-mono');
+      if (statusSpan) {
+        statusSpan.className = `font-mono text-[9px] ${pv.passes_all ? 'text-emerald-400' : 'text-amber-400'}`;
+        statusSpan.textContent = pv.passes_all ? 'PLAUSIBLE' : 'REVIEW';
+      }
+      const pillsWrap = plausEl.querySelector('.flex.flex-wrap');
+      if (pillsWrap) {
+        pillsWrap.textContent = '';
+        const makeBadge = (text, cls) => {
+          const s = document.createElement('span');
+          s.className = `px-1.5 py-0.5 rounded ${cls}`;
+          s.textContent = text;
+          return s;
+        };
+        pillsWrap.appendChild(makeBadge(`${pv.bond_geometry_pass ? '✓' : '✗'} Bonds`, pv.bond_geometry_pass ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'));
+        pillsWrap.appendChild(makeBadge(`${pv.receptor_clash_pass ? '✓' : '✗'} Clashes (${Number(pv.receptor_clash_count || 0)})`, pv.receptor_clash_pass ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'));
+        pillsWrap.appendChild(makeBadge(`${pv.planarity_pass ? '✓' : '✗'} Planarity`, pv.planarity_pass ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'));
+        const strainTxt = pv.strain_energy_kcal_mol !== null && pv.strain_energy_kcal_mol !== undefined
+          ? `${Number(pv.strain_energy_kcal_mol).toFixed(1)} kcal/mol`
+          : 'N/A';
+        pillsWrap.appendChild(makeBadge(`ΔE ${strainTxt}`, 'bg-slate-800 text-cyan-300'));
+        if (pv.covalent_proximity) {
+          pillsWrap.appendChild(makeBadge('Covalent Prox', 'bg-amber-500/20 text-amber-300 border border-amber-500/40'));
+        }
+      }
+    }
+  });
 }
 
 function renderRetroNodeList(node, esc) {
