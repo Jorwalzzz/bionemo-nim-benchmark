@@ -839,6 +839,9 @@ export function selectLead(i) {
         <button type="button" data-action="download-sdf" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5" style="border-color: rgba(0,241,253,0.3); color: #00f1fd;">
           Export Poses (.sdf)
         </button>
+        <button type="button" data-action="export-smiles" class="btn-ghost w-full text-white text-xs font-semibold py-2 rounded-lg flex items-center justify-center gap-1.5">
+          Export SMILES (.smi)
+        </button>
       </div>
     </div>
   `;

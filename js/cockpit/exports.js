@@ -241,46 +241,157 @@ export function exportLeadsCSV() {
     return;
   }
   const headers = [
-    'id', 'smiles', 'affinity_kcal_mol', 'qed', 'sascore', 'mw',
-    'admet_verdict', 'pains_count', 'brenk_count', 'pose_valid', 'provenance'
+    'run_id',
+    'target_pdb',
+    'lead_id',
+    'smiles',
+    'affinity_kcal_mol',
+    'delta_affinity_kcal_mol',
+    'qed',
+    'sascore',
+    'mw_da',
+    'pareto_optimal',
+    'admet_verdict',
+    'gi_absorption_high',
+    'bbb_permeable',
+    'pains_count',
+    'brenk_count',
+    'pose_valid',
+    'strain_energy_kcal_mol',
+    'receptor_clash_count',
+    'contacts_summary',
+    'modified_from_baseline',
+    'provenance'
   ];
   const rows = [headers.join(',')];
+  const diffById = new Map((ctx.baseline_diffs || []).map(d => [d.lead_id, d]));
+
   for (const l of ctx.leads) {
     const painsCount = Array.isArray(l.pains_alerts) ? l.pains_alerts.length : Number(l.pains_count || 0);
     const brenkCount = Array.isArray(l.brenk_alerts) ? l.brenk_alerts.length : Number(l.brenk_count || 0);
-    const poseValid = l.pose_validation && typeof l.pose_validation === 'object'
-      ? Boolean(l.pose_validation.passes_all)
+    const pv = l.pose_validation && typeof l.pose_validation === 'object' ? l.pose_validation : null;
+    const poseValid = pv ? Boolean(pv.passes_all) : '';
+    const strainVal = pv && typeof pv.strain_energy_kcal_mol === 'number' ? Number(pv.strain_energy_kcal_mol.toFixed(2)) : '';
+    const clashCount = pv && typeof pv.receptor_clash_count === 'number' ? pv.receptor_clash_count : '';
+    const contactsSummary = Array.isArray(l.interaction_contacts)
+      ? l.interaction_contacts
+          .map(c => `${String(c.type || 'Contact').replace(/[;\r\n]/g, '')}:${String(c.residue || '').replace(/[;\r\n]/g, '')}(${Number(c.distance_a || 0).toFixed(1)}A)`)
+          .join('; ')
       : '';
+    const diff = diffById.get(l.id);
+    const deltaAff = diff && typeof diff.delta_affinity === 'number' ? Number(diff.delta_affinity.toFixed(2)) : '';
+    const isModified = Boolean(diff);
+
     rows.push([
+      toCsvCell(ctx.run_id),
+      toCsvCell(ctx.pdbId),
       toCsvCell(l.id || ''),
       toCsvCell(l.smiles || ''),
       toCsvCell(typeof l.affinity === 'number' ? Number(l.affinity.toFixed(2)) : l.affinity),
+      toCsvCell(deltaAff),
       toCsvCell(typeof l.qed === 'number' ? Number(l.qed.toFixed(3)) : l.qed),
       toCsvCell(typeof l.sascore === 'number' ? Number(l.sascore.toFixed(2)) : l.sascore),
       toCsvCell(typeof l.mw === 'number' ? Number(l.mw.toFixed(2)) : l.mw),
+      toCsvCell(Boolean(l.pareto) ? 'true' : 'false'),
       toCsvCell(l.admet_verdict || l.verdict || ''),
+      toCsvCell(typeof l.gi_absorption_high === 'boolean' ? String(l.gi_absorption_high) : ''),
+      toCsvCell(typeof l.bbb_permeable === 'boolean' ? String(l.bbb_permeable) : ''),
       toCsvCell(painsCount),
       toCsvCell(brenkCount),
       toCsvCell(poseValid === '' ? '' : String(poseValid)),
+      toCsvCell(strainVal),
+      toCsvCell(clashCount),
+      toCsvCell(contactsSummary),
+      toCsvCell(isModified ? 'true' : 'false'),
       toCsvCell(l.provenance || ctx.provenance)
     ].join(','));
   }
-  const safeSlug = String(ctx.pdbId || 'leads').replace(/[^a-zA-Z0-9_-]/g, '_');
-  downloadBlob(rows.join('\n') + '\n', `${safeSlug}_leads.csv`, 'text/csv;charset=utf-8;');
-  showToast(`Exported ${ctx.leads.length} leads to CSV.`);
+  downloadBlob('\uFEFF' + rows.join('\n') + '\n', buildExportFilename(ctx, 'leads', 'csv'), 'text/csv;charset=utf-8;');
+  showToast(`Exported ${ctx.leads.length} leads to 21-column CSV.`);
+}
+
+export function serializeAnnotatedSdfRecord(rawSdf, title, props = {}) {
+  if (typeof rawSdf !== 'string' || !rawSdf.includes('M  END')) return null;
+  const normalized = rawSdf.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const mEndIdx = normalized.indexOf('M  END');
+  if (mEndIdx < 0) return null;
+
+  const molBlock = normalized.slice(0, mEndIdx + 'M  END'.length);
+  const lines = molBlock.split('\n');
+  if (lines.length < 5) return null;
+
+  // Verify non-zero 3D coordinates in V2000 atom block
+  const countsLine = lines[3] || '';
+  const atomCount = parseInt(countsLine.slice(0, 3).trim(), 10);
+  let hasNonZeroCoords = false;
+  if (Number.isFinite(atomCount) && atomCount > 0) {
+    for (let i = 4; i < Math.min(lines.length, 4 + atomCount); i++) {
+      const x = parseFloat(lines[i].slice(0, 10).trim());
+      const y = parseFloat(lines[i].slice(10, 20).trim());
+      const z = parseFloat(lines[i].slice(20, 30).trim());
+      if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+        if (Math.abs(x) + Math.abs(y) + Math.abs(z) > 1e-4) {
+          hasNonZeroCoords = true;
+          break;
+        }
+      }
+    }
+  } else {
+    hasNonZeroCoords = true; // V3000 or non-standard counts fallback
+  }
+  if (!hasNonZeroCoords) return null;
+
+  const safeTitle = String(title || 'POSE').replace(/[\r\n]+/g, ' ').trim().slice(0, 80) || 'POSE';
+  lines[0] = safeTitle;
+
+  const propBlocks = [];
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v === undefined || v === null || v === '') continue;
+    const safeKey = String(k).replace(/[^A-Za-z0-9_-]/g, '_');
+    const safeVal = String(v).replace(/\$\$\$\$/g, '').replace(/[\r\n]+/g, ' ').trim();
+    if (!safeKey || !safeVal) continue;
+    propBlocks.push(`> <${safeKey}>\n${safeVal}\n`);
+  }
+
+  return `${lines.join('\n')}\n${propBlocks.join('\n')}${propBlocks.length ? '\n' : ''}$$$$\n`;
 }
 
 /**
- * Exports genuine 3D docked SDF poses when available (live backend pose_sdf or verified KRAS G12D crystal SDF).
- * Never synthesizes fake 3D coordinates from bare SMILES; exports canonical .smi text instead.
+ * Exports genuine 3D docked multi-pose SDF records when available.
+ * Never fabricates fake 3D coordinates from bare SMILES; directs to Export SMILES (.smi).
  */
 export async function downloadSDF() {
   const ctx = buildExportContext();
   const lead = ctx.selectedLead;
-  if (lead && lead.pose_sdf && lead.pose_sdf.includes('M  END')) {
-    const safeId = (lead.id || 'lead').replace(/[^a-zA-Z0-9_-]/g, '_');
-    downloadBlob(lead.pose_sdf, `${safeId}_docked.sdf`, 'chemical/x-mdl-sdfile');
-    showToast(`Exported real 3D SDF pose for ${lead.id}.`);
+  const records = [];
+
+  if (lead) {
+    const poses = Array.isArray(lead.poses) && lead.poses.length > 0 ? lead.poses : [{ rank: 1, sdf_data: lead.pose_sdf, predicted_affinity_kcal_mol: lead.affinity, provenance: lead.provenance, pose_validation: lead.pose_validation }];
+    poses.forEach((p, idx) => {
+      const rank = Number(p.rank || idx + 1);
+      const rawSdf = p.sdf_data || (idx === 0 ? lead.pose_sdf : '');
+      const pv = p.pose_validation || lead.pose_validation || {};
+      const rec = serializeAnnotatedSdfRecord(rawSdf, `${lead.id}_pose_${rank}`, {
+        LEAD_ID: lead.id,
+        POSE_RANK: rank,
+        TARGET_PDB: ctx.pdbId,
+        AFFINITY_KCAL_MOL: typeof (p.predicted_affinity_kcal_mol ?? lead.affinity) === 'number'
+          ? Number(p.predicted_affinity_kcal_mol ?? lead.affinity).toFixed(2)
+          : '',
+        QED: typeof lead.qed === 'number' ? lead.qed.toFixed(3) : '',
+        SASCORE: typeof lead.sascore === 'number' ? lead.sascore.toFixed(2) : '',
+        PLAUSIBLE: typeof pv.passes_all === 'boolean' ? String(pv.passes_all) : '',
+        STRAIN_KCAL_MOL: typeof pv.strain_energy_kcal_mol === 'number' ? pv.strain_energy_kcal_mol.toFixed(2) : '',
+        CLASH_COUNT: typeof pv.receptor_clash_count === 'number' ? pv.receptor_clash_count : '',
+        PROVENANCE: p.provenance || lead.provenance || ctx.provenance
+      });
+      if (rec) records.push(rec);
+    });
+  }
+
+  if (records.length > 0) {
+    downloadBlob(records.join(''), buildExportFilename(ctx, 'poses', 'sdf'), 'chemical/x-mdl-sdfile');
+    showToast(`Exported ${records.length} 3D docked pose(s) for ${lead.id}.`);
     return;
   }
 
@@ -290,7 +401,7 @@ export async function downloadSDF() {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
-      downloadBlob(text, 'top_leads_docked.sdf', 'chemical/x-mdl-sdfile');
+      downloadBlob(text, buildExportFilename(ctx, 'poses', 'sdf'), 'chemical/x-mdl-sdfile');
       showToast('Docked KRAS G12D poses (.sdf) downloaded.');
       return;
     } catch (_) {
@@ -299,15 +410,30 @@ export async function downloadSDF() {
     }
   }
 
-  if (ctx.leads.length > 0) {
-    const smiText = ctx.leads
-      .map(l => `${l.smiles || 'C'}\t${l.id || 'CANDIDATE'}\tAffinity=${l.affinity ?? 'NA'}`)
-      .join('\n') + '\n';
-    downloadBlob(smiText, `${String(ctx.pdbId).replace(/[^a-zA-Z0-9_-]/g, '_')}_candidates.smi`, 'chemical/x-daylight-smiles');
-    showToast('Exported 2D SMILES (.smi) — live NIM backend required for 3D SDF conformer coordinates.');
+  showToast('No 3D SDF coordinates available for this target — use Export SMILES (.smi).');
+}
+
+export function downloadSMI() {
+  const ctx = buildExportContext();
+  if (!ctx.leads || ctx.leads.length === 0) {
+    showToast('Run discovery first to export SMILES.');
     return;
   }
-  showToast('Run discovery first to export candidate structures.');
+  const seen = new Set();
+  const lines = [];
+  for (const l of ctx.leads) {
+    const smi = String(l.smiles || '').replace(/[\t\r\n]+/g, '').trim();
+    const id = String(l.id || 'CANDIDATE').replace(/[\t\r\n]+/g, ' ').trim();
+    if (!smi || seen.has(id)) continue;
+    seen.add(id);
+    lines.push(`${smi}\t${id}`);
+  }
+  if (lines.length === 0) {
+    showToast('No valid SMILES available to export.');
+    return;
+  }
+  downloadBlob(lines.join('\n') + '\n', buildExportFilename(ctx, 'leads', 'smi'), 'chemical/x-daylight-smiles');
+  showToast(`Exported ${lines.length} deduplicated SMILES (.smi).`);
 }
 
 export async function generateINDPdf() {
