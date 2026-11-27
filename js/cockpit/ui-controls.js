@@ -472,21 +472,21 @@ export function selectLead(i) {
       </div>
 
       <!-- Interactive 3D Pocket & Pose Viewer (3Dmol.js) -->
-      <div class="rounded-xl overflow-hidden border border-surface-border bg-[#0b0f14] relative">
-        <div class="p-2 border-b border-surface-border flex items-center justify-between bg-[#121820]">
+      <div class="rounded-xl overflow-hidden border border-surface-border bg-surface-card relative">
+        <div class="p-2 border-b border-surface-border flex items-center justify-between bg-surface-elevated">
           <div class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
             <span class="text-[10px] font-bold font-mono text-cyan-300">3D Docked Complex</span>
           </div>
           <div class="flex items-center gap-1">
-            <button type="button" data-action="toggle-3d-spin" id="btnSpin" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">Spin</button>
-            <button type="button" data-action="toggle-3d-surface" id="btnSurface" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">Surface</button>
-            <button type="button" data-action="reset-3d-view" aria-label="Recenter 3D view" class="px-1.5 py-0.5 text-[9px] rounded bg-white/5 hover:bg-white/10 text-gray-300 transition-colors">Reset</button>
-            <button type="button" data-action="open-3d-modal" aria-label="Expand 3D viewer" class="px-1.5 py-0.5 text-[9px] rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 transition-colors font-bold">Expand</button>
+            <button type="button" data-action="toggle-3d-spin" id="btnSpin" class="px-1.5 py-0.5 text-[9px] rounded bg-surface-card hover:border-cyan-500/50 border border-surface-border text-gray-300 transition-colors">Spin</button>
+            <button type="button" data-action="toggle-3d-surface" id="btnSurface" class="px-1.5 py-0.5 text-[9px] rounded bg-surface-card hover:border-cyan-500/50 border border-surface-border text-gray-300 transition-colors">Surface</button>
+            <button type="button" data-action="reset-3d-view" aria-label="Recenter 3D view" class="px-1.5 py-0.5 text-[9px] rounded bg-surface-card hover:border-cyan-500/50 border border-surface-border text-gray-300 transition-colors">Reset</button>
+            <button type="button" data-action="open-3d-modal" aria-label="Expand 3D viewer" class="px-1.5 py-0.5 text-[9px] rounded bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25 border border-cyan-500/30 transition-colors font-bold">Expand</button>
           </div>
         </div>
         <div id="molViewer3D" style="width: 100%; height: 210px; position: relative;"></div>
-        <div class="p-1.5 bg-[#0f141c] border-t border-surface-border flex items-center justify-between text-[9px] text-gray-400">
+        <div class="p-1.5 bg-surface-elevated border-t border-surface-border flex items-center justify-between text-[9px] text-gray-400">
           <div class="flex items-center gap-2">
             <span><span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400"></span> Pocket</span>
             <span><span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Pose</span>
@@ -585,10 +585,10 @@ export function selectLead(i) {
           <button type="button" data-action="load-wb-preset" data-arg="her2" class="wb-preset-pill">Tucatinib (HER2)</button>
         </div>
 
-        <input type="text" id="workbenchSmilesInput" data-input-action="workbench-input" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-[#161b22] border border-[#30363d] text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
+        <input type="text" id="workbenchSmilesInput" data-input-action="workbench-input" aria-label="Ligand SMILES Structure" value="${safeSmiles}" class="w-full text-[11px] font-mono p-1.5 rounded bg-surface-card border border-surface-border text-gray-200 mb-1.5 focus:outline-none focus:border-cyan-400" />
         
         <!-- Live Biophysical Metric Tile Readout -->
-        <div id="workbenchLiveMetrics" class="grid grid-cols-4 gap-1 text-[10px] font-mono text-center p-1.5 rounded bg-black/40 border border-white/5 mb-2">
+        <div id="workbenchLiveMetrics" class="grid grid-cols-4 gap-1 text-[10px] font-mono text-center p-1.5 rounded bg-surface-card border border-surface-border mb-2">
           <div><span class="text-gray-500 block text-[9px]">ΔG (kcal/mol)</span><span id="wbLiveAffinity" class="text-emerald-400 font-bold">${lead.affinity.toFixed(2)}</span></div>
           <div><span class="text-gray-500 block text-[9px]">QED Score</span><span id="wbLiveQed" class="text-cyan-400 font-bold">${lead.qed.toFixed(3)}</span></div>
           <div><span class="text-gray-500 block text-[9px]">SAScore</span><span id="wbLiveSas" class="text-amber-400 font-bold">${lead.sascore.toFixed(2)}</span></div>
@@ -596,9 +596,9 @@ export function selectLead(i) {
         </div>
 
         <div class="grid grid-cols-3 gap-1 mb-2">
-          <button type="button" data-action="tweak-smiles" data-arg="fluorine" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+F Fluorine</button>
-          <button type="button" data-action="tweak-smiles" data-arg="methyl" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">+Me Methyl</button>
-          <button type="button" data-action="tweak-smiles" data-arg="pyridine" class="py-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-gray-300 rounded border border-gray-700 font-mono">Swap Pyridine</button>
+          <button type="button" data-action="tweak-smiles" data-arg="fluorine" class="py-1 text-[10px] bg-surface-card hover:border-cyan-500/50 text-gray-300 rounded border border-surface-border font-mono">+F Fluorine</button>
+          <button type="button" data-action="tweak-smiles" data-arg="methyl" class="py-1 text-[10px] bg-surface-card hover:border-cyan-500/50 text-gray-300 rounded border border-surface-border font-mono">+Me Methyl</button>
+          <button type="button" data-action="tweak-smiles" data-arg="pyridine" class="py-1 text-[10px] bg-surface-card hover:border-cyan-500/50 text-gray-300 rounded border border-surface-border font-mono">Swap Pyridine</button>
         </div>
 
         <button type="button" data-action="trigger-redock" class="w-full py-1.5 btn-cta text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5">

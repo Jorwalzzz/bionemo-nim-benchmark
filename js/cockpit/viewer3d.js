@@ -293,11 +293,27 @@ export function selectDockedPose(poseIndex) {
   showToast(`Loaded Pose #${chosenPose.rank || idx + 1} (${chosenPose.provenance || 'SIMULATED'})`);
 }
 
+function getThemeViewerBg() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? '#F8FAFC' : '#0B0E14';
+}
+
+if (typeof window !== 'undefined' && !window.__bionemoCockpitViewerThemeBound) {
+  window.__bionemoCockpitViewerThemeBound = true;
+  window.addEventListener('bionemo:theme-changed', () => {
+    const bg = getThemeViewerBg();
+    [primaryViewer, modalViewer].forEach((v) => {
+      if (v) {
+        try { v.setBackgroundColor(bg); v.render(); } catch (_) { /* noop */ }
+      }
+    });
+  });
+}
+
 export function init3DViewer() {
   const container = document.getElementById('molViewer3D');
   if (!container || typeof $3Dmol === 'undefined') return null;
   container.innerHTML = '';
-  primaryViewer = $3Dmol.createViewer(container, { backgroundColor: '#0b0f14' });
+  primaryViewer = $3Dmol.createViewer(container, { backgroundColor: getThemeViewerBg() });
   return primaryViewer;
 }
 
@@ -404,7 +420,7 @@ export function render3DComplex(pdbText, sdfText, pocketResidues, isEsmfold, pld
 
   container.innerHTML = '';
   clearContactOverlays();
-  primaryViewer = $3Dmol.createViewer(container, { backgroundColor: '#05070A' });
+  primaryViewer = $3Dmol.createViewer(container, { backgroundColor: getThemeViewerBg() });
   is3DSurfaceOn = false;
   surfaceObj = null;
 
@@ -588,7 +604,7 @@ export function open3DModal() {
     const container = document.getElementById('modalMolViewer3D');
     if (!container || typeof $3Dmol === 'undefined') return;
     container.innerHTML = '';
-    modalViewer = $3Dmol.createViewer(container, { backgroundColor: '#0b0f14' });
+    modalViewer = $3Dmol.createViewer(container, { backgroundColor: getThemeViewerBg() });
 
     if (state.currentTargetPdbText && state.currentTargetPdbText.length > 50) {
       modalViewer.addModel(state.currentTargetPdbText, 'pdb');

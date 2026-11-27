@@ -7,6 +7,43 @@ import { showToast } from './ui-controls.js';
 
 export let paretoChart = null;
 
+function getParetoThemeColors() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    tick: isLight ? '#475569' : '#94A3B8',
+    grid: isLight ? 'rgba(15, 23, 42, 0.10)' : 'rgba(255, 255, 255, 0.08)',
+    legend: isLight ? '#334155' : '#94A3B8',
+    tooltipBg: isLight ? '#FFFFFF' : '#111622',
+    tooltipBorder: isLight ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.15)',
+    tooltipTitle: isLight ? '#059669' : '#10B981',
+    tooltipBody: isLight ? '#0F172A' : '#E2E8F0'
+  };
+}
+
+if (typeof window !== 'undefined' && !window.__bionemoParetoThemeBound) {
+  window.__bionemoParetoThemeBound = true;
+  window.addEventListener('bionemo:theme-changed', () => {
+    if (!paretoChart || !paretoChart.options) return;
+    const c = getParetoThemeColors();
+    if (paretoChart.options.plugins?.legend?.labels) paretoChart.options.plugins.legend.labels.color = c.legend;
+    if (paretoChart.options.plugins?.tooltip) {
+      paretoChart.options.plugins.tooltip.backgroundColor = c.tooltipBg;
+      paretoChart.options.plugins.tooltip.borderColor = c.tooltipBorder;
+      paretoChart.options.plugins.tooltip.titleColor = c.tooltipTitle;
+      paretoChart.options.plugins.tooltip.bodyColor = c.tooltipBody;
+    }
+    ['x', 'y'].forEach((ax) => {
+      const s = paretoChart.options.scales?.[ax];
+      if (s) {
+        if (s.title) s.title.color = c.tick;
+        if (s.ticks) s.ticks.color = c.tick;
+        if (s.grid) s.grid.color = c.grid;
+      }
+    });
+    paretoChart.update('none');
+  });
+}
+
 export function renderPareto() {
   const canvas = document.getElementById('paretoChart');
   if (!canvas || typeof Chart === 'undefined') return;
@@ -60,6 +97,7 @@ export function renderPareto() {
   const pareto = leads.filter(l => l.pareto);
   const dominated = leads.filter(l => !l.pareto);
 
+  const tc = getParetoThemeColors();
   paretoChart = new Chart(ctx, {
     type: 'scatter',
     data: {
@@ -67,16 +105,16 @@ export function renderPareto() {
         {
           label: 'Pareto Optimal',
           data: pareto.map(l => ({ x: l.affinity, y: l.qed, label: l.id })),
-          backgroundColor: 'rgba(118,185,0,0.8)',
-          borderColor: '#76b900',
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: '#10B981',
           pointRadius: 7,
           pointHoverRadius: 10,
         },
         {
           label: 'Dominated',
           data: dominated.map(l => ({ x: l.affinity, y: l.qed, label: l.id })),
-          backgroundColor: 'rgba(107,114,128,0.4)',
-          borderColor: 'rgba(107,114,128,0.6)',
+          backgroundColor: 'rgba(100, 116, 139, 0.45)',
+          borderColor: 'rgba(100, 116, 139, 0.7)',
           pointRadius: 5,
           pointHoverRadius: 7,
         }
@@ -84,9 +122,9 @@ export function renderPareto() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      animation: { duration: 600, easing: 'easeOutCubic' },
+      animation: { duration: 400, easing: 'easeOutCubic' },
       plugins: {
-        legend: { labels: { color: '#9ca3af', font: { size: 10, family: 'Inter' }, boxWidth: 10 } },
+        legend: { labels: { color: tc.legend, font: { size: 10, family: 'Inter Tight' }, boxWidth: 10 } },
         tooltip: {
           callbacks: {
             label: (ctx) => {
@@ -94,12 +132,12 @@ export function renderPareto() {
               return ` ${d.label}: ΔG=${d.x}, QED=${d.y}`;
             }
           },
-          backgroundColor: '#161b22', borderColor: '#30363d', borderWidth: 1, titleColor: '#76b900', bodyColor: '#e6edf3', bodyFont: { family: 'JetBrains Mono', size: 11 }
+          backgroundColor: tc.tooltipBg, borderColor: tc.tooltipBorder, borderWidth: 1, titleColor: tc.tooltipTitle, bodyColor: tc.tooltipBody, bodyFont: { family: 'JetBrains Mono', size: 11 }
         }
       },
       scales: {
-        x: { title: { display: true, text: 'Binding Affinity ΔG (kcal/mol)', color: '#6b7280', font: { size: 10 } }, ticks: { color: '#6b7280', font: { size: 10, family: 'JetBrains Mono' } }, grid: { color: 'rgba(33,38,45,0.8)' } },
-        y: { title: { display: true, text: 'QED Score', color: '#6b7280', font: { size: 10 } }, ticks: { color: '#6b7280', font: { size: 10, family: 'JetBrains Mono' } }, grid: { color: 'rgba(33,38,45,0.8)' } }
+        x: { title: { display: true, text: 'Binding Affinity ΔG (kcal/mol)', color: tc.tick, font: { size: 10 } }, ticks: { color: tc.tick, font: { size: 10, family: 'JetBrains Mono' } }, grid: { color: tc.grid } },
+        y: { title: { display: true, text: 'QED Score', color: tc.tick, font: { size: 10 } }, ticks: { color: tc.tick, font: { size: 10, family: 'JetBrains Mono' } }, grid: { color: tc.grid } }
       }
     }
   });

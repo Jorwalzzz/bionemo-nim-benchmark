@@ -9,15 +9,15 @@
      ------------------------------------------------------------------------- */
   --theme-name: "dark";
 
-  /* Canvas & Elevated Interactive Surfaces */
-  --color-canvas: #05070A;
-  --color-surface: #0B0F14;
-  --color-surface-elevated: #11171E;
+  /* Canvas & Elevated Interactive Surfaces (Dark Obsidian) */
+  --color-canvas: #0B0E14;
+  --color-surface: #111622;
+  --color-surface-elevated: #171E2E;
   --color-surface-sunken: #070A0F;
-  --color-surface-glass: rgba(11, 15, 20, 0.82);
-  --color-hud-glass: rgba(5, 7, 10, 0.86);
-  --color-input: #070A0F;
-  --color-code-bg: #040609;
+  --color-surface-glass: rgba(17, 22, 34, 0.88);
+  --color-hud-glass: rgba(11, 14, 20, 0.92);
+  --color-input: #0F1520;
+  --color-code-bg: #080B10;
   --color-code-ink: #E2E8F0;
   --color-code-muted: #94A3B8;
 
@@ -94,22 +94,22 @@
 [data-theme="light"] {
   --theme-name: "light";
 
-  --color-canvas: #F6F5F1;
+  --color-canvas: #F8FAFC;
   --color-surface: #FFFFFF;
-  --color-surface-elevated: #F1F0EB;
-  --color-surface-sunken: #E7E5DE;
-  --color-surface-glass: rgba(255, 255, 255, 0.90);
-  --color-hud-glass: rgba(255, 255, 255, 0.92);
+  --color-surface-elevated: #F1F5F9;
+  --color-surface-sunken: #E2E8F0;
+  --color-surface-glass: rgba(255, 255, 255, 0.94);
+  --color-hud-glass: rgba(255, 255, 255, 0.96);
   --color-input: #FFFFFF;
-  --color-code-bg: #0B1018;
-  --color-code-ink: #E2E8F0;
+  --color-code-bg: #0F172A;
+  --color-code-ink: #F1F5F9;
   --color-code-muted: #94A3B8;
 
-  --border-hairline: rgba(14, 17, 22, 0.12);
-  --border-hairline-bright: rgba(14, 17, 22, 0.24);
-  --border-hairline-glow: rgba(15, 118, 110, 0.35);
+  --border-hairline: rgba(15, 23, 42, 0.12);
+  --border-hairline-bright: rgba(15, 23, 42, 0.24);
+  --border-hairline-glow: rgba(5, 150, 105, 0.35);
 
-  --color-ink-primary: #0E1116;
+  --color-ink-primary: #0F172A;
   --color-ink-secondary: #334155;
   --color-ink-muted: #475569;
   --color-ink-dim: #64748B;
