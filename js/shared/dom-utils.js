@@ -25,6 +25,21 @@ export function toCsvCell(value) {
   return /[",\n\r]/.test(neutralized) ? `"${neutralized.replace(/"/g, '""')}"` : neutralized;
 }
 
+export function buildExportFilename(ctx, artifact, ext) {
+  const rawSlug = String(ctx?.pdbId || ctx?.target || 'target')
+    .replace(/\.\./g, '')
+    .replace(/[^A-Za-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 32) || 'target';
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const rawRun = String(ctx?.run_id || ctx?.runId || 'demo')
+    .replace(/[^A-Za-z0-9_-]/g, '')
+    .slice(-8) || 'demo';
+  const safeArtifact = String(artifact || 'export').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || 'export';
+  const safeExt = String(ext || 'txt').replace(/[^A-Za-z0-9]/g, '').slice(0, 8) || 'txt';
+  return `bionemo_${rawSlug}_${datePart}_${rawRun}_${safeArtifact}.${safeExt}`;
+}
+
 export function downloadBlob(content, filename, mimeType = 'text/plain;charset=utf-8;') {
   const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);

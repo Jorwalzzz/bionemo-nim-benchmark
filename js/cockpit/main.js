@@ -138,6 +138,7 @@ import {
   downloadDossier,
   exportLeadsCSV,
   downloadSDF,
+  downloadSMI,
   generateINDPdf,
   downloadIndPdf,
   generateRobotProtocol,
@@ -317,6 +318,7 @@ function dispatchAction(action, el, event) {
     case 'download-dossier': return downloadDossier();
     case 'export-leads-csv': return exportLeadsCSV();
     case 'download-sdf': return downloadSDF();
+    case 'export-smiles': return downloadSMI();
     case 'select-lead': return selectLead(parseInt(el.dataset.leadIndex || '0', 10));
     case 'select-docked-pose': return selectDockedPose(parseInt(el.dataset.arg || '0', 10));
     case 'focus-contact': return focusContactIn3D(parseInt(el.dataset.arg || '0', 10));
