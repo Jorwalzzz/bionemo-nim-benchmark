@@ -219,6 +219,7 @@ class SafeSanitizer:
         "data.rcsb.org",
         "integrate.api.nvidia.com",
         "health.api.nvidia.com",
+        "api.nvcf.nvidia.com",
     })
 
     @classmethod

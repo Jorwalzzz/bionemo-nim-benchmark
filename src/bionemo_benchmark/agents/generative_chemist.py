@@ -8,9 +8,11 @@ import hashlib
 import logging
 import os
 import time
+from typing import Any
 
-from bionemo_benchmark.core.models import AgentMessage, MoleculeCandidate
+from bionemo_benchmark.core.models import AgentMessage, MoleculeCandidate, TargetProfile
 from bionemo_benchmark.core.provenance import StageProvenance, StageStatus
+from bionemo_benchmark.domain.scaffold_mutator import mutate_parent_scaffold
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger("GenerativeChemist")
@@ -20,25 +22,39 @@ MOLMIM_NIM_URL = "https://health.api.nvidia.com/v1/biology/nvidia/molmim/generat
 
 class GenerativeChemistAgent:
     def __init__(
-        self, api_key: str = None, mock: bool = True, name: str = "GenerativeChemist"
+        self,
+        api_key: str | None = None,
+        mock: bool = True,
+        name: str = "GenerativeChemist",
+        client: Any | None = None,
     ):
-        self.api_key = api_key or os.getenv("NVIDIA_API_KEY", "")
-        self.mock = mock or (not self.api_key)
+        self.client = client
+        self.api_key = api_key or (client.api_key if client is not None else "") or os.getenv("NVIDIA_API_KEY", "")
+        if client is not None:
+            self.mock = bool(client.mock)
+        else:
+            self.mock = mock or (not self.api_key)
         self.name = name
         self.last_stage_provenance: StageProvenance | None = None
 
     def generate_derivatives(
         self,
-        parent_smiles: str,
-        target_name: str,
+        parent_smiles: str | TargetProfile,
+        target_name: str = "",
         num_molecules: int = 15,
         steering_prompt: str = "",
         round_num: int = 1,
+        num_candidates: int | None = None,
     ) -> tuple[list[MoleculeCandidate], AgentMessage]:
         """
-        Executes generative latent space exploration via NVIDIA NIM MolMIM.
-        Supports feedback steering from the PI agent.
+        Executes generative latent space exploration via NVIDIA NIM MolMIM / GenMol
+        with target-agnostic RDKit bioisostere fallback.
         """
+        if isinstance(parent_smiles, TargetProfile):
+            target_name = target_name or parent_smiles.name
+            parent_smiles = parent_smiles.reference_ligand_smiles
+        if num_candidates is not None:
+            num_molecules = num_candidates
         start_time = time.time()
         t_perf = time.perf_counter()
         candidates: list[MoleculeCandidate] = []
@@ -205,19 +221,9 @@ class GenerativeChemistAgent:
                 "CS(=O)(=O)CCNCC1=CC=C(O1)C2=CC3=C(C=C2)N=CN=C3NC4=CC(=C(C=C4)OCCN5CCOCC5)Cl",  # Morpholine ether
             ]
         else:
-            # EGFR T790M / Gefitinib derivatives
-            smiles_bank = [
-                "COC1=C(OCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",  # Gefitinib parent
-                "COC1=C(OCC2CCOCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",  # Tetrahydropyran ether
-                "COC1=C(OCC2CCN(C)CC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",  # N-methyl piperidine
-                "COC1=C(OCCN2CCOCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",  # Morpholine ether
-                "COC1=C(OCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)C#C",  # Alkynyl substitution
-                "CC1=C(OCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",  # Methyl core
-                "COC1=C(OCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=CC=C4)Cl",  # Des-fluoro
-                "COC1=C(OCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(Cl)C=C4)Cl",  # Di-chloro
-                "COC1=C(OCCC2CCNCC2)C=C3C(=C1)N=CN=C3NC4=CC(=C(F)C=C4)Cl",  # Propyl spacer
-                "COC1=C(OCC2CCNCC2)C=C3C(=C1)N=C(C)N=C3NC4=CC(=C(F)C=C4)Cl",  # 2-methyl pyrimidine
-            ]
+            smiles_bank = self._mutate_parent_scaffold(
+                parent_smiles, seed=42 + round_num, max_variants=max(count, 12)
+            )
 
         candidates = []
         for i, s in enumerate(smiles_bank[:count]):
@@ -230,3 +236,11 @@ class GenerativeChemistAgent:
                 )
             )
         return candidates
+
+    def _mutate_parent_scaffold(
+        self, parent_smiles: str, seed: int = 42, max_variants: int = 12
+    ) -> list[str]:
+        """Generates deterministic target-agnostic RDKit bioisostere & BRICS analogs."""
+        return mutate_parent_scaffold(
+            parent_smiles, seed=seed, max_variants=max_variants
+        )
