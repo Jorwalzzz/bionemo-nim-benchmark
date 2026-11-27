@@ -57,6 +57,9 @@ class MoleculeCandidate:
     diffdock_confidence: float = 0.0  # 0.0 to 1.0
     contact_residues: list[str] = field(default_factory=list)
     pose_sdf: str = ""
+    poses: list[dict[str, Any]] = field(default_factory=list)
+    pose_validation: dict[str, Any] = field(default_factory=dict)
+    interaction_contacts: list[dict[str, Any]] = field(default_factory=list)
     strain_energy: float = 0.0  # MMFF94 conformational strain energy (kcal/mol)
     steric_clash_count: int = 0  # Inter/intra-atomic steric clash penalty
     is_pareto_optimal: bool = False

@@ -18,6 +18,7 @@ from rdkit.Geometry import Point3D
 from bionemo_benchmark.core.client import NimBioClient
 from bionemo_benchmark.core.models import AgentMessage, MoleculeCandidate, TargetProfile
 from bionemo_benchmark.core.provenance import StageProvenance, StageStatus
+from bionemo_benchmark.domain.pose_validation import PosePlausibilityValidator
 
 logger = logging.getLogger("DockingAgent")
 
@@ -63,6 +64,7 @@ class BiophysicsDockingAgent:
             diffdock_endpoint=DIFFDOCK_NIM_URL,
             mock=self.mock,
         )
+        self.pose_validator = PosePlausibilityValidator()
         self.last_stage_provenance: StageProvenance | None = None
 
     @staticmethod
@@ -145,26 +147,46 @@ class BiophysicsDockingAgent:
         live_req_id: str | None = None
         fallback_reason: str | None = None
 
+        receptor_pdb_blob = target.pdb_text or ""
+        if not receptor_pdb_blob and target.pdb_id and target.pdb_id != "ESMF":
+            cached = Path(__file__).resolve().parents[3] / "data" / "pdbs" / f"{target.pdb_id}.pdb"
+            if cached.is_file():
+                try:
+                    receptor_pdb_blob = cached.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    receptor_pdb_blob = ""
+        mock_pose_provenance = (
+            "MOCK_POCKET_APPROX" if receptor_pdb_blob.strip() else "UNBOUND_MOCK"
+        )
+
         for cand in eligible:
+            cand.poses = []
             # 1. 3D Conformer generation via RDKit ETKDGv3 & MMFF94 centered on receptor pocket
             mol = Chem.MolFromSmiles(cand.smiles)
+            local_alt_sdfs: list[str] = []
             if mol and mol.GetNumAtoms() > 0:
                 try:
                     mol = Chem.AddHs(mol)
                     params = AllChem.ETKDGv3()
                     params.randomSeed = 42
-                    embed_status = AllChem.EmbedMolecule(mol, params)
-                    if embed_status == 0:
+                    conf_ids = AllChem.EmbedMultipleConfs(mol, numConfs=2, params=params)
+                    if not conf_ids and AllChem.EmbedMolecule(mol, params) == 0:
+                        conf_ids = [0]
+                    if conf_ids:
                         try:
-                            AllChem.MMFFOptimizeMolecule(mol, maxIters=200)
+                            AllChem.MMFFOptimizeMoleculeConfs(mol, maxIters=200)
                         except Exception as mmff_err:
                             logger.debug(f"MMFF optimization skipped for {cand.id}: {mmff_err}")
                         strain, clashes = self._evaluate_biophysics_conformer(mol)
                         cand.strain_energy = strain
                         cand.steric_clash_count = clashes
-                        mol = Chem.RemoveHs(mol)
-                        self._center_conformer_on_pocket(mol, pocket_center)
-                        cand.pose_sdf = Chem.MolToMolBlock(mol)
+                        mol_no_h = Chem.RemoveHs(mol)
+                        for cid in range(mol_no_h.GetNumConformers()):
+                            single = Chem.Mol(mol_no_h, False, cid)
+                            self._center_conformer_on_pocket(single, pocket_center)
+                            local_alt_sdfs.append(Chem.MolToMolBlock(single))
+                        if local_alt_sdfs:
+                            cand.pose_sdf = local_alt_sdfs[0]
                 except Exception as e:
                     logger.warning(f"3D conformer generation skipped for {cand.id}: {e}")
 
@@ -175,7 +197,7 @@ class BiophysicsDockingAgent:
                     diff_resp = self.client.dock_complex(
                         protein_sequence=target.canonical_sequence,
                         ligand_smiles=cand.smiles,
-                        protein_pdb=target.pdb_text or None,
+                        protein_pdb=receptor_pdb_blob or None,
                         num_poses=2,
                     )
                     if not diff_resp.is_mock and diff_resp.poses:
@@ -188,6 +210,19 @@ class BiophysicsDockingAgent:
                         if top_pose.sdf_data:
                             cand.pose_sdf = top_pose.sdf_data
                         cand.contact_residues = list(target.pocket_residues[:3])
+                        for p in diff_resp.poses:
+                            cand.poses.append(
+                                {
+                                    "rank": int(p.rank),
+                                    "confidence_score": round(float(p.confidence_score), 3),
+                                    "predicted_affinity_kcal_mol": round(
+                                        float(p.predicted_affinity_kcal_mol), 2
+                                    ),
+                                    "rmsd": round(float(p.rmsd), 2),
+                                    "sdf_data": p.sdf_data or cand.pose_sdf,
+                                    "provenance": "LIVE_NIM",
+                                }
+                            )
                     elif not fallback_reason:
                         fallback_reason = "DiffDock NIM returned simulated fallback or empty pose payload; using ETKDGv3 + pocket scoring heuristic."
                 except Exception as nim_err:
@@ -204,6 +239,30 @@ class BiophysicsDockingAgent:
                 cand.binding_affinity = round(affinity, 2)
                 cand.diffdock_confidence = confidence
                 cand.contact_residues = contacts
+                for idx, sdf_str in enumerate(local_alt_sdfs or [cand.pose_sdf]):
+                    if not sdf_str:
+                        continue
+                    cand.poses.append(
+                        {
+                            "rank": idx + 1,
+                            "confidence_score": round(max(-3.0, confidence - idx * 0.25), 3),
+                            "predicted_affinity_kcal_mol": round(cand.binding_affinity + idx * 0.45, 2),
+                            "rmsd": round(idx * 1.15, 2),
+                            "sdf_data": sdf_str,
+                            "provenance": mock_pose_provenance,
+                        }
+                    )
+
+            # 4. 3D Physical Pose Plausibility Validation (Bond geom, clashes, SVD planarity, ΔE_strain)
+            cand.pose_validation = self.pose_validator.validate_pose(
+                pose_sdf=cand.pose_sdf,
+                pdb_text=receptor_pdb_blob,
+                covalent_residue=target.covalent_residue,
+            )
+            clash_sum = int(cand.pose_validation.get("intra_clash_count", 0)) + int(
+                cand.pose_validation.get("receptor_clash_count", 0)
+            )
+            cand.steric_clash_count = max(cand.steric_clash_count, clash_sum)
             docked_leads.append(cand)
 
         if self.mock:
