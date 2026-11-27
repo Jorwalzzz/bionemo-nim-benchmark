@@ -1190,7 +1190,15 @@ export async function runDiscovery() {
     }
   };
 
+  const runId = `run-${Date.now()}`;
+  state.runId = runId;
+  state.leadBaselines.clear();
+  state.selectedLeadId = leads[0]?.id || null;
+  state.selectedPoseIndex = 0;
+  state.leadRevision = 0;
+
   const runResult = {
+    runId: runId,
     target: info.name || target,
     pdbId: info.pdb,
     screenedCount: screenedCount,

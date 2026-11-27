@@ -82,6 +82,7 @@ import {
   logEntry,
   renderLeads,
   selectLead,
+  revertSelectedLead,
   switchTab,
   copyCode,
   showToast,
@@ -319,6 +320,7 @@ function dispatchAction(action, el, event) {
     case 'load-wb-preset': return loadWorkbenchPreset(el.dataset.arg);
     case 'tweak-smiles': return tweakSmiles(el.dataset.arg);
     case 'trigger-redock': return triggerRedockFromWorkbench();
+    case 'revert-lead': return revertSelectedLead();
     default: return undefined;
   }
 }

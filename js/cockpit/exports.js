@@ -399,9 +399,12 @@ export function adoptEvolvedScaffold() {
     showToast('No evolved scaffold available.');
     return;
   }
+  const affBox = document.getElementById('redockAffinityDisplay');
+  if (affBox) affBox.textContent = '';
   const input = document.getElementById('workbenchSmilesInput');
   if (input) {
     input.value = state.latestResistanceData.evolved_smiles;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     showToast('Evolved scaffold injected into Chemical Workbench.');
   }
   closeResistanceModal();
