@@ -37,7 +37,7 @@ def test_genmol_and_boltz2_mock_adapters() -> None:
 
 
 def test_nvcf_202_async_polling_and_batch_diffdock_parsing(monkeypatch) -> None:
-    client = NimBioClient(api_key="nvapi-test-unit-placeholder-00000000", mock=False)
+    client = NimBioClient(api_key="unit-test-token-0000", mock=False)
     monkeypatch.setattr("time.sleep", lambda *_args, **_kwargs: None)
 
     resp_202 = MagicMock()

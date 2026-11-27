@@ -209,8 +209,29 @@
 }
 
 .bar-gpu {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(90deg, #10B981 0%, #76F5A2 100%);
   box-shadow: 0 0 16px rgba(118, 245, 162, 0.4);
+}
+
+@keyframes nimSheen {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bar-gpu.is-running::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+    animation: nimSheen 900ms linear infinite;
+  }
+
+  body.page-hidden .bar-gpu.is-running::after {
+    animation-play-state: paused;
+  }
 }
 
 .track-finish-tag {
@@ -459,6 +480,23 @@
   stroke-width: 2.5px;
   stroke-linecap: round;
   transition: stroke-width 0.2s ease;
+}
+
+@keyframes dumbbellDraw {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .dumbbell-tether {
+      transform-box: fill-box;
+      transform-origin: left center;
+      animation: dumbbellDraw linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 35%;
+    }
+  }
 }
 
 .dumbbell-point-gpu {

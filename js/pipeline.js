@@ -267,6 +267,18 @@ import { escapeHtml, copyToClipboard } from './shared/dom-utils.js';
     }
 
     renderStageDetails(0);
+
+    const pipelineSection = document.getElementById('pipeline');
+    if (pipelineSection && typeof IntersectionObserver !== 'undefined') {
+      const pipelineObserver = new IntersectionObserver(
+        (entries) => {
+          const visible = entries.some((entry) => entry.isIntersecting);
+          pipelineSection.classList.toggle('is-visible', visible);
+        },
+        { threshold: 0.05 }
+      );
+      pipelineObserver.observe(pipelineSection);
+    }
   }
 
   if (document.readyState === 'loading') {

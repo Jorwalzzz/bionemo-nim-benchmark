@@ -112,9 +112,41 @@
     });
   }
 
-  function setComplexCount(count) {
-    complexCount = Math.max(100, Math.min(1000000, count));
-    updateCalculator();
+  let chipRafId = null;
+
+  function setComplexCount(count, animate = false) {
+    const target = Math.max(100, Math.min(1000000, count));
+    if (chipRafId !== null) {
+      cancelAnimationFrame(chipRafId);
+      chipRafId = null;
+    }
+
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!animate || reducedMotion || complexCount === target) {
+      complexCount = target;
+      updateCalculator();
+      return;
+    }
+
+    const startVal = complexCount;
+    const startTime = performance.now();
+    const durationMs = 140;
+
+    function tick(now) {
+      const t = Math.min(1, (now - startTime) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      complexCount = Math.round(startVal + (target - startVal) * eased);
+      updateCalculator();
+      if (t < 1) {
+        chipRafId = requestAnimationFrame(tick);
+      } else {
+        chipRafId = null;
+        complexCount = target;
+        updateCalculator();
+      }
+    }
+
+    chipRafId = requestAnimationFrame(tick);
   }
 
   function init() {
@@ -135,6 +167,10 @@
     // Slider listener
     if (sliderEl) {
       sliderEl.addEventListener('input', (e) => {
+        if (chipRafId !== null) {
+          cancelAnimationFrame(chipRafId);
+          chipRafId = null;
+        }
         const val = parseFloat(e.target.value);
         complexCount = sliderToCount(val);
         updateCalculator();
@@ -145,7 +181,7 @@
     chipBtns.forEach((chip) => {
       chip.addEventListener('click', () => {
         const count = parseInt(chip.getAttribute('data-count'), 10);
-        setComplexCount(count);
+        setComplexCount(count, true);
       });
     });
 

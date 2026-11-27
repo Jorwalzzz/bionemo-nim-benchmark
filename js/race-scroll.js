@@ -151,6 +151,8 @@
     if (isSimulating) {
       cancelAnimationFrame(simAnimId);
     }
+    const gpuBar = document.querySelector('.bar-gpu');
+    if (gpuBar) gpuBar.classList.add('is-running');
     isSimulating = true;
     progress = 0;
     updateRaceVisuals();
@@ -170,6 +172,7 @@
         simAnimId = requestAnimationFrame(step);
       } else {
         isSimulating = false;
+        if (gpuBar) gpuBar.classList.remove('is-running');
         progress = 1.0;
         updateRaceVisuals();
       }
