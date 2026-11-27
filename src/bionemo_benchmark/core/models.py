@@ -44,9 +44,12 @@ class MoleculeCandidate:
     qed: float = 0.0
     sascore: float = 0.0  # Synthetic Accessibility Score (1=easy, 10=hard)
     pains_alerts: list[str] = field(default_factory=list)
+    brenk_alerts: list[str] = field(default_factory=list)
     passes_lipinski: bool = True
     passes_veber: bool = True
+    gi_absorption_high: bool = False
     bbb_permeable: bool = False
+    is_salt_desalted: bool = False
     herg_liability: bool = False  # Cardiac ion channel risk heuristic
     admet_verdict: str = "PENDING"  # "PASS", "FLAGGED", "REJECT"
     admet_notes: list[str] = field(default_factory=list)
