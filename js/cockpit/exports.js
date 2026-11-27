@@ -5,8 +5,53 @@
 import { state, probeBackendHealth } from './state.js';
 import { showToast } from './ui-controls.js';
 import { escapeHtml } from './api.js';
-import { copyToClipboard, downloadBlob } from '../shared/dom-utils.js';
+import { copyToClipboard, downloadBlob, toCsvCell } from '../shared/dom-utils.js';
 import { openRobotModal, openResistanceModal, closeResistanceModal } from './modals.js';
+
+export function buildExportContext() {
+  const currentTargetTab = state.currentTargetTab || 'presets';
+  let target = document.getElementById('targetSelect')?.value || '7RPZ';
+  if (currentTargetTab === 'esmfold') target = 'ESMFold De Novo Target';
+  else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'RCSB Target';
+
+  const runResult = state.activeRunResult || null;
+  const leads = Array.isArray(state.currentLeads) && state.currentLeads.length > 0
+    ? state.currentLeads
+    : (Array.isArray(runResult?.leads) ? runResult.leads : []);
+  const selectedLead = state.currentSelectedLead || leads[0] || null;
+  const pdbId = runResult?.pdbId || document.getElementById('targetPdb')?.textContent || target;
+  const rawProv = String(runResult?.provenance || '').toUpperCase();
+  const isLive = rawProv === 'LIVE' || rawProv === 'MEASURED';
+  const provenance = isLive ? 'Measured / Live Backend' : 'Illustrative / Static Demo';
+
+  const retrosynthesis = runResult?.retrosynthesis || {
+    num_steps: 2,
+    feasibility: 'Heuristic BRICS / Literature Precedent',
+    is_convergent: true,
+    steps: [
+      { step: 1, reaction_type: 'Amide Condensation (HATU/DIPEA)', reagents: ['HATU', 'DIPEA', 'DMF'], yield_pct: 82.0, difficulty: 'Heuristic' },
+      { step: 2, reaction_type: 'Cross-Coupling Disconnection', reagents: ['Pd-cat', 'Base'], yield_pct: 75.0, difficulty: 'Heuristic' }
+    ]
+  };
+
+  return {
+    runId: state.runId || runResult?.runId || 'static-demo',
+    target: runResult?.target || target,
+    pdbId,
+    provenance,
+    isStaticDemo: !isLive,
+    runResult,
+    leads,
+    selectedLead,
+    selectedLeadId: state.selectedLeadId || selectedLead?.id || 'LEAD-001',
+    leadRevision: state.leadRevision || 0,
+    retrosynthesis
+  };
+}
+
+function escapeMdCell(val) {
+  return String(val ?? '').replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ');
+}
 
 export async function downloadInstaller(type) {
   let file = 'install.bat';
@@ -49,18 +94,91 @@ export async function downloadInstaller(type) {
 }
 
 export async function downloadDossier() {
+  const ctx = buildExportContext();
   const backendUp = await probeBackendHealth();
-  const file = 'CANDIDATE_SELECTION_DOSSIER.md';
-  const url = backendUp ? './api/dossier' : './results/CANDIDATE_SELECTION_DOSSIER.md';
+  if (backendUp) {
+    try {
+      const res = await fetch('./api/dossier');
+      if (res.ok) {
+        const text = await res.text();
+        downloadBlob(text, 'CANDIDATE_SELECTION_DOSSIER.md', 'text/markdown');
+        showToast('Dossier (.md) downloaded.');
+        return;
+      }
+    } catch (_) {}
+  }
+
+  if (ctx.leads.length > 0 || ctx.runResult) {
+    const leadRows = ctx.leads.map(l =>
+      `| ${escapeMdCell(l.id)} | \`${escapeMdCell(l.smiles)}\` | ${typeof l.affinity === 'number' ? l.affinity.toFixed(2) : '—'} | ${typeof l.qed === 'number' ? l.qed.toFixed(3) : '—'} | ${typeof l.sascore === 'number' ? l.sascore.toFixed(2) : '—'} | ${escapeMdCell(l.verdict || '—')} |`
+    ).join('\n');
+    const md = [
+      `# BioNeMo NIM Benchmark Suite — Candidate Selection Dossier`,
+      ``,
+      `- **Target:** ${escapeMdCell(ctx.target)} (\`${escapeMdCell(ctx.pdbId)}\`)`,
+      `- **Provenance:** ${ctx.provenance}`,
+      `- **Nominated Lead:** ${escapeMdCell(ctx.selectedLeadId)} (Rev ${ctx.leadRevision})`,
+      `- **Retrosynthesis:** ${escapeMdCell(ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent')}`,
+      ``,
+      `## Screened Leads`,
+      `| ID | SMILES | ΔG (kcal/mol) | QED | SAScore | Verdict |`,
+      `| :--- | :--- | :---: | :---: | :---: | :---: |`,
+      leadRows,
+      ``,
+      `> Independently developed by Aarav Jorwal (@Jorwalzzz) · AGPL-3.0-only`
+    ].join('\n');
+    const safeSlug = String(ctx.pdbId || 'target').replace(/[^a-zA-Z0-9_-]/g, '_');
+    downloadBlob(md, `DOSSIER_${safeSlug}.md`, 'text/markdown');
+    showToast(`Dossier (${ctx.pdbId}) downloaded.`);
+    return;
+  }
+
+  const fallbackUrl = './results/CANDIDATE_SELECTION_DOSSIER.md';
   try {
-    const res = await fetch(url);
+    const res = await fetch(fallbackUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
-    downloadBlob(text, file, 'text/markdown');
+    downloadBlob(text, 'CANDIDATE_SELECTION_DOSSIER.md', 'text/markdown');
     showToast('Dossier (.md) downloaded.');
   } catch (e) {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
   }
+}
+
+export function exportLeadsCSV() {
+  const ctx = buildExportContext();
+  if (!ctx.leads || ctx.leads.length === 0) {
+    showToast('Run discovery first to export leads CSV.');
+    return;
+  }
+  const headers = [
+    'id', 'smiles', 'affinity_kcal_mol', 'qed', 'sascore', 'mw',
+    'admet_verdict', 'pains_count', 'brenk_count', 'pose_valid', 'provenance'
+  ];
+  const rows = [headers.join(',')];
+  for (const l of ctx.leads) {
+    const painsCount = Array.isArray(l.pains_alerts) ? l.pains_alerts.length : Number(l.pains_count || 0);
+    const brenkCount = Array.isArray(l.brenk_alerts) ? l.brenk_alerts.length : Number(l.brenk_count || 0);
+    const poseValid = l.pose_validation && typeof l.pose_validation === 'object'
+      ? Boolean(l.pose_validation.passes_all)
+      : '';
+    rows.push([
+      toCsvCell(l.id || ''),
+      toCsvCell(l.smiles || ''),
+      toCsvCell(typeof l.affinity === 'number' ? Number(l.affinity.toFixed(2)) : l.affinity),
+      toCsvCell(typeof l.qed === 'number' ? Number(l.qed.toFixed(3)) : l.qed),
+      toCsvCell(typeof l.sascore === 'number' ? Number(l.sascore.toFixed(2)) : l.sascore),
+      toCsvCell(typeof l.mw === 'number' ? Number(l.mw.toFixed(2)) : l.mw),
+      toCsvCell(l.admet_verdict || l.verdict || ''),
+      toCsvCell(painsCount),
+      toCsvCell(brenkCount),
+      toCsvCell(poseValid === '' ? '' : String(poseValid)),
+      toCsvCell(l.provenance || ctx.provenance)
+    ].join(','));
+  }
+  const safeSlug = String(ctx.pdbId || 'leads').replace(/[^a-zA-Z0-9_-]/g, '_');
+  downloadBlob(rows.join('\n') + '\n', `${safeSlug}_leads.csv`, 'text/csv;charset=utf-8;');
+  showToast(`Exported ${ctx.leads.length} leads to CSV.`);
 }
 
 /**
@@ -68,7 +186,8 @@ export async function downloadDossier() {
  * Never synthesizes fake 3D coordinates from bare SMILES; exports canonical .smi text instead.
  */
 export async function downloadSDF() {
-  const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || null;
+  const ctx = buildExportContext();
+  const lead = ctx.selectedLead;
   if (lead && lead.pose_sdf && lead.pose_sdf.includes('M  END')) {
     const safeId = (lead.id || 'lead').replace(/[^a-zA-Z0-9_-]/g, '_');
     downloadBlob(lead.pose_sdf, `${safeId}_docked.sdf`, 'chemical/x-mdl-sdfile');
@@ -76,8 +195,7 @@ export async function downloadSDF() {
     return;
   }
 
-  const targetVal = document.getElementById('targetSelect')?.value || '7RPZ';
-  if ((state.currentTargetTab || 'presets') === 'presets' && (targetVal === '7RPZ' || targetVal === 'KRAS G12D')) {
+  if ((state.currentTargetTab || 'presets') === 'presets' && (ctx.pdbId === '7RPZ' || ctx.target === 'KRAS G12D')) {
     const url = './results/top_leads_docked.sdf';
     try {
       const res = await fetch(url);
@@ -92,12 +210,11 @@ export async function downloadSDF() {
     }
   }
 
-  const leads = state.currentLeads && state.currentLeads.length ? state.currentLeads : (lead ? [lead] : []);
-  if (leads.length > 0) {
-    const smiText = leads
+  if (ctx.leads.length > 0) {
+    const smiText = ctx.leads
       .map(l => `${l.smiles || 'C'}\t${l.id || 'CANDIDATE'}\tAffinity=${l.affinity ?? 'NA'}`)
       .join('\n') + '\n';
-    downloadBlob(smiText, `${targetVal.replace(/[^a-zA-Z0-9_-]/g, '_')}_candidates.smi`, 'chemical/x-daylight-smiles');
+    downloadBlob(smiText, `${String(ctx.pdbId).replace(/[^a-zA-Z0-9_-]/g, '_')}_candidates.smi`, 'chemical/x-daylight-smiles');
     showToast('Exported 2D SMILES (.smi) — live NIM backend required for 3D SDF conformer coordinates.');
     return;
   }
@@ -107,12 +224,8 @@ export async function downloadSDF() {
 export async function generateINDPdf() {
   showToast('Compiling Pre-Clinical Candidate Summary Dossier...');
 
-  const currentTargetTab = state.currentTargetTab || 'presets';
-  let target = document.getElementById('targetSelect')?.value || '7RPZ';
-  if (currentTargetTab === 'esmfold') target = 'ESMFold De Novo Target';
-  else if (currentTargetTab === 'rcsb') target = (document.getElementById('customTargetInput')?.value || '').trim() || 'RCSB Target';
-
-  const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || {
+  const ctx = buildExportContext();
+  const lead = ctx.selectedLead || {
     id: 'LEAD-001',
     affinity: -9.4,
     smiles: 'O=C(N1CCN(C2=NC=C(Cl)C3=C2C(C4=C(F)C=CC=C4F)=CC=C3)CC1)C5=C(N)N=C6C(F)=CC=CC6=C5',
@@ -124,25 +237,18 @@ export async function generateINDPdf() {
   };
 
   const pocketRes = state.currentTargetPocketResidues || [];
-  const pdbIdVal = document.getElementById('targetPdb')?.textContent || '7RPZ';
   const payload = {
     dossier: {
-      target: target,
-      pdb_id: pdbIdVal,
+      target: ctx.target,
+      pdb_id: ctx.pdbId,
+      provenance: ctx.provenance,
       nominated_lead: lead.id,
       binding_affinity: lead.affinity,
       residue_count: pocketRes.length ? pocketRes.length * 28 : 188,
-      screened: state.currentLeads ? state.currentLeads.length : 10,
-      pareto_count: state.currentLeads ? state.currentLeads.filter(l => l.pareto).length : 3,
+      screened: ctx.leads.length || 10,
+      pareto_count: ctx.leads.filter(l => l.pareto).length || 1,
       leads: [lead],
-      retrosynthesis: {
-        num_steps: 2,
-        feasibility: 'Commercially Accessible (1-2 steps)',
-        steps: [
-          { step: 1, reaction_type: 'Amide Condensation (PyBOP/DIPEA)', reagents: ['DIPEA', 'DMF', 'rt 2h'], yield_pct: 85.0, difficulty: 'Routine' },
-          { step: 2, reaction_type: 'Suzuki-Miyaura Cross-Coupling', reagents: ['Pd(dppf)Cl2', 'K2CO3', '80°C'], yield_pct: 78.0, difficulty: 'Routine' }
-        ]
-      }
+      retrosynthesis: ctx.retrosynthesis
     }
   };
 
@@ -210,11 +316,13 @@ export async function generateINDPdf() {
 export const downloadIndPdf = generateINDPdf;
 
 export async function generateRobotProtocol() {
-  const targetVal = document.getElementById('targetSelect')?.value || '7RPZ';
-  const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || {
+  const ctx = buildExportContext();
+  const targetVal = ctx.target || '7RPZ';
+  const lead = ctx.selectedLead || {
     id: 'LEAD-001',
     smiles: 'CC(=O)N1CCNCC1'
   };
+  const revisionKey = `${ctx.runId}:${ctx.selectedLeadId}:${ctx.leadRevision}`;
 
   showToast('Generating Opentrons OT-2 Python protocol...');
   try {
@@ -231,7 +339,7 @@ export async function generateRobotProtocol() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.currentOt2Code = data.ot2_protocol_py || '';
-    state.currentOt2Key = `${targetVal}|${lead.id}|${lead.smiles || ''}`;
+    state.currentOt2Key = revisionKey;
     state.currentLabCardMd = data.lab_card_md || '';
 
     const codeEl = document.getElementById('ot2CodeContent');
@@ -243,23 +351,24 @@ export async function generateRobotProtocol() {
     openRobotModal();
     showToast('Opentrons OT-2 Protocol generated.');
   } catch (err) {
-    const sampleScript = `"""\nOT-2 AUTOMATED DILUTION PROTOCOL (UNVALIDATED)\nWARNING: Auto-generated for illustrative purposes only.\nNOT reviewed by a qualified chemist. DO NOT use in wet lab without expert review.\nTarget Complex: ${targetVal}\nTarget Candidate: ${lead.id}\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "${targetVal} serial dilution (${lead.id})",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 ${targetVal} serial dilution protocol complete.")\n`;
+    const sampleScript = `"""\nOT-2 AUTOMATED DILUTION PROTOCOL (${ctx.provenance} / UNVALIDATED)\nWARNING: Auto-generated for illustrative purposes only.\nNOT reviewed by a qualified chemist. DO NOT use in wet lab without expert review.\nTarget Complex: ${targetVal} (${ctx.pdbId})\nTarget Candidate: ${lead.id} (Rev ${ctx.leadRevision})\nGenerated for: BioNeMo NIM Benchmark Suite\n"""\n\nfrom opentrons import protocol_api\n\nmetadata = {\n    "protocolName": "${targetVal} serial dilution (${lead.id})",\n    "author": "Aarav Jorwal (@Jorwalzzz)",\n    "description": "2-fold serial dilution assay protocol for nominated candidate ${lead.id}",\n    "apiLevel": "2.15"\n}\n\ndef run(protocol: protocol_api.ProtocolContext):\n    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 1)\n    res = protocol.load_labware('nest_12_reservoir_15ml', 3)\n    tips = protocol.load_labware('opentrons_96_tiprack_300ul', 2)\n    p300 = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tips])\n    p300.flow_rate.aspirate = 25\n    p300.flow_rate.dispense = 25\n\n    row = plate.rows()[0]\n    p300.transfer(50, res['A1'], row[1:], new_tip='once')\n    p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')\n    protocol.comment("OT-2 ${targetVal} serial dilution protocol complete.")\n`;
     state.currentOt2Code = sampleScript;
-    state.currentOt2Key = `${targetVal}|${lead.id}|${lead.smiles || ''}`;
-    state.currentLabCardMd = `# Wet-Lab Protocol Card — ${lead.id} (${targetVal})\n> **Generated for BioNeMo NIM Benchmark Suite**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Assay & Dilution Overview\n- Format: Corning 96-well flat-bottom plate (360 µL/well)\n- Gradient: 2-fold serial dilution down Row A (columns 1 to 12)\n- Fluidics: Throttled aspiration (25 µL/s) for DMSO compatibility\n`;
+    state.currentOt2Key = revisionKey;
+    state.currentLabCardMd = `# Wet-Lab Protocol Card — ${lead.id} (${targetVal})\n> **Generated for BioNeMo NIM Benchmark Suite (${ctx.provenance})**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Assay & Dilution Overview\n- Format: Corning 96-well flat-bottom plate (360 µL/well)\n- Gradient: 2-fold serial dilution down Row A (columns 1 to 12)\n- Fluidics: Throttled aspiration (25 µL/s) for DMSO compatibility\n`;
     const codeEl = document.getElementById('ot2CodeContent');
     if (codeEl) codeEl.textContent = state.currentOt2Code;
     const leadEl = document.getElementById('robotModalLeadId');
     if (leadEl) leadEl.textContent = lead.id;
     const stepsEl = document.getElementById('robotModalSteps');
-    if (stepsEl) stepsEl.textContent = '2 Steps (High Feasibility)';
+    if (stepsEl) stepsEl.textContent = `${ctx.retrosynthesis?.num_steps || 2} Steps (${ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent'})`;
     openRobotModal();
     showToast('Opentrons OT-2 Protocol generated (Static Ready).');
   }
 }
 
 export async function generateLabCard() {
-  const lead = state.currentSelectedLead || (state.currentLeads && state.currentLeads[0]) || {
+  const ctx = buildExportContext();
+  const lead = ctx.selectedLead || {
     id: 'LEAD-001',
     smiles: 'CC(=O)N1CCNCC1'
   };
@@ -276,7 +385,8 @@ export async function generateLabCard() {
     downloadBlob(data.lab_card_md, `WetLab_Card_${lead.id}.md`, 'text/markdown');
     showToast('Wet-Lab SOP Card (.md) downloaded.');
   } catch (err) {
-    const cardContent = state.currentLabCardMd || `# Wet-Lab Protocol Card — ${lead.id}\n> **Generated by NVIDIA BioNeMo Autonomous Scientist**\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Route Overview\n- Synthetic Complexity: Commercially Accessible (2 steps)\n- Reagents: DIPEA, DMF, Pd(dppf)Cl2, K2CO3\n`;
+    const retroFeasibility = ctx.retrosynthesis?.feasibility || 'Heuristic BRICS / Literature Precedent';
+    const cardContent = state.currentLabCardMd || `# Wet-Lab Protocol Card — ${lead.id} (${ctx.target})\n> **Generated by BioNeMo NIM Benchmark Suite (Illustrative / Unvalidated)**\n> **Provenance:** ${ctx.provenance}\n> **Target Scaffold:** \`${lead.smiles || 'CC(=O)N1CCNCC1'}\`\n\n## 1. Route Overview\n- Retrosynthetic Assessment: ${retroFeasibility}\n- Independently developed by Aarav Jorwal (@Jorwalzzz) · AGPL-3.0-only\n`;
     downloadBlob(cardContent, `WetLab_Card_${lead.id}.md`, 'text/markdown');
     showToast('Wet-Lab SOP Card (.md) downloaded.');
   }

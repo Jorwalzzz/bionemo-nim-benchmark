@@ -135,6 +135,7 @@ import {
 import {
   downloadInstaller,
   downloadDossier,
+  exportLeadsCSV,
   downloadSDF,
   generateINDPdf,
   downloadIndPdf,
@@ -313,6 +314,7 @@ function dispatchAction(action, el, event) {
     case 'resistance-test': return runResistanceStressTest();
     case 'generate-ind-pdf': return generateINDPdf();
     case 'download-dossier': return downloadDossier();
+    case 'export-leads-csv': return exportLeadsCSV();
     case 'download-sdf': return downloadSDF();
     case 'select-lead': return selectLead(parseInt(el.dataset.leadIndex || '0', 10));
     case 'select-docked-pose': return selectDockedPose(parseInt(el.dataset.arg || '0', 10));

@@ -17,15 +17,12 @@ export function escapeHtml(str) {
  * Neutralizes spreadsheet formula injection (CWE-1236) and wraps per RFC 4180.
  */
 export function toCsvCell(value) {
-  if (value == null) return '';
-  let raw = String(value);
-  if (/^[=+\-@\t\r]/.test(raw)) {
-    raw = `'${raw}`;
-  }
-  if (/[",\r\n]/.test(raw)) {
-    return `"${raw.replace(/"/g, '""')}"`;
-  }
-  return raw;
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '';
+  const str = String(value);
+  if (/^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(str.trim())) return str.trim();
+  const neutralized = /^\s*[=+\-@\t\r]/.test(str) ? `'${str}` : str;
+  return /[",\n\r]/.test(neutralized) ? `"${neutralized.replace(/"/g, '""')}"` : neutralized;
 }
 
 export function downloadBlob(content, filename, mimeType = 'text/plain;charset=utf-8;') {
