@@ -126,6 +126,8 @@ class RetrosynthesisPlan:
     steps: list[RetrosynthesisStep] = field(default_factory=list)
     starting_materials: list[str] = field(default_factory=list)
     estimated_turnaround_days: int = 7
+    route_tree: dict[str, Any] = field(default_factory=dict)
+    is_convergent: bool = False
 
 
 @dataclass
