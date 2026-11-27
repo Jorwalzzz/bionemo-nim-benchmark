@@ -81,9 +81,7 @@
   position: absolute;
   inset: 0;
   z-index: 25;
-  background: var(--color-hud-glass);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--color-surface);
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -117,7 +115,6 @@
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  backdrop-filter: blur(8px);
 }
 
 @media (max-width: 768px) {
@@ -142,8 +139,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .hud-pill-button:hover {
@@ -183,8 +178,6 @@
   padding: 0.35rem 0.5rem;
   border-radius: 10px;
   border: 1px solid var(--border-hairline);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Right-Side Floating Discovery & Telemetry HUD */
@@ -201,9 +194,7 @@
   border: 1px solid var(--border-hairline);
   border-radius: 14px;
   padding: 1.25rem;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-surface);
   display: flex;
   flex-direction: column;
   gap: 1.15rem;

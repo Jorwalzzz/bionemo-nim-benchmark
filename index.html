@@ -41,10 +41,8 @@
   <link rel="stylesheet" href="./css/pose-lab.css"/>
   <link rel="stylesheet" href="./css/pipeline-cli.css"/>
 
-  <!-- Theme Toggle & Micro-Interactions -->
+  <!-- Theme Toggle & Copy Helpers -->
   <script src="./js/theme.js" defer></script>
-  <!-- Hero WebGL Canvas Ribbon -->
-  <script src="./js/hero-webgl.js" defer></script>
   <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback & SRI) -->
   <script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" data-fallback-src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
   <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
@@ -125,11 +123,8 @@
     </nav>
   </header>
 
-  <!-- STAGE A.2: 100vh "TIME COLLAPSING" HERO SECTION -->
+  <!-- HERO BENCHMARK OVERVIEW -->
   <section id="hero" class="hero-stage">
-    <!-- WebGL Particle Ribbon Canvas Layer -->
-    <canvas id="heroWebGLCanvas" class="hero-webgl-canvas" aria-label="Interactive particle ribbon visualizing time collapse"></canvas>
-
     <div class="hero-content">
       <!-- Eyebrow Badge -->
       <div class="hero-eyebrow">
@@ -137,7 +132,7 @@
         <span class="badge-measured">SUITE v2.2.0</span>
       </div>
 
-      <!-- Monumental 54.8x Focal Numeral -->
+      <!-- 54.8x Focal Metric -->
       <div class="hero-metric-wrap">
         <div class="hero-54x tabular-nums">54.8×</div>
       </div>
@@ -151,9 +146,9 @@
         <span>PINNED CPU BASELINE</span>
       </div>
 
-      <!-- Primary Value Proposition Headline -->
+      <!-- Primary Headline -->
       <h1 class="hero-headline">
-        When Drug Discovery Time Collapses from Hours to Milliseconds.
+        GPU-Accelerated Biomolecular Inference Benchmark.
       </h1>
 
       <!-- Informative Subhead -->
@@ -828,60 +823,63 @@
           <!-- Rendered dynamically by js/pipeline.js -->
         </div>
 
-        <!-- Slide-Over / Expandable Schema Inspector Drawer -->
-        <div id="schema-drawer-panel" class="schema-drawer" role="region" aria-label="Pipeline Schema Inspector">
-          <div class="schema-drawer-header">
-            <div>
-              <div id="schema-drawer-title" style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">
-                Stage 01: Target &amp; Ligand Ingestion
-              </div>
-              <div id="schema-drawer-service" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-signal-green);margin-top:0.2rem;">
-                RDKit C++ / PDB REST Gateway
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <span class="badge-measured">JSON-SCHEMA v7</span>
-              <button type="button" id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
-                <span>Copy Payload</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="schema-drawer-body">
-            <!-- Left: Input & Output Schemas -->
-            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <!-- Collapsible Pipeline Schema Inspector -->
+        <details style="margin-top:1.25rem;">
+          <summary class="btn-race-action" style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;">
+            <span>Inspect Stage JSON Schemas &amp; Sample Payload</span>
+          </summary>
+          <div id="schema-drawer-panel" class="schema-drawer" role="region" aria-label="Pipeline Schema Inspector" style="margin-top:0.75rem;">
+            <div class="schema-drawer-header">
               <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Input Contract Schema
+                <div id="schema-drawer-title" style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">
+                  Stage 01: Target &amp; Ligand Ingestion
                 </div>
-                <pre id="schema-input-code" class="schema-code-block"></pre>
+                <div id="schema-drawer-service" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-signal-green);margin-top:0.2rem;">
+                  RDKit C++ / PDB REST Gateway
+                </div>
               </div>
-              <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Output Contract Schema
-                </div>
-                <pre id="schema-output-code" class="schema-code-block"></pre>
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span class="badge-measured">JSON-SCHEMA v7</span>
+                <button type="button" id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  <span>Copy Payload</span>
+                </button>
               </div>
             </div>
 
-            <!-- Right: Resilience & Example Payload -->
-            <div style="display:flex;flex-direction:column;gap:1.25rem;">
-              <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Failover &amp; Resilience Policy
+            <div class="schema-drawer-body">
+              <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Input Contract Schema
+                  </div>
+                  <pre id="schema-input-code" class="schema-code-block"></pre>
                 </div>
-                <div id="schema-resilience-text" style="font-size:0.82rem;color:var(--color-ink-muted);line-height:1.5;background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:8px;padding:1rem;"></div>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Output Contract Schema
+                  </div>
+                  <pre id="schema-output-code" class="schema-code-block"></pre>
+                </div>
               </div>
-              <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Verified Sample JSON Payload
+
+              <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Failover &amp; Resilience Policy
+                  </div>
+                  <div id="schema-resilience-text" style="font-size:0.82rem;color:var(--color-ink-muted);line-height:1.5;background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:8px;padding:1rem;"></div>
                 </div>
-                <pre id="schema-payload-code" class="schema-code-block"></pre>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Verified Sample JSON Payload
+                  </div>
+                  <pre id="schema-payload-code" class="schema-code-block"></pre>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </details>
       </div>
     </section>
 
@@ -1145,9 +1143,13 @@
             </div>
           </div>
 
-          <!-- Code View Pane -->
+          <!-- Collapsible Code View Pane -->
           <div class="ot2-code-pane">
-            <pre id="ot2-protocol-code" class="ot2-code-pre"># =============================================================================
+            <details>
+              <summary class="btn-race-action" style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:0.75rem;">
+                <span>View Opentrons OT-2 Python Script (API v2.15)</span>
+              </summary>
+              <pre id="ot2-protocol-code" class="ot2-code-pre"># =============================================================================
 # UNVALIDATED PROTOCOL WARNING
 # This script was auto-generated for illustrative purposes only.
 # It has NOT been reviewed or validated by a qualified chemist.
@@ -1186,6 +1188,7 @@ def run(protocol: protocol_api.ProtocolContext):
     # 3. 2-fold serial dilution down Row A with mixing
     p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')
     protocol.comment("OT-2 KRAS G12D serial dilution protocol complete.")</pre>
+            </details>
           </div>
         </div>
       </div>

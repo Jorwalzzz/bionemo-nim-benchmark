@@ -390,11 +390,26 @@ async function init() {
   mobileGuardEl = document.getElementById('mobile-touch-guard');
   mobileExitBtn = document.getElementById('btn-mobile-exit-3d');
 
+function getThemeCanvasColor() {
+  return document.documentElement.getAttribute('data-theme') === 'light' ? '#F8FAFC' : '#0B0E14';
+}
+
+let viewerInitialized = false;
+
   containerEl.innerHTML = '';
   viewer = $3Dmol.createViewer(containerEl, {
-    backgroundColor: '#05070a',
+    backgroundColor: getThemeCanvasColor(),
     antialias: true,
     defaultcolors: $3Dmol.rasmolElementColors
+  });
+
+  window.addEventListener('bionemo:theme-changed', () => {
+    if (viewer) {
+      try {
+        viewer.setBackgroundColor(getThemeCanvasColor());
+        viewer.render();
+      } catch (_) {}
+    }
   });
 
   targetPillBtns.forEach(btn => {
@@ -425,10 +440,31 @@ async function init() {
   await setTarget('8AZV');
 }
 
+function scheduleLazyInit() {
+  const stage = document.getElementById('molViewer3D') || document.getElementById('pose-lab');
+  if (!stage || typeof IntersectionObserver === 'undefined') {
+    init();
+    return;
+  }
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        if (!viewerInitialized) {
+          viewerInitialized = true;
+          init();
+        }
+      }
+    },
+    { rootMargin: '250px' }
+  );
+  observer.observe(stage);
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', scheduleLazyInit);
 } else {
-  init();
+  scheduleLazyInit();
 }
 
 window.BioNeMoPoseLab = {

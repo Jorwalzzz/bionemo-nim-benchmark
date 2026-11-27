@@ -47,6 +47,9 @@
       localStorage.setItem(STORAGE_KEY, theme);
     } catch (_) {}
     updateThemeIcon(theme);
+    try {
+      window.dispatchEvent(new CustomEvent('bionemo:theme-changed', { detail: { theme: theme } }));
+    } catch (_) {}
   }
 
   function updateThemeIcon(theme) {
@@ -102,68 +105,7 @@
       );
     }
 
-    // Gate custom cursor ring strictly to the welcome page (index.html)
-    var wantsCursor = document.body && document.body.dataset.cursor === 'lab';
-    var hasFinePointer = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (wantsCursor && hasFinePointer && !reducedMotion) {
-      var ring = document.createElement('div');
-      ring.className = 'cursor-ring';
-      var dot = document.createElement('div');
-      dot.className = 'cursor-dot';
-      document.body.appendChild(ring);
-      document.body.appendChild(dot);
-
-      var mouseX = -100;
-      var mouseY = -100;
-      var ringX = -100;
-      var ringY = -100;
-      var cursorRafId = 0;
-      var lastMoveAt = 0;
-
-      function renderCursor() {
-        ringX += (mouseX - ringX) * 0.22;
-        ringY += (mouseY - ringY) * 0.22;
-        ring.style.left = ringX + 'px';
-        ring.style.top = ringY + 'px';
-
-        var settled = Math.abs(mouseX - ringX) < 0.25 && Math.abs(mouseY - ringY) < 0.25;
-        if (!document.hidden && (!settled || performance.now() - lastMoveAt < 500)) {
-          cursorRafId = requestAnimationFrame(renderCursor);
-        } else {
-          cursorRafId = 0;
-        }
-      }
-
-      window.addEventListener(
-        'mousemove',
-        function (e) {
-          mouseX = e.clientX;
-          mouseY = e.clientY;
-          dot.style.left = mouseX + 'px';
-          dot.style.top = mouseY + 'px';
-          lastMoveAt = performance.now();
-          if (!cursorRafId && !document.hidden) {
-            cursorRafId = requestAnimationFrame(renderCursor);
-          }
-        },
-        { passive: true }
-      );
-
-      var interactiveTargets = 'a, button, input, select, textarea, .hero-terminal-pill, [role="button"]';
-      document.addEventListener('mouseover', function (e) {
-        if (e.target && e.target.closest && e.target.closest(interactiveTargets)) {
-          ring.classList.add('cursor-hover');
-        }
-      });
-      document.addEventListener('mouseout', function (e) {
-        if (e.target && e.target.closest && e.target.closest(interactiveTargets)) {
-          ring.classList.remove('cursor-hover');
-        }
-      });
-    }
-
+    // Native OS cursor enforced across all pages; custom dual-cursor RAF loop removed.
     window.copyHeroTerminal = function (btn) {
       var text = 'git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git';
       var onCopied = function () {
@@ -172,7 +114,7 @@
         feedback.className = 'hero-terminal-cmd';
         feedback.style.color = 'var(--color-signal-green)';
         feedback.style.fontWeight = '700';
-        feedback.textContent = '✓ Copied to clipboard';
+        feedback.textContent = 'Copied git clone command';
         btn.replaceChildren(feedback);
         setTimeout(function () {
           btn.replaceChildren.apply(btn, originalNodes);
@@ -182,6 +124,14 @@
         navigator.clipboard.writeText(text).then(onCopied).catch(function () {});
       }
     };
+
+    document.querySelectorAll('[data-action="copy-hero-terminal"]').forEach(function (el) {
+      if (el.dataset.copyBound) return;
+      el.dataset.copyBound = '1';
+      el.addEventListener('click', function () {
+        window.copyHeroTerminal(el);
+      });
+    });
   }
 
   if (document.readyState === 'loading') {
