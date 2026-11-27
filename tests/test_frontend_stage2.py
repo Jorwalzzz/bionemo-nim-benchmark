@@ -206,13 +206,11 @@ def test_playwright_stage2_bugs_and_csp(static_site_url: str) -> None:
         # Load cockpit.html under strict CSP
         page.goto(f"{static_site_url}/cockpit.html", wait_until="networkidle")
 
-        # Close first-time auto tour if launched, then verify Tour Step 3 selects 7RPZ (not 4OBE)
+        # Close first-time auto tour if launched, then verify Quickstart Step 1 selects 7RPZ (not 4OBE)
         tour_modal = page.locator("#tourCardModal")
         if not tour_modal.is_visible():
-            page.click('button[aria-label="Start guided tour"]')
+            page.click('button[aria-label="Start quickstart guide"]')
             page.wait_for_selector("#tourCardModal", state="visible")
-        page.click("#btnTourNext")
-        page.click("#btnTourNext")
         page.click("#btnTourAction")
         page.wait_for_timeout(150)
         assert page.locator("#targetSelect").input_value() == "7RPZ"

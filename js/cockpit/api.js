@@ -1121,6 +1121,24 @@ export async function runDiscovery() {
   updateProvenanceBanner(activeProvenance);
 
   if (customStaticBlocked) {
+    const blockedRun = {
+      target: info.name || target,
+      pdbId: info.pdb,
+      screenedCount: 0,
+      passedCount: 0,
+      flaggedCount: 0,
+      dockedCount: 0,
+      paretoCount: 0,
+      leads: [],
+      topLead: null,
+      provenance: activeProvenance,
+      timestamp: new Date().toISOString()
+    };
+    state.activeRunResult = blockedRun;
+    if (typeof window !== 'undefined') {
+      window.activeRunResult = blockedRun;
+    }
+    updateProvenanceBanner(activeProvenance);
     ['kpiAffinity', 'kpiQed', 'kpiScreened', 'kpiPareto'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.textContent = '—';
