@@ -448,12 +448,14 @@ function scheduleLazyInit() {
   }
   const observer = new IntersectionObserver(
     (entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        observer.disconnect();
-        if (!viewerInitialized) {
-          viewerInitialized = true;
-          init();
-        }
+      const visible = entries.some((entry) => entry.isIntersecting);
+      if (visible && !viewerInitialized) {
+        viewerInitialized = true;
+        init();
+        return;
+      }
+      if (viewer) {
+        viewer.spin(visible && isRotating ? 'y' : false, 1);
       }
     },
     { rootMargin: '250px' }
