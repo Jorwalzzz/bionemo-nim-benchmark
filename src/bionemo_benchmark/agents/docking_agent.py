@@ -18,6 +18,7 @@ from rdkit.Geometry import Point3D
 from bionemo_benchmark.core.client import NimBioClient
 from bionemo_benchmark.core.models import AgentMessage, MoleculeCandidate, TargetProfile
 from bionemo_benchmark.core.provenance import StageProvenance, StageStatus
+from bionemo_benchmark.domain.interactions import InteractionProfiler
 from bionemo_benchmark.domain.pose_validation import PosePlausibilityValidator
 
 logger = logging.getLogger("DockingAgent")
@@ -65,6 +66,7 @@ class BiophysicsDockingAgent:
             mock=self.mock,
         )
         self.pose_validator = PosePlausibilityValidator()
+        self.interaction_profiler = InteractionProfiler()
         self.last_stage_provenance: StageProvenance | None = None
 
     @staticmethod
@@ -263,6 +265,29 @@ class BiophysicsDockingAgent:
                 cand.pose_validation.get("receptor_clash_count", 0)
             )
             cand.steric_clash_count = max(cand.steric_clash_count, clash_sum)
+
+            # 5. Directional 3D Non-Covalent Interaction Profiling per pose
+            for pose_entry in cand.poses:
+                pose_sdf_item = pose_entry.get("sdf_data") or ""
+                pose_contacts = self.interaction_profiler.profile_interactions(
+                    pose_sdf=pose_sdf_item,
+                    pdb_text=receptor_pdb_blob,
+                )
+                pose_entry["interaction_contacts"] = pose_contacts
+            cand.interaction_contacts = (
+                list(cand.poses[0].get("interaction_contacts", []))
+                if cand.poses
+                else self.interaction_profiler.profile_interactions(
+                    pose_sdf=cand.pose_sdf,
+                    pdb_text=receptor_pdb_blob,
+                )
+            )
+            if cand.interaction_contacts:
+                detected_residues = list(
+                    dict.fromkeys(c["residue"] for c in cand.interaction_contacts)
+                )
+                cand.contact_residues = detected_residues[:6]
+
             docked_leads.append(cand)
 
         if self.mock:
