@@ -5,6 +5,7 @@ Serializers, client extraction, security helpers, and shared state for BioNeMo C
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
 from pathlib import Path
@@ -252,3 +253,15 @@ def with_cookie(resp: Response, token: str) -> Response:
         samesite="lax",
     )
     return resp
+
+
+def sanitize_json_numbers(obj: Any) -> Any:
+    """Recursively converts NaN/Inf floats into None for strict RFC-8259 JSON."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: sanitize_json_numbers(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [sanitize_json_numbers(v) for v in obj]
+    return obj
+

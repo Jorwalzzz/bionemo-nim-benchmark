@@ -46,6 +46,7 @@ from bionemo_benchmark.server.serializers import (
     ROOT_ASSETS_DIR,
     auth_manager,
     get_client_identifiers,
+    sanitize_json_numbers,
     trial_limiter,
     verify_request_origin,
     with_cookie,
@@ -311,6 +312,8 @@ def _serialize_campaign_payload(
             "num_steps": rp.num_steps,
             "feasibility": rp.overall_feasibility,
             "starting_materials": rp.starting_materials,
+            "is_convergent": rp.is_convergent,
+            "route_tree": rp.route_tree,
             "steps": [
                 {
                     "step": s.step_number,
@@ -326,7 +329,7 @@ def _serialize_campaign_payload(
 
     council_summary = orchestrator.bus.get_council_summary()
 
-    return {
+    payload = {
         "status": "completed",
         "trial_status": trial_info,
         "provenance": provenance,
@@ -361,9 +364,17 @@ def _serialize_campaign_payload(
                 "logp": lead.logp,
                 "sascore": lead.sascore,
                 "admet_verdict": lead.admet_verdict,
+                "pains_alerts": lead.pains_alerts,
+                "brenk_alerts": lead.brenk_alerts,
+                "gi_absorption_high": lead.gi_absorption_high,
+                "bbb_permeable": lead.bbb_permeable,
+                "is_salt_desalted": lead.is_salt_desalted,
                 "is_pareto": lead.is_pareto_optimal,
                 "round": lead.generation_round,
                 "pose_sdf": lead.pose_sdf,
+                "poses": lead.poses,
+                "pose_validation": lead.pose_validation,
+                "interaction_contacts": lead.interaction_contacts,
                 "contact_residues": lead.contact_residues,
                 "provenance": mode,
                 "is_simulated": is_sim,
@@ -371,6 +382,7 @@ def _serialize_campaign_payload(
             for lead in dossier.top_leads
         ],
     }
+    return sanitize_json_numbers(payload)
 
 
 @router.post("/api/run")

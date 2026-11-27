@@ -30,6 +30,7 @@ from bionemo_benchmark.server.serializers import (
     get_authenticated_user,
     get_client_identifiers,
     logger,
+    sanitize_json_numbers,
     sanitize_target_query,
     trial_limiter,
     verify_request_origin,
@@ -229,7 +230,7 @@ async def api_redock(request: Request) -> Any:
         raise
     if reservation_id:
         auth_manager.commit_run(reservation_id)
-    return redock_result
+    return sanitize_json_numbers(redock_result)
 
 
 @router.post("/api/dossier/pdf")

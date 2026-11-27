@@ -9,16 +9,22 @@ Provides native Model Context Protocol (MCP) tools for interacting with:
 """
 
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
 
+from bionemo_benchmark.agents.admet_critic import ADMETCriticAgent
+from bionemo_benchmark.agents.retrosynthesis_agent import RetrosynthesisAgent
 from bionemo_benchmark.core.client import CANONICAL_AMINO_ACIDS, NimBioClient
+from bionemo_benchmark.core.models import MoleculeCandidate
 from bionemo_benchmark.core.pipeline import BenchmarkPipeline
+from bionemo_benchmark.domain.interactions import InteractionProfiler
 from bionemo_benchmark.domain.pdb_utils import (
     generate_synthetic_backbone,
     sanitize_pdb_atom_records,
 )
+from bionemo_benchmark.domain.pose_validation import PosePlausibilityValidator
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -438,6 +444,137 @@ def bionemo_compare_known_inhibitors(target_name: str, candidate_affinity_kcal_m
         }
         
     return result
+
+
+def _mcp_finite(obj: Any) -> Any:
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _mcp_finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_mcp_finite(v) for v in obj]
+    return obj
+
+
+@mcp.tool()
+def bionemo_screen_medchem(smiles: str) -> dict[str, Any]:
+    """
+    Screens a SMILES molecule with RDKit PAINS A/B/C, BRENK, Ertl SA, BOILED-Egg GI/BBB,
+    and multi-fragment salt stripping (max 2048 characters).
+    """
+    if not isinstance(smiles, str) or not smiles.strip() or len(smiles.strip()) > 2048:
+        return {"valid": False, "error": "SMILES must be non-empty and <= 2048 characters."}
+    try:
+        clean_smi = SafeSanitizer.sanitize_chemical_smiles(smiles, max_length=2048)
+    except Exception as exc:
+        return {"valid": False, "error": str(exc)}
+
+    critic = ADMETCriticAgent()
+    cand = MoleculeCandidate(id="MCP-SCREEN", smiles=clean_smi, parent_smiles=clean_smi)
+    evaluated, _ = critic.evaluate_candidates([cand])
+    res = evaluated[0]
+    if res.admet_verdict == "REJECT" and "SMILES parse error" in " ".join(res.admet_notes):
+        return {"valid": False, "error": "Invalid SMILES chemical structure."}
+
+    return _mcp_finite(
+        {
+            "valid": True,
+            "smiles": clean_smi,
+            "molecular_formula": res.molecular_formula,
+            "mw": res.mw,
+            "logp": res.logp,
+            "tpsa": res.tpsa,
+            "qed": res.qed,
+            "sascore": res.sascore,
+            "pains_alerts": res.pains_alerts,
+            "brenk_alerts": res.brenk_alerts,
+            "passes_lipinski": res.passes_lipinski,
+            "passes_veber": res.passes_veber,
+            "gi_absorption_high": res.gi_absorption_high,
+            "bbb_permeable": res.bbb_permeable,
+            "is_salt_desalted": res.is_salt_desalted,
+            "herg_liability": res.herg_liability,
+            "admet_verdict": res.admet_verdict,
+            "admet_notes": res.admet_notes,
+        }
+    )
+
+
+@mcp.tool()
+def bionemo_validate_pose(
+    pose_sdf: str,
+    pdb_text: str = "",
+    covalent_residue: str | None = None,
+) -> dict[str, Any]:
+    """
+    Validates 3D pose plausibility (bond geometry, intra/receptor clashes, SVD ring planarity,
+    and constrained H-relaxed ΔE_strain) and profiles directional 3D protein-ligand interactions.
+    Enforces 1 MB SDF and 5 MB PDB byte limits.
+    """
+    if not isinstance(pose_sdf, str) or not pose_sdf.strip():
+        return {"valid": False, "error": "pose_sdf must be a non-empty SDF block."}
+    if len(pose_sdf.encode("utf-8")) > 1_048_576:
+        return {"valid": False, "error": "pose_sdf exceeds 1 MB byte cap."}
+    if not isinstance(pdb_text, str):
+        return {"valid": False, "error": "pdb_text must be a string."}
+    if len(pdb_text.encode("utf-8")) > 5_242_880:
+        return {"valid": False, "error": "pdb_text exceeds 5 MB byte cap."}
+
+    validator = PosePlausibilityValidator()
+    validation = validator.validate_pose(
+        pose_sdf=pose_sdf,
+        pdb_text=pdb_text,
+        covalent_residue=covalent_residue,
+    )
+    if validation.get("error"):
+        return {"valid": False, "error": validation["error"]}
+
+    profiler = InteractionProfiler()
+    contacts = (
+        profiler.profile_interactions(pose_sdf=pose_sdf, pdb_text=pdb_text)
+        if pdb_text.strip()
+        else []
+    )
+    return _mcp_finite(
+        {
+            "valid": True,
+            "pose_validation": validation,
+            "interaction_contacts": contacts,
+        }
+    )
+
+
+@mcp.tool()
+def bionemo_plan_retrosynthesis(smiles: str) -> dict[str, Any]:
+    """
+    Deconstructs a target SMILES (max 2048 chars) into a depth-3 binary recursive BRICS
+    synthesis tree with capped terminal building-block fragments.
+    """
+    if not isinstance(smiles, str) or not smiles.strip() or len(smiles.strip()) > 2048:
+        return {"valid": False, "error": "SMILES must be non-empty and <= 2048 characters."}
+    try:
+        clean_smi = SafeSanitizer.sanitize_chemical_smiles(smiles, max_length=2048)
+    except Exception as exc:
+        return {"valid": False, "error": str(exc)}
+
+    agent = RetrosynthesisAgent()
+    cand = MoleculeCandidate(id="MCP-RETRO", smiles=clean_smi, parent_smiles=clean_smi)
+    plan = agent.plan_synthesis_route(cand)
+    if plan.num_steps == 0:
+        return {"valid": False, "error": plan.overall_feasibility}
+
+    return _mcp_finite(
+        {
+            "valid": True,
+            "target_smiles": plan.target_smiles,
+            "num_steps": plan.num_steps,
+            "feasibility": plan.overall_feasibility,
+            "is_convergent": plan.is_convergent,
+            "route_tree": plan.route_tree,
+            "starting_materials": plan.starting_materials,
+            "estimated_turnaround_days": plan.estimated_turnaround_days,
+        }
+    )
 
 
 def main() -> None:
