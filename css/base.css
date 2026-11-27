@@ -102,6 +102,54 @@ table th {
   color: var(--color-signal-green);
 }
 
+/* Zero-JS Native Hardware-Compositor SVG Reticle Cursor (Welcome Page) */
+@media (hover: hover) and (pointer: fine) {
+  body[data-cursor="lab"] {
+    cursor: url('../assets/cursors/reticle-dark.svg') 12 12, crosshair;
+  }
+
+  body[data-cursor="lab"] a,
+  body[data-cursor="lab"] button,
+  body[data-cursor="lab"] summary,
+  body[data-cursor="lab"] [role="button"],
+  body[data-cursor="lab"] select,
+  body[data-cursor="lab"] input[type="range"],
+  body[data-cursor="lab"] input[type="checkbox"],
+  body[data-cursor="lab"] input[type="radio"],
+  body[data-cursor="lab"] label[for] {
+    cursor: url('../assets/cursors/pointer-dark.svg') 12 12, pointer;
+  }
+
+  body[data-cursor="lab"] input[type="text"],
+  body[data-cursor="lab"] input[type="search"],
+  body[data-cursor="lab"] textarea,
+  body[data-cursor="lab"] pre,
+  body[data-cursor="lab"] code {
+    cursor: text;
+  }
+
+  [data-theme="light"] body[data-cursor="lab"] {
+    cursor: url('../assets/cursors/reticle-light.svg') 12 12, crosshair;
+  }
+
+  [data-theme="light"] body[data-cursor="lab"] a,
+  [data-theme="light"] body[data-cursor="lab"] button,
+  [data-theme="light"] body[data-cursor="lab"] summary,
+  [data-theme="light"] body[data-cursor="lab"] [role="button"],
+  [data-theme="light"] body[data-cursor="lab"] select,
+  [data-theme="light"] body[data-cursor="lab"] input[type="range"],
+  [data-theme="light"] body[data-cursor="lab"] input[type="checkbox"],
+  [data-theme="light"] body[data-cursor="lab"] input[type="radio"],
+  [data-theme="light"] body[data-cursor="lab"] label[for] {
+    cursor: url('../assets/cursors/pointer-light.svg') 12 12, pointer;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: 2px;
+}
+
 /* -----------------------------------------------------------------------------
    ATMOSPHERE & DEPTH (Fractal Film-Grain & Ambient Light Blooms)
    ----------------------------------------------------------------------------- */
@@ -116,14 +164,7 @@ table th {
 }
 
 .film-grain {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.032;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  display: none;
 }
 
 .ambient-bloom {
@@ -131,8 +172,7 @@ table th {
   pointer-events: none;
   z-index: 0;
   border-radius: 50%;
-  filter: blur(120px);
-  will-change: transform;
+  contain: strict;
 }
 
 .ambient-bloom-1 {
@@ -152,53 +192,7 @@ table th {
   background: radial-gradient(circle, rgba(255, 138, 76, 0.06), transparent 70%);
 }
 
-/* -----------------------------------------------------------------------------
-   DESKTOP CUSTOM CURSOR RING (Magnetic & Subtle)
-   ----------------------------------------------------------------------------- */
-@media (hover: hover) and (pointer: fine) {
-  .cursor-ring {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 24px;
-    height: 24px;
-    border: 1px solid var(--color-signal-green);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 99999;
-    transform: translate(-50%, -50%) scale(1);
-    transition: transform 120ms var(--ease-precision), opacity 150ms ease, border-color 150ms ease;
-    mix-blend-mode: exclusion;
-    opacity: 0;
-  }
-  .cursor-dot {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 4px;
-    background: var(--color-signal-green);
-    border-radius: 50%;
-    pointer-events: none;
-    z-index: 100000;
-    transform: translate(-50%, -50%);
-    opacity: 0;
-  }
-  body:hover .cursor-ring,
-  body:hover .cursor-dot {
-    opacity: 1;
-  }
-  .cursor-hover {
-    transform: translate(-50%, -50%) scale(1.85);
-    background: var(--color-signal-green-tint);
-    border-color: var(--color-cold-cyan);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .cursor-ring, .cursor-dot {
-    display: none !important;
-  }
   * {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
@@ -227,8 +221,6 @@ table th {
   align-items: center;
   gap: 8px;
   background: var(--color-surface-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-hairline);
   box-shadow: var(--shadow-glass-nav);
   border-radius: 9999px;
@@ -236,6 +228,7 @@ table th {
   max-width: 1200px;
   width: auto;
   position: relative;
+  contain: layout style;
   transition: border-color var(--dur-fast) var(--ease-precision), box-shadow var(--dur-fast) var(--ease-precision);
 }
 
@@ -394,9 +387,11 @@ table th {
 
 .nav-progress-bar {
   height: 100%;
-  width: 0%;
+  width: 100%;
   background: var(--gradient-nim-flash);
-  transition: width 80ms linear;
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
 }
 
 /* -----------------------------------------------------------------------------
@@ -560,8 +555,7 @@ table th {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: rgba(7, 10, 15, 0.9);
-  backdrop-filter: blur(12px);
+  background: var(--color-surface-elevated);
   border: 1px solid var(--border-hairline);
   border-radius: 10px;
   padding: 8px 14px;

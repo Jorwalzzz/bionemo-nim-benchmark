@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://3dmol.org https://3Dmol.org https://cdn.jsdelivr.net blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://files.rcsb.org https://data.rcsb.org https://raw.githubusercontent.com https://health.api.nvidia.com https://integrate.api.nvidia.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"/>
   <meta http-equiv="X-Content-Type-Options" content="nosniff"/>
   <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
-  <script>if(window.top!==window.self){try{window.top.location=window.self.location}catch(e){document.documentElement.innerHTML=''}}</script>
+  <script src="./js/frame-guard.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NVIDIA BioNeMo & NIM Inference Benchmark — Time Collapsing Discovery Studio</title>
   <meta name="description" content="Publication-grade empirical benchmark comparing NVIDIA BioNeMo NIM microservices (H100 SXM5) against CPU compute baselines. 54.8x mean acceleration."/>
@@ -16,15 +16,23 @@
   <meta property="og:description" content="54.8x per-model speedup. Empirical latency, atomic RMSD parity, and autonomous lead screening."/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
-  <meta property="og:image" content="https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/results/throughput_comparison.png"/>
+  <meta property="og:image" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/assets/img/throughput_comparison.png"/>
   <meta property="og:image:width" content="1200"/>
   <meta property="og:image:height" content="630"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/Jorwalzzz/bionemo-nim-benchmark/main/results/throughput_comparison.png"/>
+  <meta name="twitter:image" content="https://jorwalzzz.github.io/bionemo-nim-benchmark/assets/img/throughput_comparison.png"/>
   <meta name="twitter:title" content="NVIDIA BioNeMo & NIM Inference Benchmark"/>
   <meta name="twitter:description" content="Empirical computational biology benchmark comparing NVIDIA BioNeMo microservices against CPU baselines."/>
   <link rel="canonical" href="https://jorwalzzz.github.io/bionemo-nim-benchmark/"/>
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg"/>
+
+  <!-- Preconnect & Font Stylesheets (Non-Blocking) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"/>
+
+  <!-- Pre-Paint Theme Initializer (Synchronous Classic Script, Zero FOUC) -->
+  <script src="./js/theme-init.js"></script>
 
   <!-- Design System Stylesheets -->
   <link rel="stylesheet" href="./css/tokens.css"/>
@@ -33,27 +41,25 @@
   <link rel="stylesheet" href="./css/pose-lab.css"/>
   <link rel="stylesheet" href="./css/pipeline-cli.css"/>
 
-  <!-- Theme Engine (Executes immediately for zero FOUC) -->
-  <script src="./js/theme.js"></script>
-  <!-- Hero WebGL Canvas Ribbon -->
-  <script src="./js/hero-webgl.js" defer></script>
+  <!-- Theme Toggle & Copy Helpers -->
+  <script src="./js/theme.js" defer></script>
   <!-- 3Dmol.js WebGL Molecular Engine (Local Vendor with CDN Fallback & SRI) -->
-  <script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" onerror="this.onerror=null;this.src='https://3Dmol.org/build/3Dmol-min.js'" defer></script>
+  <script src="./vendor/3Dmol-min.js" integrity="sha384-NM1C3ZcjJAUuea4z5P0F1LXCE0n/gamcTJqFiwNDn4QYgPMSRAcbKj2mWZZYt43t" crossorigin="anonymous" data-fallback-src="https://3Dmol.org/build/3Dmol-min.js" defer></script>
   <!-- Stage B: Telemetry Hydrator, Race Controller, Dumbbell Matrix, and Calculator -->
   <script src="./js/data-hydrator.js" defer></script>
   <script src="./js/race-scroll.js" defer></script>
-  <script src="./js/charts.js" defer></script>
+  <script type="module" src="./js/charts.js"></script>
   <script src="./js/calculator.js" defer></script>
   <!-- Stage C: 3D Pose Lab, Discovery Studio, and Lead Evaluator -->
-  <script src="./js/molviewer.js" defer></script>
-  <script src="./js/studio.js" defer></script>
-  <script src="./js/lead-evaluator.js" defer></script>
+  <script type="module" src="./js/molviewer.js"></script>
+  <script type="module" src="./js/studio.js"></script>
+  <script type="module" src="./js/lead-evaluator.js"></script>
   <!-- Stage D: Pipeline Flow Diagram & Two-Pane CLI Builder -->
-  <script src="./js/pipeline.js" defer></script>
-  <script src="./js/cli-builder.js" defer></script>
+  <script type="module" src="./js/pipeline.js"></script>
+  <script type="module" src="./js/cli-builder.js"></script>
 </head>
 
-<body>
+<body data-cursor="lab">
   <!-- Accessibility skip link -->
   <a href="#hero" class="sr-only focus:not-sr-only">Skip to Hero Content</a>
   <a href="#benchmarks" class="sr-only focus:not-sr-only">Skip to Benchmark Explorer</a>
@@ -91,7 +97,7 @@
       <!-- Action Cluster -->
       <div class="nav-actions">
         <!-- Light / Dark Theme Toggle -->
-        <button id="themeToggleBtn" class="btn-theme-toggle" aria-label="Toggle Warm Paper Light / Dark Theme" title="Toggle Light/Dark Theme">
+        <button type="button" id="themeToggleBtn" class="btn-theme-toggle" aria-label="Toggle Warm Paper Light / Dark Theme" title="Toggle Light/Dark Theme">
           <span id="themeToggleIcon" style="display:flex;align-items:center;justify-content:center;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           </span>
@@ -100,7 +106,7 @@
         <!-- GitHub Release Link -->
         <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" class="btn-nav-github" title="View Source & Releases on GitHub">
           <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-          <span>v2.5</span>
+          <span>v2.2.0</span>
         </a>
 
         <!-- Launch Cockpit Action Button -->
@@ -117,11 +123,8 @@
     </nav>
   </header>
 
-  <!-- STAGE A.2: 100vh "TIME COLLAPSING" HERO SECTION -->
+  <!-- HERO BENCHMARK OVERVIEW -->
   <section id="hero" class="hero-stage">
-    <!-- WebGL Particle Ribbon Canvas Layer -->
-    <canvas id="heroWebGLCanvas" class="hero-webgl-canvas" aria-label="Interactive particle ribbon visualizing time collapse"></canvas>
-
     <div class="hero-content">
       <!-- Eyebrow Badge -->
       <div class="hero-eyebrow">
@@ -129,7 +132,7 @@
         <span class="badge-measured">SUITE v2.2.0</span>
       </div>
 
-      <!-- Monumental 54.8x Focal Numeral -->
+      <!-- 54.8x Focal Metric -->
       <div class="hero-metric-wrap">
         <div class="hero-54x tabular-nums">54.8×</div>
       </div>
@@ -143,9 +146,9 @@
         <span>PINNED CPU BASELINE</span>
       </div>
 
-      <!-- Primary Value Proposition Headline -->
+      <!-- Primary Headline -->
       <h1 class="hero-headline">
-        When Drug Discovery Time Collapses from Hours to Milliseconds.
+        GPU-Accelerated Biomolecular Inference Benchmark.
       </h1>
 
       <!-- Informative Subhead -->
@@ -166,11 +169,11 @@
       </div>
 
       <!-- Tactile Terminal Pill -->
-      <div class="hero-terminal-pill" onclick="copyHeroTerminal(this)" role="button" tabindex="0" title="Click to copy repository clone command" aria-label="Terminal command: git clone repository">
+      <button type="button" class="hero-terminal-pill" data-action="copy-hero-terminal" title="Click to copy repository clone command" aria-label="Terminal command: git clone repository">
         <span class="text-slate-500">$</span>
         <span class="hero-terminal-cmd">git clone https://github.com/Jorwalzzz/bionemo-nim-benchmark.git</span>
-        <svg class="hero-terminal-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-      </div>
+        <svg class="hero-terminal-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+      </button>
     </div>
   </section>
 
@@ -201,7 +204,7 @@
       <!-- Item 4: Parity & Hermeticity -->
       <div class="ticker-item">
         <div class="ticker-label">Verification Suite</div>
-        <div class="ticker-num">186/186</div>
+        <div class="ticker-num">245/245</div>
         <div class="ticker-detail">Hermetic Pytest Tests Passed</div>
       </div>
     </div>
@@ -225,11 +228,11 @@
             Select Target Workload
           </div>
           <div id="race-pills" class="workload-pills-wrap">
-            <button class="workload-pill-btn active" data-workload="diffdock" title="DiffDock on BCR-ABL1 Kinase (2HYY)">DiffDock (2HYY)</button>
-            <button class="workload-pill-btn" data-workload="esmfold" title="ESMFold on DHFR (1DHF)">ESMFold (1DHF)</button>
-            <button class="workload-pill-btn" data-workload="esm2" title="ESM-2 650M on Ubiquitin (1UBQ)">ESM-2 (1UBQ)</button>
-            <button class="workload-pill-btn" data-workload="molmim" title="MolMIM 70M on EGFR (1M17)">MolMIM (1M17)</button>
-            <button class="workload-pill-btn" data-workload="openfold" title="OpenFold on SARS-CoV-2 RdRp (7BV2)">OpenFold (7BV2)</button>
+            <button type="button" class="workload-pill-btn active" data-workload="diffdock" title="DiffDock on BCR-ABL1 Kinase (2HYY)">DiffDock (2HYY)</button>
+            <button type="button" class="workload-pill-btn" data-workload="esmfold" title="ESMFold on DHFR (1DHF)">ESMFold (1DHF)</button>
+            <button type="button" class="workload-pill-btn" data-workload="esm2" title="ESM-2 650M on Ubiquitin (1UBQ)">ESM-2 (1UBQ)</button>
+            <button type="button" class="workload-pill-btn" data-workload="molmim" title="MolMIM 70M on EGFR (1M17)">MolMIM (1M17)</button>
+            <button type="button" class="workload-pill-btn" data-workload="openfold" title="OpenFold on SARS-CoV-2 RdRp (7BV2)">OpenFold (7BV2)</button>
           </div>
 
           <div style="font-size:0.8rem;color:var(--color-ink-secondary);line-height:1.5;margin-top:1rem;">
@@ -281,6 +284,7 @@
                   <span>TIMELINE SCRUBBER</span>
                   <span style="color:var(--color-signal-green);font-weight:700;">H100 FLASH AT 1.68%</span>
                 </div>
+                <label for="race-scrub-input" class="sr-only">Race timeline scrub control</label>
                 <input id="race-scrub-input" type="range" min="0" max="100" value="100" class="scrub-range-input" aria-label="Race timeline scrub control"/>
                 <div class="scrub-markers">
                   <span>0.0s (Launch)</span>
@@ -293,7 +297,7 @@
 
               <!-- Action Bar -->
               <div class="race-actions-bar">
-                <button id="btn-replay-flash" class="btn-race-action" title="Replay real-time race simulation">
+                <button type="button" id="btn-replay-flash" class="btn-race-action" title="Replay real-time race simulation">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                   <span>Replay Flash</span>
                 </button>
@@ -370,44 +374,45 @@
 
       <!-- Expandable Full Telemetry Matrix Drawer -->
       <div class="telemetry-drawer-container">
-        <div id="drawer-header" class="drawer-header-bar" role="button" tabindex="0" aria-expanded="false">
+        <button type="button" id="drawer-header" class="drawer-header-bar" aria-expanded="false">
           <div class="drawer-toggle-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 4h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <span>Inspect Full Telemetry Matrix (5 Microservice Records)</span>
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <span class="badge-measured">100% HERMETIC DATA</span>
-            <svg id="drawer-chevron" class="drawer-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            <svg id="drawer-chevron" class="drawer-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
           </div>
-        </div>
+        </button>
 
         <div id="drawer-content" class="drawer-content">
           <!-- Filter & Search Controls Bar -->
           <div class="drawer-filter-bar">
             <!-- Filter Pills -->
             <div class="workload-pills-wrap" style="margin-bottom:0;">
-              <button class="workload-pill-btn matrix-filter-pill active" data-filter="all">All Modalities</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="ESM-2">ESM-2 (650M)</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="ESMFold">ESMFold</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="DiffDock">DiffDock</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="MolMIM">MolMIM</button>
-              <button class="workload-pill-btn matrix-filter-pill" data-filter="OpenFold">OpenFold</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill active" data-filter="all">All Modalities</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="ESM-2">ESM-2 (650M)</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="ESMFold">ESMFold</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="DiffDock">DiffDock</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="MolMIM">MolMIM</button>
+              <button type="button" class="workload-pill-btn matrix-filter-pill" data-filter="OpenFold">OpenFold</button>
             </div>
 
             <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
               <!-- Search Box (Strict 2.5rem padding prevents icon collision) -->
               <div class="table-search-wrap">
                 <svg class="table-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <label for="table-search-input" class="sr-only">Search benchmark matrix table</label>
                 <input id="table-search-input" type="text" placeholder="Filter by target, PDB, UniProt..." class="table-search-input" aria-label="Search benchmark matrix table"/>
               </div>
 
               <!-- Export Buttons -->
               <div class="table-export-actions">
-                <button id="btn-export-csv" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download CSV dataset">
+                <button type="button" id="btn-export-csv" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download CSV dataset">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                   <span>CSV</span>
                 </button>
-                <button id="btn-export-json" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download JSON dataset">
+                <button type="button" id="btn-export-json" class="btn-race-action" style="padding:0.45rem 0.8rem;font-size:0.75rem;" title="Download JSON dataset">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                   <span>JSON</span>
                 </button>
@@ -454,16 +459,16 @@
           <!-- Slider Control Group -->
           <div class="calc-control-group">
             <div class="calc-control-label">
-              <span>SCREENING LIBRARY SIZE:</span>
+              <label for="calc-slider">SCREENING LIBRARY SIZE:</label>
               <span id="calc-count-display" style="color:var(--color-signal-green);font-weight:700;">10,000 Complexes</span>
             </div>
             <div class="calc-slider-wrap">
               <input id="calc-slider" type="range" min="0" max="100" value="50" class="calc-slider" aria-label="Library size logarithmic slider"/>
               <div class="calc-chips-wrap">
-                <button class="calc-chip-btn" data-count="1000">1k (Pilot)</button>
-                <button class="calc-chip-btn active" data-count="10000">10k (Standard)</button>
-                <button class="calc-chip-btn" data-count="100000">100k (Focused)</button>
-                <button class="calc-chip-btn" data-count="1000000">1M (Mega-Screen)</button>
+                <button type="button" class="calc-chip-btn" data-count="1000">1k (Pilot)</button>
+                <button type="button" class="calc-chip-btn active" data-count="10000">10k (Standard)</button>
+                <button type="button" class="calc-chip-btn" data-count="100000">100k (Focused)</button>
+                <button type="button" class="calc-chip-btn" data-count="1000000">1M (Mega-Screen)</button>
               </div>
             </div>
           </div>
@@ -471,7 +476,7 @@
           <!-- Workload Selector -->
           <div class="calc-control-group">
             <div class="calc-control-label">
-              <span>ACTIVE DISCOVERY WORKLOAD:</span>
+              <label for="calc-workload-select">ACTIVE DISCOVERY WORKLOAD:</label>
             </div>
             <select id="calc-workload-select" class="calc-control-select" aria-label="Select active discovery workload">
               <option value="cycle" selected>End-to-End Discovery Cycle (32.40s vs 0.55s, 58.9x)</option>
@@ -559,7 +564,7 @@
             <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">Tap to Interact in 3D</div>
             <div style="font-size:0.8rem;color:var(--color-ink-muted);">Prevents canvas touch from trapping vertical page scrolling</div>
           </div>
-          <button id="btn-mobile-exit-3d" class="btn-mobile-exit-3d" aria-label="Exit 3D Interaction">
+          <button type="button" id="btn-mobile-exit-3d" class="btn-mobile-exit-3d" aria-label="Exit 3D Interaction">
             <span>&times; Exit 3D</span>
           </button>
 
@@ -568,26 +573,26 @@
             <div id="pose-source-badge" style="margin-right:0.25rem;">
               <span class="badge-measured">RCSB Live PDB</span>
             </div>
-            <button class="hud-pill-button target-switch-pill active" data-target-pdb="8AZV" title="KRAS G12D Switch-II Pocket">KRAS G12D (8AZV)</button>
-            <button class="hud-pill-button target-switch-pill" data-target-pdb="4MNE" title="BRAF V600E Kinase Domain">BRAF V600E (4MNE)</button>
-            <button class="hud-pill-button target-switch-pill" data-target-pdb="7BQY" title="SARS-CoV-2 Mpro Catalytic Dyad">Mpro (7BQY)</button>
+            <button type="button" class="hud-pill-button target-switch-pill active" data-target-pdb="8AZV" title="KRAS G12D Switch-II Pocket">KRAS G12D (8AZV)</button>
+            <button type="button" class="hud-pill-button target-switch-pill" data-target-pdb="4MNE" title="BRAF V600E Kinase Domain">BRAF V600E (4MNE)</button>
+            <button type="button" class="hud-pill-button target-switch-pill" data-target-pdb="7BQY" title="SARS-CoV-2 Mpro Catalytic Dyad">Mpro (7BQY)</button>
           </div>
 
           <!-- Bottom-Left Camera & Representation Dock -->
           <div class="pose-hud-bottom-left">
-            <button id="btn-pose-rotate" class="hud-pill-button" title="Toggle Auto-Rotation">
+            <button type="button" id="btn-pose-rotate" class="hud-pill-button" title="Toggle Auto-Rotation">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
               <span>Auto-Rotate</span>
             </button>
-            <button id="btn-pose-focus" class="hud-pill-button" title="Focus Camera on Active Pocket">
+            <button type="button" id="btn-pose-focus" class="hud-pill-button" title="Focus Camera on Active Pocket">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
               <span>Focus Pocket</span>
             </button>
-            <button id="btn-pose-surface" class="hud-pill-button" title="Toggle Translucent Binding Surface">
+            <button type="button" id="btn-pose-surface" class="hud-pill-button" title="Toggle Translucent Binding Surface">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
               <span>Molecular Surface</span>
             </button>
-            <button id="btn-pose-reset" class="hud-pill-button" title="Reset Viewport Framing">
+            <button type="button" id="btn-pose-reset" class="hud-pill-button" title="Reset Viewport Framing">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
               <span>Reset View</span>
             </button>
@@ -611,9 +616,9 @@
                 Lead Series Candidate
               </div>
               <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-                <button class="hud-pill-button lead-series-pill" data-series="lead_01">Lead 01 Core</button>
-                <button class="hud-pill-button lead-series-pill active" data-series="lead_02">Lead 02 +F (Nominated)</button>
-                <button class="hud-pill-button lead-series-pill" data-series="lead_03">Lead 03 Evolved</button>
+                <button type="button" class="hud-pill-button lead-series-pill" data-series="lead_01">Lead 01 Core</button>
+                <button type="button" class="hud-pill-button lead-series-pill active" data-series="lead_02">Lead 02 +F (Nominated)</button>
+                <button type="button" class="hud-pill-button lead-series-pill" data-series="lead_03">Lead 03 Evolved</button>
               </div>
             </div>
 
@@ -623,10 +628,10 @@
                 In-Silico R-Group Tweaks
               </div>
               <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
-                <button class="hud-pill-button lead-mod-chip" data-mod="f">+F (C5)</button>
-                <button class="hud-pill-button lead-mod-chip" data-mod="cf3">+CF3</button>
-                <button class="hud-pill-button lead-mod-chip" data-mod="me">+Me (N4)</button>
-                <button class="hud-pill-button lead-mod-chip" data-mod="pyridine">Swap Pyridine</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="f">+F (C5)</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="cf3">+CF3</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="me">+Me (N4)</button>
+                <button type="button" class="hud-pill-button lead-mod-chip" data-mod="pyridine">Swap Pyridine</button>
               </div>
             </div>
 
@@ -774,6 +779,7 @@
 
       <!-- Full-Width Drag-and-Drop CSV / JSON Loader -->
       <div id="lead-dropzone" class="lead-dropzone">
+        <label for="lead-file-input" class="sr-only">Upload custom benchmark or candidate file</label>
         <input id="lead-file-input" type="file" accept=".csv,.json" class="dropzone-input-file" aria-label="Upload custom benchmark or candidate file"/>
         <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;pointer-events:none;">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--color-signal-green);"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
@@ -785,11 +791,12 @@
           </p>
         </div>
         <div style="margin-top:1.25rem;">
-          <button id="btn-load-sample-batch" class="btn-race-action" style="position:relative;z-index:10;pointer-events:auto;" title="Load complete 4-lead sample batch">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <button type="button" id="btn-load-sample-batch" class="btn-race-action" style="position:relative;z-index:10;pointer-events:auto;" title="Load complete 4-lead sample batch">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             <span>Load Sample Multi-Candidate Batch</span>
           </button>
         </div>
+        <div id="lead-dropzone-status" role="status" aria-live="polite" class="hidden" style="margin-top:0.75rem;font-family:var(--font-mono);font-size:0.75rem;"></div>
       </div>
     </section>
 
@@ -816,60 +823,63 @@
           <!-- Rendered dynamically by js/pipeline.js -->
         </div>
 
-        <!-- Slide-Over / Expandable Schema Inspector Drawer -->
-        <div id="schema-drawer-panel" class="schema-drawer" role="region" aria-label="Pipeline Schema Inspector">
-          <div class="schema-drawer-header">
-            <div>
-              <div id="schema-drawer-title" style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">
-                Stage 01: Target &amp; Ligand Ingestion
-              </div>
-              <div id="schema-drawer-service" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-signal-green);margin-top:0.2rem;">
-                RDKit C++ / PDB REST Gateway
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <span class="badge-measured">JSON-SCHEMA v7</span>
-              <button id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
-                <span>Copy Payload</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="schema-drawer-body">
-            <!-- Left: Input & Output Schemas -->
-            <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <!-- Collapsible Pipeline Schema Inspector -->
+        <details style="margin-top:1.25rem;">
+          <summary class="btn-race-action" style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;">
+            <span>Inspect Stage JSON Schemas &amp; Sample Payload</span>
+          </summary>
+          <div id="schema-drawer-panel" class="schema-drawer" role="region" aria-label="Pipeline Schema Inspector" style="margin-top:0.75rem;">
+            <div class="schema-drawer-header">
               <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Input Contract Schema
+                <div id="schema-drawer-title" style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--color-ink-primary);">
+                  Stage 01: Target &amp; Ligand Ingestion
                 </div>
-                <pre id="schema-input-code" class="schema-code-block"></pre>
+                <div id="schema-drawer-service" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--color-signal-green);margin-top:0.2rem;">
+                  RDKit C++ / PDB REST Gateway
+                </div>
               </div>
-              <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Output Contract Schema
-                </div>
-                <pre id="schema-output-code" class="schema-code-block"></pre>
+              <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span class="badge-measured">JSON-SCHEMA v7</span>
+                <button type="button" id="btn-copy-schema-payload" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy sample JSON payload">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                  <span>Copy Payload</span>
+                </button>
               </div>
             </div>
 
-            <!-- Right: Resilience & Example Payload -->
-            <div style="display:flex;flex-direction:column;gap:1.25rem;">
-              <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Failover &amp; Resilience Policy
+            <div class="schema-drawer-body">
+              <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Input Contract Schema
+                  </div>
+                  <pre id="schema-input-code" class="schema-code-block"></pre>
                 </div>
-                <div id="schema-resilience-text" style="font-size:0.82rem;color:var(--color-ink-muted);line-height:1.5;background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:8px;padding:1rem;"></div>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Output Contract Schema
+                  </div>
+                  <pre id="schema-output-code" class="schema-code-block"></pre>
+                </div>
               </div>
-              <div>
-                <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
-                  Verified Sample JSON Payload
+
+              <div style="display:flex;flex-direction:column;gap:1.25rem;">
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Failover &amp; Resilience Policy
+                  </div>
+                  <div id="schema-resilience-text" style="font-size:0.82rem;color:var(--color-ink-muted);line-height:1.5;background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:8px;padding:1rem;"></div>
                 </div>
-                <pre id="schema-payload-code" class="schema-code-block"></pre>
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;color:var(--color-ink-secondary);text-transform:uppercase;margin-bottom:0.4rem;">
+                    Verified Sample JSON Payload
+                  </div>
+                  <pre id="schema-payload-code" class="schema-code-block"></pre>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </details>
       </div>
     </section>
 
@@ -929,9 +939,9 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
             <div class="font-display font-bold text-base" style="color:var(--color-ink-primary);">CLI Configuration Flags</div>
             <div style="display:flex;gap:0.35rem;">
-              <button class="calc-chip-btn cli-preset-btn active" data-preset="mock">Mock Dry-Run</button>
-              <button class="calc-chip-btn cli-preset-btn" data-preset="kras">KRAS Screen</button>
-              <button class="calc-chip-btn cli-preset-btn" data-preset="full">Full Suite</button>
+              <button type="button" class="calc-chip-btn cli-preset-btn active" data-preset="mock">Mock Dry-Run</button>
+              <button type="button" class="calc-chip-btn cli-preset-btn" data-preset="kras">KRAS Screen</button>
+              <button type="button" class="calc-chip-btn cli-preset-btn" data-preset="full">Full Suite</button>
             </div>
           </div>
 
@@ -949,7 +959,7 @@
           <div class="calc-control-group">
             <label for="cli-target" class="calc-control-label">TARGET PDB COMPLEX:</label>
             <select id="cli-target" class="calc-control-select">
-              <option value="8AZV" selected>KRAS G12D (PDB: 8AZV, Switch-II Pocket)</option>
+              <option value="7RPZ" selected>KRAS G12D (PDB: 7RPZ, Switch-II Pocket)</option>
               <option value="4MNE">BRAF V600E (PDB: 4MNE, Kinase Domain)</option>
               <option value="7BQY">SARS-CoV-2 Mpro (PDB: 7BQY, Catalytic Dyad)</option>
               <option value="ALL_TARGETS">All Benchmark Complexes (1UBQ, 1DHF, 2HYY, 1M17, 7BV2)</option>
@@ -959,7 +969,7 @@
           <!-- Poses Slider -->
           <div class="calc-control-group">
             <div class="calc-control-label">
-              <span>DIFFDOCK POSES:</span>
+              <label for="cli-poses">DIFFDOCK POSES:</label>
               <span id="cli-poses-display" style="color:var(--color-signal-green);font-weight:700;">5 Poses</span>
             </div>
             <input id="cli-poses" type="range" min="1" max="20" value="5" class="calc-slider" aria-label="Number of poses slider"/>
@@ -988,11 +998,11 @@
 
           <!-- Toggles -->
           <div style="display:flex;gap:1.5rem;align-items:center;padding-top:0.25rem;">
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-ink-primary);">
+            <label for="cli-admet" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-ink-primary);">
               <input id="cli-admet" type="checkbox" checked style="accent-color:var(--color-signal-green);"/>
               <span>--admet-filter</span>
             </label>
-            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-signal-green);">
+            <label for="cli-mock" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-family:var(--font-mono);font-size:0.78rem;color:var(--color-signal-green);">
               <input id="cli-mock" type="checkbox" checked style="accent-color:var(--color-signal-green);"/>
               <span>--mock (Zero-Credit Testing)</span>
             </label>
@@ -1009,7 +1019,7 @@
                 <span class="mac-dot dot-green"></span>
               </div>
               <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);">
-                bash — bionemo-cli // v2.5
+                bash — bionemo-cli // v2.2.0
               </span>
             </div>
             <div style="margin-top:1.25rem;">
@@ -1021,7 +1031,7 @@
             <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--color-ink-muted);">
               Zero external dependencies required. Verified in Python 3.12 virtualenv.
             </span>
-            <button id="btn-copy-cli-command" class="btn-race-action" title="Copy command to clipboard">
+            <button type="button" id="btn-copy-cli-command" class="btn-race-action" title="Copy command to clipboard">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
               <span>Copy Command</span>
             </button>
@@ -1053,7 +1063,7 @@
           </div>
         </a>
 
-        <a href="./results/screened_candidates_summary.csv" download class="deliverable-card" title="Download Screened Candidates CSV">
+        <a href="./data/screened_candidates_summary.csv" download class="deliverable-card" title="Download Screened Candidates CSV">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span class="badge-measured">CSV DATASET</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -1085,7 +1095,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:0.75rem;">
             <span class="badge-illustrative">Illustrative Synthesis Protocol</span>
-            <button id="btn-copy-ot2-code" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy Python protocol">
+            <button type="button" id="btn-copy-ot2-code" class="btn-race-action" style="padding:0.35rem 0.75rem;font-size:0.75rem;" title="Copy Python protocol">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
               <span>Copy Protocol</span>
             </button>
@@ -1133,9 +1143,13 @@
             </div>
           </div>
 
-          <!-- Code View Pane -->
+          <!-- Collapsible Code View Pane -->
           <div class="ot2-code-pane">
-            <pre id="ot2-protocol-code" class="ot2-code-pre"># =============================================================================
+            <details>
+              <summary class="btn-race-action" style="display:inline-flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:0.75rem;">
+                <span>View Opentrons OT-2 Python Script (API v2.15)</span>
+              </summary>
+              <pre id="ot2-protocol-code" class="ot2-code-pre"># =============================================================================
 # UNVALIDATED PROTOCOL WARNING
 # This script was auto-generated for illustrative purposes only.
 # It has NOT been reviewed or validated by a qualified chemist.
@@ -1174,6 +1188,7 @@ def run(protocol: protocol_api.ProtocolContext):
     # 3. 2-fold serial dilution down Row A with mixing
     p300.transfer(50, row[:11], row[1:12], mix_after=(3, 40), new_tip='always')
     protocol.comment("OT-2 KRAS G12D serial dilution protocol complete.")</pre>
+            </details>
           </div>
         </div>
       </div>
@@ -1244,8 +1259,8 @@ def run(protocol: protocol_api.ProtocolContext):
           </div>
           <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
             <span class="badge-measured">GNU AGPLv3 LICENSE</span>
-            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">186/186 HERMETIC TESTS PASSING</span>
-            <span class="badge-measured">RELEASE v2.5</span>
+            <span class="badge-measured" style="background:rgba(16,185,129,0.15);color:var(--color-signal-green);">245/245 HERMETIC TESTS PASSING</span>
+            <span class="badge-measured">RELEASE v2.2.0</span>
           </div>
         </div>
       </div>
@@ -1267,7 +1282,7 @@ def run(protocol: protocol_api.ProtocolContext):
       </div>
 
       <!-- Scope & Scientific Limitations Box -->
-      <div style="background:#040609;border:1px solid var(--border-hairline);border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem;font-size:0.78rem;color:var(--color-ink-muted);line-height:1.6;">
+      <div style="background:var(--color-surface-sunken);border:1px solid var(--border-hairline);border-radius:12px;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem;font-size:0.78rem;color:var(--color-ink-muted);line-height:1.6;">
         <div>
           <strong style="color:var(--color-ink-primary);">Benchmark Scope &amp; Scientific Limitations:</strong> This benchmark suite evaluates warm-container inference latency and structural output parity on standardized target complexes. Reported accelerations represent empirical hardware runtimes comparing an NVIDIA H100 80GB SXM5 GPU against an AMD EPYC 7763 64-core processor with 16 physical cores pinned for process isolation. Cold-start container initializations and wide-area network latency are omitted. In-silico docking scores and ADMET predictions represent computational hypotheses that require independent biophysical assay confirmation (SPR/MST) before clinical progression.
         </div>
@@ -1279,12 +1294,12 @@ def run(protocol: protocol_api.ProtocolContext):
       <!-- Bottom Bar -->
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;font-size:0.8rem;color:var(--color-ink-muted);">
         <div>
-          &copy; 2026 Aarav Jorwal (<a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);text-decoration:none;">@Jorwalzzz</a>). Licensed under <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-primary);">GNU AGPLv3</a>. All worldwide trademark rights reserved.
+          &copy; 2026 Aarav Jorwal (<a href="https://github.com/Jorwalzzz" target="_blank" rel="noopener noreferrer" style="color:var(--color-signal-green);text-decoration:none;">@Jorwalzzz</a>). Licensed under <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-primary);">GNU AGPLv3</a>. Independent open-source scientific benchmark.
         </div>
         <div style="display:flex;gap:1.5rem;">
           <a href="./index.html" style="color:var(--color-ink-secondary);text-decoration:none;">Studio Home</a>
           <a href="./cockpit.html" style="color:var(--color-ink-secondary);text-decoration:none;">Cockpit Workstation</a>
-          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-secondary);text-decoration:none;">GitHub v2.5</a>
+          <a href="https://github.com/Jorwalzzz/bionemo-nim-benchmark" target="_blank" rel="noopener noreferrer" style="color:var(--color-ink-secondary);text-decoration:none;">GitHub v2.2.0</a>
         </div>
       </div>
     </div>

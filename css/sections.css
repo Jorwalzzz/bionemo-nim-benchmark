@@ -13,6 +13,8 @@
   max-width: 1280px;
   margin: 0 auto;
   border-bottom: 1px solid var(--border-hairline);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 620px;
 }
 
 @media (max-width: 768px) {
@@ -121,9 +123,7 @@
   border-radius: 14px;
   padding: 1.75rem;
   position: relative;
-  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.25);
 }
 
 @media (max-width: 640px) {
@@ -267,7 +267,6 @@
   height: 6px;
   background: var(--color-surface-sunken);
   border-radius: 3px;
-  outline: none;
   cursor: ew-resize;
 }
 
@@ -504,6 +503,11 @@
 }
 
 .drawer-header-bar {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid transparent;
+  text-align: left;
+  font: inherit;
   padding: 1.25rem 1.75rem;
   display: flex;
   justify-content: space-between;
@@ -511,7 +515,6 @@
   cursor: pointer;
   user-select: none;
   background: var(--color-surface-sunken);
-  border-bottom: 1px solid transparent;
   transition: background 0.2s ease;
 }
 
@@ -583,12 +586,13 @@
   font-family: var(--font-body);
   font-size: 0.85rem;
   color: var(--color-ink-primary);
-  outline: none;
   transition: border-color 0.2s ease;
 }
 
-.table-search-input:focus {
+.table-search-input:focus-visible {
   border-color: var(--color-signal-green);
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: 1px;
 }
 
 .table-export-actions {
@@ -653,8 +657,6 @@
   border-radius: 14px;
   padding: 2rem 1.75rem;
   box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .calc-controls-grid {
@@ -687,7 +689,6 @@
   color: var(--color-ink-primary);
   font-family: var(--font-body);
   font-size: 0.9rem;
-  outline: none;
   cursor: pointer;
 }
 
@@ -704,7 +705,6 @@
   height: 8px;
   background: var(--color-surface-sunken);
   border-radius: 4px;
-  outline: none;
   cursor: pointer;
 }
 

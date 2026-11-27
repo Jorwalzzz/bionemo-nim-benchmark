@@ -178,7 +178,10 @@ class TestEnterpriseHardeningAndExploitProtection:
 
         # 3. Valid key accepted
         admin_key = os.environ.get("ADMIN_RESET_KEY", "bionemo-admin-prod-9821")
-        resp_valid = client.post("/api/reset-trial", headers={"X-Admin-Key": admin_key})
+        resp_valid = client.post(
+            "/api/reset-trial",
+            headers={"X-Admin-Key": admin_key, "X-BioNeMo-CSRF": "1"},
+        )
         assert resp_valid.status_code == 200
         assert resp_valid.json()["success"] is True
 

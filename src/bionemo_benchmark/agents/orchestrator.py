@@ -30,6 +30,7 @@ from bionemo_benchmark.core.models import (
     MoleculeCandidate,
     RetrosynthesisPlan,
 )
+from bionemo_benchmark.core.provenance import StageProvenance
 from bionemo_benchmark.infra.message_bus import SwarmMessageBus
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
@@ -71,6 +72,7 @@ class AgenticScientistOrchestrator:
         self.audit_log: list[AgentMessage] = []
         self.latest_retrosynthesis_plan: RetrosynthesisPlan | None = None
         self.evolution_rounds_data: list[dict[str, Any]] = []
+        self.stage_provenances: list[StageProvenance] = []
 
     def _emit(self, msg: AgentMessage):
         self.audit_log.append(msg)
@@ -89,9 +91,12 @@ class AgenticScientistOrchestrator:
         os.makedirs(output_dir, exist_ok=True)
         self.bus.clear()
         self.evolution_rounds_data.clear()
+        self.stage_provenances.clear()
 
         # --- Sub-Agent 1: Target Scout (Dr. Cynthia) ---
         target_profile, scout_msg = self.target_scout.scout_target(target_query)
+        if getattr(self.target_scout, "last_stage_provenance", None) is not None:
+            self.stage_provenances.append(self.target_scout.last_stage_provenance)
         self._emit(scout_msg)
         self.bus.publish(
             agent_id="scout",
@@ -126,6 +131,8 @@ class AgenticScientistOrchestrator:
                 steering_prompt=prompt_guidance,
                 round_num=current_round,
             )
+            if getattr(self.generative_chemist, "last_stage_provenance", None) is not None:
+                self.stage_provenances.append(self.generative_chemist.last_stage_provenance)
             self._emit(chem_msg)
             self.bus.publish(
                 agent_id="chemist",
@@ -200,6 +207,8 @@ class AgenticScientistOrchestrator:
             docked_leads, dock_msg = self.docking_agent.dock_candidates(
                 dockable_leads, target_profile
             )
+            if getattr(self.docking_agent, "last_stage_provenance", None) is not None:
+                self.stage_provenances.append(self.docking_agent.last_stage_provenance)
             self._emit(dock_msg)
 
             top_docked = (
@@ -403,10 +412,21 @@ class AgenticScientistOrchestrator:
             "logp": round(res_cand.logp, 2),
             "sascore": round(res_cand.sascore, 2),
             "admet_verdict": res_cand.admet_verdict,
+            "pains_alerts": res_cand.pains_alerts,
+            "brenk_alerts": res_cand.brenk_alerts,
+            "gi_absorption_high": res_cand.gi_absorption_high,
+            "bbb_permeable": res_cand.bbb_permeable,
+            "is_salt_desalted": res_cand.is_salt_desalted,
             "pose_sdf": res_cand.pose_sdf,
+            "poses": res_cand.poses,
+            "pose_validation": res_cand.pose_validation,
+            "interaction_contacts": res_cand.interaction_contacts,
+            "contact_residues": res_cand.contact_residues,
             "retrosynthesis": {
                 "num_steps": retro_plan.num_steps,
                 "feasibility": retro_plan.overall_feasibility,
                 "starting_materials": retro_plan.starting_materials,
+                "is_convergent": retro_plan.is_convergent,
+                "route_tree": retro_plan.route_tree,
             },
         }

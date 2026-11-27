@@ -44,7 +44,7 @@
 .pose-scan-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(5, 7, 10, 0.88);
+  background: var(--color-hud-glass);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -81,9 +81,7 @@
   position: absolute;
   inset: 0;
   z-index: 25;
-  background: rgba(5, 7, 10, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--color-surface);
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -110,14 +108,13 @@
   z-index: 28;
   padding: 0.4rem 0.8rem;
   border-radius: 9999px;
-  background: rgba(5, 7, 10, 0.85);
+  background: var(--color-hud-glass);
   border: 1px solid var(--border-hairline);
   color: var(--color-signal-green);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  backdrop-filter: blur(8px);
 }
 
 @media (max-width: 768px) {
@@ -134,16 +131,14 @@
   font-size: 0.75rem;
   padding: 0.35rem 0.75rem;
   border-radius: 9999px;
-  background: rgba(13, 19, 34, 0.7);
-  color: var(--color-ink-muted);
+  background: var(--color-hud-glass);
+  color: var(--color-ink-secondary);
   border: 1px solid var(--border-hairline);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .hud-pill-button:hover {
@@ -152,7 +147,7 @@
 }
 
 .hud-pill-button.active {
-  background: rgba(16, 185, 129, 0.18);
+  background: var(--color-signal-green-tint);
   color: var(--color-signal-green);
   border-color: var(--color-signal-green);
   box-shadow: 0 0 10px rgba(118, 245, 162, 0.3);
@@ -179,12 +174,10 @@
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
-  background: rgba(5, 7, 10, 0.75);
+  background: var(--color-hud-glass);
   padding: 0.35rem 0.5rem;
   border-radius: 10px;
   border: 1px solid var(--border-hairline);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Right-Side Floating Discovery & Telemetry HUD */
@@ -197,13 +190,11 @@
   max-width: calc(100% - 2.5rem);
   z-index: 20;
   overflow-y: auto;
-  background: rgba(5, 7, 10, 0.85);
+  background: var(--color-hud-glass);
   border: 1px solid var(--border-hairline);
   border-radius: 14px;
   padding: 1.25rem;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-surface);
   display: flex;
   flex-direction: column;
   gap: 1.15rem;

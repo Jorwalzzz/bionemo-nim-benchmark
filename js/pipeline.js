@@ -9,8 +9,7 @@
  * 4. Keyboard accessibility (Escape, Enter, Space).
  */
 
-(function () {
-  'use strict';
+import { escapeHtml, copyToClipboard } from './shared/dom-utils.js';
 
   const PIPELINE_STAGES = [
     {
@@ -205,81 +204,71 @@
       PIPELINE_STAGES.forEach((stage, idx) => {
         const amberClass = stage.isAmber ? 'stage-amber' : '';
         cardsHtml += `
-          <div
+          <button
+            type="button"
             class="pipeline-node-card ${amberClass} ${idx === 0 ? 'active' : ''}"
             data-stage-idx="${idx}"
-            tabindex="0"
-            role="button"
             aria-expanded="${idx === 0 ? 'true' : 'false'}"
             aria-controls="schema-drawer-panel"
           >
             <div class="node-stage-numeral">STAGE ${stage.stageNum}</div>
-            <div class="node-title">${stage.title}</div>
-            <div class="node-desc">${stage.desc}</div>
+            <div class="node-title">${escapeHtml(stage.title)}</div>
+            <div class="node-desc">${escapeHtml(stage.desc)}</div>
             <div class="node-inspect-cta">
               <span>Inspect Schema</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </div>
-          </div>
+          </button>
         `;
       });
       nodesContainerEl.innerHTML = cardsHtml;
 
-      // Attach Node Listeners
       const cards = nodesContainerEl.querySelectorAll('.pipeline-node-card');
       cards.forEach((card) => {
         const idx = parseInt(card.getAttribute('data-stage-idx'), 10);
         card.addEventListener('click', () => renderStageDetails(idx));
-        card.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            renderStageDetails(idx);
-          }
-        });
       });
     }
 
-    // Copy Payload Button Listener
     if (copyPayloadBtn) {
-      copyPayloadBtn.addEventListener('click', () => {
+      copyPayloadBtn.addEventListener('click', async () => {
         const stage = PIPELINE_STAGES[currentStageIdx];
         const payloadText = JSON.stringify(stage.samplePayload, null, 2);
-        navigator.clipboard.writeText(payloadText).then(() => {
+        const ok = await copyToClipboard(payloadText);
+        if (ok) {
           const originalText = copyPayloadBtn.innerHTML;
           copyPayloadBtn.innerHTML = `
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
             <span>Copied!</span>
           `;
           setTimeout(() => {
             copyPayloadBtn.innerHTML = originalText;
           }, 2000);
-        });
+        }
       });
     }
 
-    // Copy OT-2 Protocol Button Listener
     const btnCopyOt2 = document.getElementById('btn-copy-ot2-code');
     if (btnCopyOt2) {
-      btnCopyOt2.addEventListener('click', () => {
+      btnCopyOt2.addEventListener('click', async () => {
         const code = document.getElementById('ot2-protocol-code')?.textContent || '';
-        navigator.clipboard.writeText(code).then(() => {
+        const ok = await copyToClipboard(code);
+        if (ok) {
           const originalText = btnCopyOt2.innerHTML;
           btnCopyOt2.innerHTML = `
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
             <span>Protocol Copied!</span>
           `;
           setTimeout(() => {
             btnCopyOt2.innerHTML = originalText;
           }, 2000);
-        });
+        }
       });
     }
 
-    // Initial render
     renderStageDetails(0);
   }
 
-  // Bind to DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -290,4 +279,3 @@
     setStage: renderStageDetails,
     getStages: () => PIPELINE_STAGES
   };
-})();

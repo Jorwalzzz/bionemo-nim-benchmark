@@ -42,10 +42,11 @@ Execute this workflow whenever `/deploy-pages` or `/deploy` is invoked to publis
 1. Query the live GitHub Pages URL:
    ```powershell
    python scripts/audit/audit_live_site.py
+   python scripts/verify_live_cockpit.py
    ```
 2. Verify HTTP 200 response status from `https://jorwalzzz.github.io/bionemo-nim-benchmark/`.
 3. Verify live presence of critical content markers:
    - `BioNeMo NIM`
-   - `145/145 HERMETIC TESTS PASSING`
+   - `N/N HERMETIC TESTS PASSING` badge matching 100% of collected hermetic pytest suite (and local `cockpit.html`)
    - `GNU Affero General Public License v3.0`
    - `NVIDIA Trademark & Non-Affiliation Notice`

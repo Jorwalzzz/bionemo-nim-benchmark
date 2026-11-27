@@ -7,10 +7,11 @@ services:
     container_name: bionemo-cockpit
     ports:
       - "8088:8088"
-    env_file:
-      - path: .env
-        required: false
     environment:
-      - PORT=8088
-      - HOST=0.0.0.0
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      - PORT=${PORT:-8088}
+      - HOST=${HOST:-0.0.0.0}
+      - DISABLE_TRIAL_LIMIT=${DISABLE_TRIAL_LIMIT:-false}
+      - NIM_ALLOWED_HOSTS=${NIM_ALLOWED_HOSTS:-}
+      - NIM_ALLOW_PRIVATE_HOSTS=${NIM_ALLOW_PRIVATE_HOSTS:-false}
     restart: unless-stopped

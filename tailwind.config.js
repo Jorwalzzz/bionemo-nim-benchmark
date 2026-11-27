@@ -9,14 +9,20 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-        heading: ['Outfit', 'sans-serif']
+        sans: ['Inter Tight', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        heading: ['Space Grotesk', 'sans-serif'],
+        display: ['Space Grotesk', 'sans-serif']
       },
       colors: {
         nvidia: { green: '#76b900', bright: '#a3e635' },
         cyber: { cyan: '#00f1fd', purple: '#a855f7', blue: '#3b82f6' },
-        surface: { base: '#080c12', card: '#0d1117', elevated: '#161b22', border: '#21262d' }
+        surface: {
+          base: 'var(--color-canvas, #0B0E14)',
+          card: 'var(--color-surface, #111622)',
+          elevated: 'var(--color-surface-elevated, #171E2E)',
+          border: 'var(--border-hairline, rgba(255,255,255,0.1))'
+        }
       },
       animation: {
         'pulse-glow': 'pulseGlow 2s ease-in-out infinite',

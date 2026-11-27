@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 import re
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -27,15 +26,57 @@ from bionemo_benchmark.infra.security_sentinel import SafeSanitizer, SecretScrub
 from bionemo_benchmark.reporting.ind_dossier import generate_ind_pdf
 from bionemo_benchmark.server.serializers import (
     BASE_DIR,
+    auth_manager,
     get_authenticated_user,
     get_client_identifiers,
     logger,
+    sanitize_json_numbers,
     sanitize_target_query,
     trial_limiter,
     verify_request_origin,
 )
 
 router: APIRouter = APIRouter()
+
+
+def _authorize_heavy_structure_op(request: Request, action_label: str) -> tuple[Response | None, str | None]:
+    """Enforce owner bypass or authenticated atomic quota reservation when trial limits are enabled."""
+    if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() in ("true", "1", "yes"):
+        return None, None
+
+    from bionemo_benchmark.server.routes_owner import get_trial_policy
+
+    if get_trial_policy(request).is_owner:
+        return None, None
+
+    user = get_authenticated_user(request)
+    if not user:
+        return (
+            JSONResponse(
+                status_code=401,
+                content={
+                    "error": "AUTHENTICATION_REQUIRED",
+                    "message": f"Sign in required to perform {action_label}.",
+                    "requires_auth": True,
+                },
+            ),
+            None,
+        )
+
+    decision = auth_manager.consume_run(user["id"])
+    if not decision.allowed:
+        return (
+            JSONResponse(
+                status_code=429,
+                content={
+                    "error": "DAILY_QUOTA_EXCEEDED",
+                    "message": decision.message or "Daily trial quota reached.",
+                    "quota": decision.quota_info,
+                },
+            ),
+            None,
+        )
+    return None, decision.reservation_id
 
 
 @router.post("/api/target/fetch")
@@ -117,11 +158,15 @@ def get_target_pdb(pdb_id: str) -> Response:
 
     try:
         url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
-        req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Scout/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as r:  # nosec B310
-            if r.status == 200:
-                data = r.read(5 * 1024 * 1024).decode("utf-8", errors="replace")
-                return Response(content=data, media_type="chemical/x-pdb")
+        resp = SafeSanitizer.safe_http_request(
+            "GET",
+            url,
+            headers={"User-Agent": "BioNeMo-Scout/1.0"},
+            timeout=10.0,
+        )
+        if resp.status_code == 200:
+            data = resp.content[: 5 * 1024 * 1024].decode("utf-8", errors="replace")
+            return Response(content=data, media_type="chemical/x-pdb")
     except Exception as exc:
         logger.warning(f"RCSB fetch failed for {clean_id}: {exc}")
     return JSONResponse(
@@ -141,21 +186,17 @@ async def api_redock(request: Request) -> Any:
             },
         )
 
-    if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() not in ("true", "1", "yes"):
-        user = get_authenticated_user(request)
-        if not user:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": "AUTHENTICATION_REQUIRED",
-                    "message": "Sign in required to perform interactive molecular redocking.",
-                    "requires_auth": True,
-                },
-            )
+    auth_err, reservation_id = _authorize_heavy_structure_op(
+        request, "interactive molecular redocking"
+    )
+    if auth_err is not None:
+        return auth_err
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
     if usage.get("is_locked", False):
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
         return JSONResponse(
             status_code=403,
             content={
@@ -170,6 +211,8 @@ async def api_redock(request: Request) -> Any:
         modified_smiles = SafeSanitizer.sanitize_chemical_smiles(raw_smiles, max_length=500)
         target_name = sanitize_target_query(body.get("target", "KRAS G12D"))
     except Exception as e:
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
         return JSONResponse(
             status_code=400,
             content={"error": f"Invalid request body: {SecretScrubber.scrub(str(e))}"},
@@ -179,8 +222,15 @@ async def api_redock(request: Request) -> Any:
     use_mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
     orchestrator = AgenticScientistOrchestrator(api_key=api_key, mock=use_mock)
 
-    redock_result = orchestrator.redock_modified_candidate(modified_smiles, target_name)
-    return redock_result
+    try:
+        redock_result = orchestrator.redock_modified_candidate(modified_smiles, target_name)
+    except Exception:
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
+        raise
+    if reservation_id:
+        auth_manager.commit_run(reservation_id)
+    return sanitize_json_numbers(redock_result)
 
 
 @router.post("/api/dossier/pdf")
@@ -206,12 +256,25 @@ async def api_generate_ind_pdf(request: Request) -> Response:
     if not dossier_data:
         dossier_data = {
             "target": "KRAS G12D",
-            "pdb_id": "8AZV",
+            "pdb_id": "7RPZ",
             "nominated_lead": "LEAD-001",
             "binding_affinity": -9.4,
-            "residue_count": 188,
+            "residue_count": 168,
             "screened": 10,
             "pareto_count": 3,
+            "provenance": {
+                "overall_mode": "HEURISTIC_SIMULATION",
+                "mode": "HEURISTIC_SIMULATION",
+                "is_simulated": True,
+                "pdf_watermark": "HEURISTIC SIMULATION — NOT FOR CLINICAL USE",
+                "stages": [
+                    {
+                        "stage_name": "default_sample_dossier",
+                        "status": "MOCK",
+                        "notes": "Fallback illustrative dossier preview",
+                    }
+                ],
+            },
             "leads": [
                 {
                     "id": "LEAD-001",
@@ -392,21 +455,17 @@ async def api_resistance_evolve(request: Request) -> Response:
             },
         )
 
-    if os.environ.get("DISABLE_TRIAL_LIMIT", "").lower() not in ("true", "1", "yes"):
-        user = get_authenticated_user(request)
-        if not user:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "error": "AUTHENTICATION_REQUIRED",
-                    "message": "Sign in required to simulate adaptive resistance escape mutations.",
-                    "requires_auth": True,
-                },
-            )
+    auth_err, reservation_id = _authorize_heavy_structure_op(
+        request, "adaptive resistance escape mutations"
+    )
+    if auth_err is not None:
+        return auth_err
 
     session_id, signed_token, fp_hash, client_ip, _ = get_client_identifiers(request)
     usage = trial_limiter.check_usage(session_id, fp_hash, client_ip)
     if usage.get("is_locked", False):
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
         return JSONResponse(
             status_code=403,
             content={
@@ -437,18 +496,25 @@ async def api_resistance_evolve(request: Request) -> Response:
     api_key = os.getenv("NVIDIA_API_KEY", "").strip()
     mock = os.getenv("USE_MOCK", "false").lower() == "true" or not api_key
 
-    scout = TargetScoutAgent(api_key=api_key, mock=mock)
-    target_prof, _ = scout.scout_target(target_name)
+    try:
+        scout = TargetScoutAgent(api_key=api_key, mock=mock)
+        target_prof, _ = scout.scout_target(target_name)
 
-    lead_cand = MoleculeCandidate(
-        id=lead_id,
-        smiles=lead_smiles,
-        parent_smiles=lead_smiles,
-        binding_affinity=affinity,
-    )
+        lead_cand = MoleculeCandidate(
+            id=lead_id,
+            smiles=lead_smiles,
+            parent_smiles=lead_smiles,
+            binding_affinity=affinity,
+        )
 
-    engine = ResistanceEscapeEngine(api_key=api_key, mock=mock)
-    scan = engine.scan_and_evolve(lead=lead_cand, target=target_prof)
+        engine = ResistanceEscapeEngine(api_key=api_key, mock=mock)
+        scan = engine.scan_and_evolve(lead=lead_cand, target=target_prof)
+    except Exception:
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
+        raise
+    if reservation_id:
+        auth_manager.commit_run(reservation_id)
 
     return JSONResponse(
         {

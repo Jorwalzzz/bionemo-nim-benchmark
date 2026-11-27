@@ -61,21 +61,20 @@ class ResistanceEscapeEngine:
     Orchestrates resistance hotspot identification and MolMIM counter-design.
     """
 
-    def __init__(self, api_key: str = "", mock: bool = True):
+    def __init__(self, api_key: str = "", mock: bool = True, seed: int = 42):
         self.api_key = api_key
         self.mock = mock
+        self.seed = seed
         self.client = NimBioClient(api_key=api_key, mock=mock)
 
     def scan_and_evolve(
-        self, lead: MoleculeCandidate, target: TargetProfile
+        self, lead: MoleculeCandidate, target: TargetProfile, seed: int | None = None
     ) -> ResistanceScan:
         """
-        Executes the adaptive resistance scan:
-        1. Analyzes target pocket residues & queries ESM-2 for mutational entropy.
-        2. Simulates clinical resistance challenge.
-        3. Computes affinity loss against the mutated pocket.
-        4. If resistance is detected, invokes MolMIM to generate an evolved escape scaffold.
+        Executes deterministic mutational resistance escape analysis (seeded RNG)
+        with live ESM-2 NIM query when enabled.
         """
+        rng = random.Random(self.seed if seed is None else seed)
         target_key = target.name
         catalog_entry = None
         for k in CLINICAL_RESISTANCE_CATALOG:
@@ -100,24 +99,35 @@ class ResistanceEscapeEngine:
             mechanism = catalog_entry["mechanism"]
             bioisostere_note = catalog_entry["bioisostere_mod"]
 
+        live_calls = 0
+        if not self.mock and self.api_key and target.canonical_sequence:
+            try:
+                esm_resp = self.client.get_esm2_embeddings(target.canonical_sequence[:512])
+                if not esm_resp.is_mock and esm_resp.latency.status_code == 200:
+                    live_calls += 1
+            except Exception as exc:
+                logger.warning("Resistance scan ESM-2 query fell back to heuristic (%s)", exc)
+
         # 1. Baseline affinity of original lead
         orig_aff = lead.binding_affinity if lead.binding_affinity != 0.0 else -8.6
 
-        # 2. Mutational affinity degradation
-        # Resistance mutations typically cause a 2.0 - 3.8 kcal/mol penalty
-        affinity_loss = round(random.uniform(2.1, 3.4), 2)
+        # 2. Deterministic mutational affinity degradation (2.1 - 3.4 kcal/mol penalty)
+        affinity_loss = round(rng.uniform(2.1, 3.4), 2)
         mutant_affinity = round(orig_aff + affinity_loss, 2)  # closer to 0 is worse
 
         resistance_detected = affinity_loss >= 1.5
 
-        # 3. MolMIM counter-design evolution
+        # 3. Counter-design evolution (seeded RNG)
         evolved_lead_id = f"{lead.id}-EVOLVED"
         evolved_smiles, evolved_affinity = self._evolve_escape_candidate(
-            lead=lead, target=target, catalog_entry=catalog_entry, orig_aff=orig_aff
+            lead=lead,
+            target=target,
+            catalog_entry=catalog_entry,
+            orig_aff=orig_aff,
+            rng=rng,
         )
 
         delta_recovery = round(mutant_affinity - evolved_affinity, 2)
-        nim_calls = 3 if resistance_detected else 1  # ESM-2 + DiffDock + MolMIM
 
         return ResistanceScan(
             original_lead_id=lead.id,
@@ -130,7 +140,7 @@ class ResistanceEscapeEngine:
             evolved_lead_smiles=evolved_smiles,
             evolved_affinity=evolved_affinity,
             delta_recovery=delta_recovery,
-            nim_calls_made=nim_calls,
+            nim_calls_made=live_calls,
             structural_mechanism=f"{mechanism} {bioisostere_note}",
         )
 
@@ -140,12 +150,13 @@ class ResistanceEscapeEngine:
         target: TargetProfile,
         catalog_entry: dict[str, Any] | None,
         orig_aff: float,
+        rng: random.Random | None = None,
     ) -> tuple[str, float]:
         """
-        Invokes MolMIM steering or smart chemical modification to bypass the resistance clash.
+        Generates a deterministic evolved escape scaffold when live MolMIM steering is absent.
         """
-        # Aim for 0.4 - 1.2 kcal/mol better affinity than original lead
-        recovery_bonus = round(random.uniform(0.5, 1.2), 2)
+        generator = rng or random.Random(self.seed)
+        recovery_bonus = round(generator.uniform(0.5, 1.2), 2)
         evolved_affinity = round(orig_aff - recovery_bonus, 2)
 
         # Generate a valid, single-entity RDKit evolved chemical structure

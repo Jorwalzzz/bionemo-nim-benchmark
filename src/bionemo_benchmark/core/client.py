@@ -9,7 +9,9 @@ network vs. server inference latency profiling, and full mock simulation fallbac
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import math
 import os
 import random
 import re
@@ -18,9 +20,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import requests
+from rdkit import Chem
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from bionemo_benchmark.domain.scaffold_mutator import mutate_parent_scaffold
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 logger = logging.getLogger(__name__)
@@ -43,6 +47,14 @@ DEFAULT_ESM2_ENDPOINT = os.getenv(
 DEFAULT_DIFFDOCK_ENDPOINT = os.getenv(
     "DIFFDOCK_ENDPOINT", "https://health.api.nvidia.com/v1/biology/mit/diffdock"
 )
+DEFAULT_GENMOL_ENDPOINT = os.getenv(
+    "GENMOL_ENDPOINT", "https://health.api.nvidia.com/v1/biology/nvidia/genmol/generate"
+)
+DEFAULT_BOLTZ2_ENDPOINT = os.getenv(
+    "BOLTZ2_ENDPOINT", "https://health.api.nvidia.com/v1/biology/mit/boltz2/predict"
+)
+NVCF_STATUS_BASE_URL = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status"
+_NVCF_REQID_RE = re.compile(r"^[A-Za-z0-9\-_.]{1,128}$")
 
 
 @dataclass
@@ -54,6 +66,7 @@ class LatencyProfile:
     network_overhead_ms: float
     status_code: int = 200
     retries_count: int = 0
+    request_id: str | None = None
 
 
 @dataclass
@@ -93,6 +106,34 @@ class DiffDockResponse:
     raw_response: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class GenMolResponse:
+    """Standardized response from NVIDIA NIM GenMol generative chemistry endpoint."""
+
+    molecules: list[dict[str, Any]]
+    num_molecules: int
+    latency: LatencyProfile
+    model: str = "nvidia/genmol"
+    is_mock: bool = False
+    raw_response: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class Boltz2Response:
+    """Standardized response from NVIDIA NIM Boltz-2 biomolecular co-folding endpoint."""
+
+    structure_mmcif: str
+    structure_pdb: str
+    confidence_scores: list[float]
+    complex_plddt: float | None
+    ptm: float | None
+    affinity_ic50_um: float | None
+    latency: LatencyProfile
+    model: str = "mit/boltz2"
+    is_mock: bool = False
+    raw_response: dict[str, Any] = field(default_factory=dict)
+
+
 class NimBioClient:
     """
     Production-grade HTTP Client for NVIDIA NIM / BioNeMo endpoints.
@@ -106,6 +147,8 @@ class NimBioClient:
         base_url: str = DEFAULT_NIM_BASE_URL,
         esm2_endpoint: str = DEFAULT_ESM2_ENDPOINT,
         diffdock_endpoint: str = DEFAULT_DIFFDOCK_ENDPOINT,
+        genmol_endpoint: str = DEFAULT_GENMOL_ENDPOINT,
+        boltz2_endpoint: str = DEFAULT_BOLTZ2_ENDPOINT,
         timeout_seconds: float = 60.0,
         max_retries: int = 4,
         backoff_factor: float = 0.8,
@@ -115,6 +158,8 @@ class NimBioClient:
         self.base_url = base_url.rstrip("/")
         self.esm2_endpoint = esm2_endpoint
         self.diffdock_endpoint = diffdock_endpoint
+        self.genmol_endpoint = genmol_endpoint
+        self.boltz2_endpoint = boltz2_endpoint
         self.timeout_seconds = timeout_seconds
         self.max_retries = max_retries
         self.backoff_factor = backoff_factor
@@ -208,6 +253,7 @@ class NimBioClient:
                     headers=headers,
                     timeout=self.timeout_seconds,
                     verify=True,
+                    allow_redirects=False,
                 )
                 t_end = time.perf_counter()
                 total_latency_ms = (t_end - t_start) * 1000.0
@@ -259,6 +305,14 @@ class NimBioClient:
                     server_inference_ms = max(5.0, total_latency_ms * 0.75)
 
                 network_overhead_ms = max(0.0, total_latency_ms - server_inference_ms)
+                live_req_id = None
+                if resp.status_code == 200:
+                    live_req_id = (
+                        resp.headers.get("nv-request-id")
+                        or resp.headers.get("x-request-id")
+                        or resp.headers.get("request-id")
+                        or f"nim-http200-{hashlib.sha256(resp.content).hexdigest()[:12]}"
+                    )
 
                 latency_profile = LatencyProfile(
                     total_latency_ms=round(total_latency_ms, 2),
@@ -266,7 +320,25 @@ class NimBioClient:
                     network_overhead_ms=round(network_overhead_ms, 2),
                     status_code=resp.status_code,
                     retries_count=attempt,
+                    request_id=live_req_id,
                 )
+                if resp.status_code == 202:
+                    req_id = (
+                        resp.headers.get("nvcf-reqid")
+                        or resp.headers.get("x-nvcf-reqid")
+                        or ""
+                    ).strip()
+                    if not req_id:
+                        try:
+                            req_id = str(resp.json().get("reqId", "")).strip()
+                        except Exception:
+                            req_id = ""
+                    if req_id:
+                        return self._poll_nvcf_status(
+                            req_id,
+                            initial_elapsed_ms=total_latency_ms,
+                            retries_count=attempt,
+                        )
                 return resp, latency_profile
 
             except (requests.RequestException, requests.Timeout) as e:
@@ -453,6 +525,255 @@ class NimBioClient:
             raw_response={"status": "COMPLETED", "poses_generated": len(poses)},
         )
 
+    def _poll_nvcf_status(
+        self,
+        req_id: str,
+        initial_elapsed_ms: float = 0.0,
+        retries_count: int = 0,
+        max_polls: int = 12,
+        poll_interval_s: float = 1.5,
+    ) -> tuple[requests.Response, LatencyProfile]:
+        """Polls NVIDIA NVCF HTTP 202 async completion status cleanly."""
+        if not _NVCF_REQID_RE.match(req_id):
+            raise ValueError(f"Invalid NVCF request ID format: {req_id!r}")
+        status_url = f"{NVCF_STATUS_BASE_URL}/{req_id}"
+        SafeSanitizer.validate_outbound_url(status_url)
+        headers = self._get_headers()
+        t0 = time.perf_counter()
+        last_resp: requests.Response | None = None
+
+        for _ in range(max_polls):
+            time.sleep(poll_interval_s)
+            resp = self.session.request(
+                method="GET",
+                url=status_url,
+                headers=headers,
+                timeout=self.timeout_seconds,
+                verify=True,
+                allow_redirects=False,
+            )
+            last_resp = resp
+            if resp.status_code != 202:
+                elapsed_ms = initial_elapsed_ms + (time.perf_counter() - t0) * 1000.0
+                live_req_id = (
+                    resp.headers.get("nv-request-id")
+                    or resp.headers.get("x-request-id")
+                    or req_id
+                )
+                return resp, LatencyProfile(
+                    total_latency_ms=round(elapsed_ms, 2),
+                    server_inference_ms=round(elapsed_ms * 0.85, 2),
+                    network_overhead_ms=round(elapsed_ms * 0.15, 2),
+                    status_code=resp.status_code,
+                    retries_count=retries_count,
+                    request_id=live_req_id,
+                )
+
+        assert last_resp is not None
+        elapsed_ms = initial_elapsed_ms + (time.perf_counter() - t0) * 1000.0
+        return last_resp, LatencyProfile(
+            total_latency_ms=round(elapsed_ms, 2),
+            server_inference_ms=round(elapsed_ms * 0.85, 2),
+            network_overhead_ms=round(elapsed_ms * 0.15, 2),
+            status_code=last_resp.status_code,
+            retries_count=retries_count,
+            request_id=req_id,
+        )
+
+    def _simulate_genmol_response(self, smiles: str, num_molecules: int) -> GenMolResponse:
+        variants = mutate_parent_scaffold(smiles, seed=42, max_variants=max(num_molecules, 1))
+        if not variants:
+            variants = [smiles]
+        padded = [variants[i % len(variants)] for i in range(num_molecules)]
+        mols = [{"smiles": smi, "score": round(max(0.1, 0.88 - idx * 0.03), 3)} for idx, smi in enumerate(padded)]
+        return GenMolResponse(
+            molecules=mols,
+            num_molecules=len(mols),
+            latency=LatencyProfile(
+                total_latency_ms=28.4,
+                server_inference_ms=21.0,
+                network_overhead_ms=7.4,
+                status_code=200,
+                retries_count=0,
+            ),
+            model="nvidia/genmol",
+            is_mock=True,
+            raw_response={"molecules": mols},
+        )
+
+    def generate_genmol(
+        self,
+        smiles: str,
+        num_molecules: int = 10,
+        temperature: float = 1.5,
+        scoring: str = "QED",
+    ) -> GenMolResponse:
+        """Calls NVIDIA NIM GenMol endpoint with deterministic bioisostere fallback."""
+        if not smiles or len(smiles) > 2048 or Chem.MolFromSmiles(smiles) is None:
+            raise ValueError("Invalid or oversized seed SMILES for GenMol.")
+        target_count = max(1, min(int(num_molecules), 50))
+        if self.mock:
+            return self._simulate_genmol_response(smiles, target_count)
+
+        payload = {
+            "smiles": smiles,
+            "num_molecules": target_count,
+            "temperature": float(temperature),
+            "scoring": scoring,
+        }
+        try:
+            resp, latency = self._execute_with_backoff(
+                method="POST",
+                url=self.genmol_endpoint,
+                payload=payload,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_mols = data.get("molecules", [])
+                parsed: list[dict[str, Any]] = []
+                for entry in raw_mols:
+                    smi = str(entry.get("smiles") or entry.get("smi") or "").strip()
+                    if smi and Chem.MolFromSmiles(smi) is not None:
+                        score_val = entry.get("score")
+                        parsed.append(
+                            {
+                                "smiles": smi,
+                                "score": float(score_val)
+                                if score_val is not None and math.isfinite(float(score_val))
+                                else None,
+                            }
+                        )
+                if parsed:
+                    return GenMolResponse(
+                        molecules=parsed,
+                        num_molecules=len(parsed),
+                        latency=latency,
+                        model="nvidia/genmol",
+                        is_mock=False,
+                        raw_response=data,
+                    )
+            if _STRICT_MODE:
+                raise RuntimeError(f"GenMol API returned HTTP {resp.status_code}.")
+        except Exception as exc:
+            if _STRICT_MODE:
+                raise RuntimeError(f"GenMol request failed: {exc}") from exc
+            logger.warning("[SIMULATION FALLBACK] GenMol request failed: %s", exc)
+        return self._simulate_genmol_response(smiles, target_count)
+
+    def _simulate_boltz2_response(self, clean_seq: str) -> Boltz2Response:
+        pdb_lines = []
+        for idx, aa in enumerate(clean_seq[:40], start=1):
+            x = idx * 3.8
+            pdb_lines.append(
+                f"ATOM  {idx:5d}  CA  {aa} A{idx:4d}    {x:8.3f}{0.0:8.3f}{0.0:8.3f}  1.00 78.00           C"
+            )
+        pdb_lines.append("END")
+        pdb_str = "\n".join(pdb_lines)
+        mmcif_str = (
+            "data_boltz2_mock\nloop_\n"
+            "_atom_site.group_PDB\n_atom_site.id\n_atom_site.label_atom_id\n"
+            "ATOM 1 CA\n"
+        )
+        return Boltz2Response(
+            structure_mmcif=mmcif_str,
+            structure_pdb=pdb_str,
+            confidence_scores=[0.78],
+            complex_plddt=0.78,
+            ptm=0.74,
+            affinity_ic50_um=None,
+            latency=LatencyProfile(
+                total_latency_ms=42.0,
+                server_inference_ms=33.0,
+                network_overhead_ms=9.0,
+                status_code=200,
+                retries_count=0,
+            ),
+            model="mit/boltz2",
+            is_mock=True,
+            raw_response={"complex_plddt": 0.78, "ptm": 0.74},
+        )
+
+    def predict_boltz2_complex(
+        self,
+        sequence: str,
+        ligand_smiles: str,
+        sampling_steps: int = 25,
+        diffusion_samples: int = 1,
+    ) -> Boltz2Response:
+        """Calls NVIDIA NIM Boltz-2 endpoint with NVCF 202 polling & deterministic mock."""
+        clean_seq = self.validate_protein_sequence(sequence)
+        if not ligand_smiles or len(ligand_smiles) > 2048 or Chem.MolFromSmiles(ligand_smiles) is None:
+            raise ValueError("Invalid or oversized ligand SMILES for Boltz-2.")
+        if self.mock:
+            return self._simulate_boltz2_response(clean_seq)
+
+        payload = {
+            "polymers": [{"id": "A", "molecule_type": "protein", "sequence": clean_seq}],
+            "ligands": [{"id": "B", "smiles": ligand_smiles}],
+            "sampling_steps": max(5, min(int(sampling_steps), 100)),
+            "diffusion_samples": max(1, min(int(diffusion_samples), 5)),
+        }
+        try:
+            resp, latency = self._execute_with_backoff(
+                method="POST",
+                url=self.boltz2_endpoint,
+                payload=payload,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                mmcif_str = ""
+                pdb_str = ""
+                for item in data.get("structures", []):
+                    fmt = str(item.get("format", "")).lower()
+                    body = str(item.get("structure", ""))
+                    if fmt == "mmcif" and not mmcif_str:
+                        mmcif_str = body
+                    elif fmt == "pdb" and not pdb_str:
+                        pdb_str = body
+                raw_confs = data.get("confidence_scores", [])
+                conf_scores = [
+                    float(c)
+                    for c in raw_confs
+                    if c is not None and math.isfinite(float(c))
+                ]
+                raw_plddt = data.get("complex_plddt")
+                plddt = (
+                    float(raw_plddt)
+                    if raw_plddt is not None and math.isfinite(float(raw_plddt))
+                    else (conf_scores[0] if conf_scores else None)
+                )
+                raw_ptm = data.get("ptm")
+                ptm = (
+                    float(raw_ptm)
+                    if raw_ptm is not None and math.isfinite(float(raw_ptm))
+                    else None
+                )
+                raw_ic50 = data.get("affinity_ic50_um")
+                ic50 = (
+                    float(raw_ic50)
+                    if raw_ic50 is not None and math.isfinite(float(raw_ic50))
+                    else None
+                )
+                return Boltz2Response(
+                    structure_mmcif=mmcif_str,
+                    structure_pdb=pdb_str,
+                    confidence_scores=conf_scores,
+                    complex_plddt=plddt,
+                    ptm=ptm,
+                    affinity_ic50_um=ic50,
+                    latency=latency,
+                    model="mit/boltz2",
+                    is_mock=False,
+                    raw_response=data,
+                )
+            if _STRICT_MODE:
+                raise RuntimeError(f"Boltz-2 API returned HTTP {resp.status_code}.")
+        except Exception as exc:
+            if _STRICT_MODE:
+                raise RuntimeError(f"Boltz-2 request failed: {exc}") from exc
+            logger.warning("[SIMULATION FALLBACK] Boltz-2 request failed: %s", exc)
+        return self._simulate_boltz2_response(clean_seq)
+
     def dock_complex(
         self,
         protein_sequence: str,
@@ -511,8 +832,18 @@ class NimBioClient:
             if resp.status_code == 200:
                 data = resp.json()
                 if data.get("status") == "success" and data.get("position_confidence"):
-                    confidences = data.get("position_confidence", [])
-                    sdf_chunks = data.get("ligand_positions", [])
+                    raw_conf = data.get("position_confidence", [])
+                    confidences = (
+                        raw_conf[0]
+                        if raw_conf and isinstance(raw_conf[0], list)
+                        else raw_conf
+                    )
+                    raw_sdf = data.get("ligand_positions", [])
+                    sdf_chunks = (
+                        raw_sdf[0]
+                        if raw_sdf and isinstance(raw_sdf[0], list)
+                        else raw_sdf
+                    )
 
                     parsed_poses: list[DiffDockPose] = []
                     for idx, conf in enumerate(confidences):

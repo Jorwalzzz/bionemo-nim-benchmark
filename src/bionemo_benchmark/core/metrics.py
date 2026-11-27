@@ -19,6 +19,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from bionemo_benchmark.core.eval_suite import (
+    ScaffoldEvaluatedRecord,
+    evaluate_benchmark_suite,
+)
 from bionemo_benchmark.core.pipeline import ComplexBenchmarkRecord
 
 logger = logging.getLogger(__name__)
@@ -103,6 +107,15 @@ class BenchmarkReporter:
                 self.df["diffdock_latency_ms"].tolist()
             ),
         }
+
+    @staticmethod
+    def compute_scaffold_eval_summary(
+        records: list[ScaffoldEvaluatedRecord],
+        seed: int = 42,
+        n_boot: int = 1000,
+    ) -> dict[str, Any]:
+        """Delegates scaffold-cluster stratified evaluation cleanly."""
+        return evaluate_benchmark_suite(records, seed=seed, n_boot=n_boot)
 
     def plot_throughput_comparison(
         self, filename: str = "throughput_comparison.png"

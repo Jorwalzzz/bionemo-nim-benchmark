@@ -9,16 +9,22 @@ Provides native Model Context Protocol (MCP) tools for interacting with:
 """
 
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
 
+from bionemo_benchmark.agents.admet_critic import ADMETCriticAgent
+from bionemo_benchmark.agents.retrosynthesis_agent import RetrosynthesisAgent
 from bionemo_benchmark.core.client import CANONICAL_AMINO_ACIDS, NimBioClient
+from bionemo_benchmark.core.models import MoleculeCandidate
 from bionemo_benchmark.core.pipeline import BenchmarkPipeline
+from bionemo_benchmark.domain.interactions import InteractionProfiler
 from bionemo_benchmark.domain.pdb_utils import (
     generate_synthetic_backbone,
     sanitize_pdb_atom_records,
 )
+from bionemo_benchmark.domain.pose_validation import PosePlausibilityValidator
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -162,7 +168,11 @@ def bionemo_query_diffdock(
     
     client = NimBioClient(mock=mock)
     pdb_str = pdb_content or generate_synthetic_backbone(clean_seq)
-    resp = client.run_diffdock(pdb_str, chem_res.canonical_smiles)
+    resp = client.dock_complex(
+        protein_sequence=clean_seq,
+        ligand_smiles=chem_res.canonical_smiles,
+        protein_pdb=pdb_str,
+    )
     
     poses_summary = [
         {
@@ -251,18 +261,22 @@ def bionemo_fetch_rcsb_pdb(pdb_id: str) -> dict[str, Any]:
     Returns:
         Dictionary with status, clean PDB atom count, residue count, and extracted sequence.
     """
-    import urllib.request
-
     try:
         clean_id = SafeSanitizer.validate_pdb_id(pdb_id)
-    except ValueError as val_err:
+    except ValueError:
         return {"valid": False, "error": f"Invalid PDB ID format: '{pdb_id}'. Must strictly match ^[1-9][A-Za-z0-9]{{3}}$."}
 
     url = SafeSanitizer.validate_outbound_url(f"https://files.rcsb.org/download/{clean_id}.pdb")
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "BioNeMo-Antigravity/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as response:  # nosec B310
-            raw_pdb = response.read().decode("utf-8", errors="replace")
+        response = SafeSanitizer.safe_http_request(
+            "GET",
+            url,
+            headers={"User-Agent": "BioNeMo-Antigravity/1.0"},
+            timeout=10.0,
+        )
+        if response.status_code != 200:
+            return {"valid": False, "error": f"Failed to download PDB {clean_id} from RCSB: HTTP {response.status_code}"}
+        raw_pdb = response.text
     except Exception as exc:
         return {"valid": False, "error": f"Failed to download PDB {clean_id} from RCSB: {str(exc)}"}
         
@@ -317,30 +331,33 @@ def bionemo_query_esmfold(sequence: str, mock: bool = True) -> dict[str, Any]:
             "pdb_preview": "\n".join(synthetic_pdb.splitlines()[:10]),
         }
         
-    # Live NIM ESMFold call
-    import urllib.request
-    api_key = os.getenv("NVIDIA_API_KEY", "")
+    api_key = os.getenv("NVIDIA_API_KEY", "").strip()
     if not api_key:
         return {"valid": False, "error": "NVIDIA_API_KEY not configured in environment"}
-        
+
     url = SafeSanitizer.validate_outbound_url("https://health.api.nvidia.com/v1/biology/meta/esmfold")
-    payload = json.dumps({"sequence": clean_seq}).encode("utf-8")
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
-    
+
     try:
-        req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310
-            data = json.loads(resp.read().decode("utf-8"))
-            return {
-                "model": "meta/esmfold",
-                "is_mock": False,
-                "sequence_length": len(clean_seq),
-                "data": data,
-            }
+        resp = SafeSanitizer.safe_http_request(
+            "POST",
+            url,
+            headers=headers,
+            json_payload={"sequence": clean_seq},
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "model": "meta/esmfold",
+            "is_mock": False,
+            "sequence_length": len(clean_seq),
+            "data": data,
+        }
     except Exception as exc:
         return {"valid": False, "error": f"NIM ESMFold call failed: {str(exc)}"}
 
@@ -427,6 +444,137 @@ def bionemo_compare_known_inhibitors(target_name: str, candidate_affinity_kcal_m
         }
         
     return result
+
+
+def _mcp_finite(obj: Any) -> Any:
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: _mcp_finite(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_mcp_finite(v) for v in obj]
+    return obj
+
+
+@mcp.tool()
+def bionemo_screen_medchem(smiles: str) -> dict[str, Any]:
+    """
+    Screens a SMILES molecule with RDKit PAINS A/B/C, BRENK, Ertl SA, BOILED-Egg GI/BBB,
+    and multi-fragment salt stripping (max 2048 characters).
+    """
+    if not isinstance(smiles, str) or not smiles.strip() or len(smiles.strip()) > 2048:
+        return {"valid": False, "error": "SMILES must be non-empty and <= 2048 characters."}
+    try:
+        clean_smi = SafeSanitizer.sanitize_chemical_smiles(smiles, max_length=2048)
+    except Exception as exc:
+        return {"valid": False, "error": str(exc)}
+
+    critic = ADMETCriticAgent()
+    cand = MoleculeCandidate(id="MCP-SCREEN", smiles=clean_smi, parent_smiles=clean_smi)
+    evaluated, _ = critic.evaluate_candidates([cand])
+    res = evaluated[0]
+    if res.admet_verdict == "REJECT" and "SMILES parse error" in " ".join(res.admet_notes):
+        return {"valid": False, "error": "Invalid SMILES chemical structure."}
+
+    return _mcp_finite(
+        {
+            "valid": True,
+            "smiles": clean_smi,
+            "molecular_formula": res.molecular_formula,
+            "mw": res.mw,
+            "logp": res.logp,
+            "tpsa": res.tpsa,
+            "qed": res.qed,
+            "sascore": res.sascore,
+            "pains_alerts": res.pains_alerts,
+            "brenk_alerts": res.brenk_alerts,
+            "passes_lipinski": res.passes_lipinski,
+            "passes_veber": res.passes_veber,
+            "gi_absorption_high": res.gi_absorption_high,
+            "bbb_permeable": res.bbb_permeable,
+            "is_salt_desalted": res.is_salt_desalted,
+            "herg_liability": res.herg_liability,
+            "admet_verdict": res.admet_verdict,
+            "admet_notes": res.admet_notes,
+        }
+    )
+
+
+@mcp.tool()
+def bionemo_validate_pose(
+    pose_sdf: str,
+    pdb_text: str = "",
+    covalent_residue: str | None = None,
+) -> dict[str, Any]:
+    """
+    Validates 3D pose plausibility (bond geometry, intra/receptor clashes, SVD ring planarity,
+    and constrained H-relaxed ΔE_strain) and profiles directional 3D protein-ligand interactions.
+    Enforces 1 MB SDF and 5 MB PDB byte limits.
+    """
+    if not isinstance(pose_sdf, str) or not pose_sdf.strip():
+        return {"valid": False, "error": "pose_sdf must be a non-empty SDF block."}
+    if len(pose_sdf.encode("utf-8")) > 1_048_576:
+        return {"valid": False, "error": "pose_sdf exceeds 1 MB byte cap."}
+    if not isinstance(pdb_text, str):
+        return {"valid": False, "error": "pdb_text must be a string."}
+    if len(pdb_text.encode("utf-8")) > 5_242_880:
+        return {"valid": False, "error": "pdb_text exceeds 5 MB byte cap."}
+
+    validator = PosePlausibilityValidator()
+    validation = validator.validate_pose(
+        pose_sdf=pose_sdf,
+        pdb_text=pdb_text,
+        covalent_residue=covalent_residue,
+    )
+    if validation.get("error"):
+        return {"valid": False, "error": validation["error"]}
+
+    profiler = InteractionProfiler()
+    contacts = (
+        profiler.profile_interactions(pose_sdf=pose_sdf, pdb_text=pdb_text)
+        if pdb_text.strip()
+        else []
+    )
+    return _mcp_finite(
+        {
+            "valid": True,
+            "pose_validation": validation,
+            "interaction_contacts": contacts,
+        }
+    )
+
+
+@mcp.tool()
+def bionemo_plan_retrosynthesis(smiles: str) -> dict[str, Any]:
+    """
+    Deconstructs a target SMILES (max 2048 chars) into a depth-3 binary recursive BRICS
+    synthesis tree with capped terminal building-block fragments.
+    """
+    if not isinstance(smiles, str) or not smiles.strip() or len(smiles.strip()) > 2048:
+        return {"valid": False, "error": "SMILES must be non-empty and <= 2048 characters."}
+    try:
+        clean_smi = SafeSanitizer.sanitize_chemical_smiles(smiles, max_length=2048)
+    except Exception as exc:
+        return {"valid": False, "error": str(exc)}
+
+    agent = RetrosynthesisAgent()
+    cand = MoleculeCandidate(id="MCP-RETRO", smiles=clean_smi, parent_smiles=clean_smi)
+    plan = agent.plan_synthesis_route(cand)
+    if plan.num_steps == 0:
+        return {"valid": False, "error": plan.overall_feasibility}
+
+    return _mcp_finite(
+        {
+            "valid": True,
+            "target_smiles": plan.target_smiles,
+            "num_steps": plan.num_steps,
+            "feasibility": plan.overall_feasibility,
+            "is_convergent": plan.is_convergent,
+            "route_tree": plan.route_tree,
+            "starting_materials": plan.starting_materials,
+            "estimated_turnaround_days": plan.estimated_turnaround_days,
+        }
+    )
 
 
 def main() -> None:

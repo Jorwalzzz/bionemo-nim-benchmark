@@ -6,7 +6,6 @@ installer distribution, and static web page delivery routes.
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -14,7 +13,6 @@ import platform
 import sys
 import time
 from typing import Any
-import uuid
 
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import (
@@ -26,6 +24,11 @@ from fastapi.responses import (
 
 from bionemo_benchmark.agents.orchestrator import AgenticScientistOrchestrator
 from bionemo_benchmark.core.models import CouncilMessage
+from bionemo_benchmark.core.provenance import (
+    CampaignProvenance,
+    StageProvenance,
+    StageStatus,
+)
 from bionemo_benchmark.infra.security_sentinel import SecretScrubber
 from bionemo_benchmark.reporting.nvidia_showcase import (
     BioNeMoBlueprintGenerator,
@@ -41,12 +44,52 @@ from bionemo_benchmark.server.serializers import (
     LANDING_PATH,
     RESULTS_DIR,
     ROOT_ASSETS_DIR,
+    auth_manager,
     get_client_identifiers,
+    sanitize_json_numbers,
     trial_limiter,
+    verify_request_origin,
     with_cookie,
 )
 
 router: APIRouter = APIRouter()
+
+
+def _build_campaign_provenance(
+    orchestrator: Any,
+    client_host: str,
+    rdkit_ver: str,
+    elapsed_ms: float,
+) -> dict[str, Any]:
+    """Assemble unforgeable CampaignProvenance directly from executed pipeline stages."""
+    stages = tuple(getattr(orchestrator, "stage_provenances", None) or ())
+    if not stages:
+        stages = (
+            StageProvenance(
+                stage_name="discovery_pipeline",
+                status=StageStatus.MOCK,
+                notes="Simulated / fallback campaign execution",
+            ),
+        )
+    model = CampaignProvenance(
+        stages=stages,
+        backend_host=client_host or "127.0.0.1",
+        rdkit_version=rdkit_ver,
+        elapsed_ms=max(0.0, float(elapsed_ms)),
+    )
+    return model.model_dump(mode="json")
+
+
+def _detect_rdkit_version() -> str:
+    rdkit_ver = "2024.03.5"
+    if "rdkit" in sys.modules:
+        return getattr(sys.modules["rdkit"], "__version__", rdkit_ver)
+    try:
+        import rdkit
+
+        return getattr(rdkit, "__version__", rdkit_ver)
+    except Exception:
+        return rdkit_ver
 
 
 def make_orchestrator(**kw: Any) -> AgenticScientistOrchestrator:
@@ -84,17 +127,17 @@ def get_root_asset(request: Request) -> Response:
     return JSONResponse(status_code=404, content={"error": f"Asset {name} not found"})
 
 
-@router.get("/cockpit.html", response_class=HTMLResponse)
+@router.api_route("/cockpit.html", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_cockpit_html_page(request: Request) -> Response:
     return get_cockpit(request)
 
 
-@router.get("/index.html", response_class=HTMLResponse)
+@router.api_route("/index.html", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_index_html_page(request: Request) -> Response:
     return get_landing(request)
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_landing(request: Request) -> Response:
     """Serves high-impact executive showcase landing portal."""
     if os.path.exists(LANDING_PATH):
@@ -103,7 +146,7 @@ def get_landing(request: Request) -> Response:
     return get_cockpit(request)
 
 
-@router.get("/cockpit", response_class=HTMLResponse)
+@router.api_route("/cockpit", methods=["GET", "HEAD"], response_class=HTMLResponse)
 def get_cockpit(request: Request) -> Response:
     """Serves full interactive Autonomous Drug Discovery Cockpit with 3Dmol viewer."""
     _, signed_token, _, _, _ = get_client_identifiers(request)
@@ -251,52 +294,16 @@ def get_setup_guide() -> dict[str, str]:
 # -------------------------------------------------------------------------
 
 
-@router.post("/api/run")
-def trigger_run(
-    request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
-) -> Response:
-    start_time = time.perf_counter()
-    err, ctx = gate_run(request, target)
-    if err:
-        return err
-    assert ctx is not None
-    target_clean, signed_token, trial_info = ctx
-    safe_candidates = min(max(candidates, 1), 10)
-
-    orchestrator = make_orchestrator()
-    dossier = orchestrator.run_discovery_campaign(
-        target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
-    )
-
-    is_live = not orchestrator.mock and bool(getattr(orchestrator, "api_key", None))
-    mode = "LIVE_NVIDIA_NIM" if is_live else "MOCK_SIMULATION"
-    req_id = f"req-nim-{uuid.uuid4().hex[:12]}"
-    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
-    client_host = request.client.host if request.client else "127.0.0.1"
-
-    rdkit_ver = "2024.03.5"
-    if "rdkit" in sys.modules:
-        rdkit_ver = getattr(sys.modules["rdkit"], "__version__", rdkit_ver)
-    else:
-        try:
-            import rdkit
-            rdkit_ver = getattr(rdkit, "__version__", rdkit_ver)
-        except Exception:
-            pass
-
-    provenance = {
-        "mode": mode,
-        "backend_host": client_host,
-        "nim_endpoints_called": [
-            "/v1/biology/esmfold",
-            "/v1/biology/diffdock",
-            "/v1/biology/molmim",
-        ] if is_live else ["mock://esmfold", "mock://diffdock", "mock://molmim"],
-        "request_ids": [req_id],
-        "rdkit_version": rdkit_ver,
-        "elapsed_ms": elapsed_ms,
-        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-    }
+def _serialize_campaign_payload(
+    *,
+    orchestrator: AgenticScientistOrchestrator,
+    dossier: Any,
+    provenance: dict[str, Any],
+    trial_info: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Build the unified campaign JSON envelope shared by `/api/run` and `/api/stream`."""
+    mode = str(provenance["overall_mode"])
+    is_sim = bool(provenance["is_simulated"])
 
     retro_data: dict[str, Any] = {}
     if orchestrator.latest_retrosynthesis_plan:
@@ -305,6 +312,8 @@ def trigger_run(
             "num_steps": rp.num_steps,
             "feasibility": rp.overall_feasibility,
             "starting_materials": rp.starting_materials,
+            "is_convergent": rp.is_convergent,
+            "route_tree": rp.route_tree,
             "steps": [
                 {
                     "step": s.step_number,
@@ -320,7 +329,7 @@ def trigger_run(
 
     council_summary = orchestrator.bus.get_council_summary()
 
-    result = {
+    payload = {
         "status": "completed",
         "trial_status": trial_info,
         "provenance": provenance,
@@ -355,40 +364,116 @@ def trigger_run(
                 "logp": lead.logp,
                 "sascore": lead.sascore,
                 "admet_verdict": lead.admet_verdict,
+                "pains_alerts": lead.pains_alerts,
+                "brenk_alerts": lead.brenk_alerts,
+                "gi_absorption_high": lead.gi_absorption_high,
+                "bbb_permeable": lead.bbb_permeable,
+                "is_salt_desalted": lead.is_salt_desalted,
                 "is_pareto": lead.is_pareto_optimal,
                 "round": lead.generation_round,
                 "pose_sdf": lead.pose_sdf,
+                "poses": lead.poses,
+                "pose_validation": lead.pose_validation,
+                "interaction_contacts": lead.interaction_contacts,
                 "contact_residues": lead.contact_residues,
                 "provenance": mode,
-                "is_simulated": not is_live,
+                "is_simulated": is_sim,
             }
             for lead in dossier.top_leads
         ],
     }
+    return sanitize_json_numbers(payload)
+
+
+@router.post("/api/run")
+def trigger_run(
+    request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(10)
+) -> Response:
+    start_time = time.perf_counter()
+    err, ctx = gate_run(request, target)
+    if err:
+        return err
+    assert ctx is not None
+    target_clean, signed_token, trial_info = ctx
+    reservation_id = getattr(request.state, "quota_reservation_id", None)
+    safe_candidates = min(max(candidates, 1), 10)
+
+    orchestrator = make_orchestrator()
+    try:
+        dossier = orchestrator.run_discovery_campaign(
+            target_query=target_clean, num_candidates=safe_candidates, output_dir=RESULTS_DIR
+        )
+    except Exception:
+        if reservation_id:
+            auth_manager.refund_run(reservation_id)
+        raise
+    else:
+        if reservation_id:
+            auth_manager.commit_run(reservation_id)
+
+    elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    client_host = request.client.host if request.client else "127.0.0.1"
+    rdkit_ver = _detect_rdkit_version()
+    provenance = _build_campaign_provenance(
+        orchestrator=orchestrator,
+        client_host=client_host,
+        rdkit_ver=rdkit_ver,
+        elapsed_ms=elapsed_ms,
+    )
+    result = _serialize_campaign_payload(
+        orchestrator=orchestrator,
+        dossier=dossier,
+        provenance=provenance,
+        trial_info=trial_info,
+    )
     if signed_token:
         return with_cookie(JSONResponse(result), signed_token)
     return JSONResponse(result)
 
 
-@router.get("/api/stream")
+@router.api_route("/api/stream", methods=["GET", "POST"])
 async def stream_council_run(
     request: Request, target: str = Query("KRAS G12D"), candidates: int = Query(6)
 ) -> Response:
     """
     Live Asynchronous Server-Sent Events (SSE) Stream:
     Streams each council agent's thoughts, debates, vetoes, and docking scores
-    in real time directly into the browser at 60 FPS.
+    in real time with zero proxy/middleware buffering and atomic quota refund on failure.
     """
-    err, ctx = gate_run(request, target)
+    target_val = target
+    candidates_val = candidates
+    if request.method == "POST":
+        if not verify_request_origin(request):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "CSRF_ORIGIN_REJECTED",
+                    "message": "Cross-origin execution blocked for security.",
+                },
+            )
+        try:
+            raw_body = await request.body()
+            if raw_body:
+                parsed = json.loads(raw_body.decode("utf-8"))
+                if isinstance(parsed, dict):
+                    target_val = str(parsed.get("target", target_val))
+                    if "candidates" in parsed:
+                        candidates_val = int(parsed["candidates"])
+        except Exception:
+            pass
+
+    err, ctx = gate_run(request, target_val)
     if err:
         return err
     assert ctx is not None
     target_clean, _, _ = ctx
-    safe_candidates = min(max(candidates, 1), 10)
+    reservation_id = getattr(request.state, "quota_reservation_id", None)
+    safe_candidates = min(max(int(candidates_val), 1), 10)
 
     async def event_generator():
         queue: asyncio.Queue = asyncio.Queue()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
+        committed = False
 
         def on_council_dialogue(msg: CouncilMessage):
             loop.call_soon_threadsafe(
@@ -416,30 +501,39 @@ async def stream_council_run(
             ),
         )
 
-        while not future.done() or not queue.empty():
-            try:
-                item = await asyncio.wait_for(queue.get(), timeout=0.2)
-                yield f"data: {json.dumps(item)}\n\n"
-            except TimeoutError:
-                yield ": keep-alive\n\n"
-
         try:
+            yield f"data: {json.dumps({'event': 'stream_ready', 'target': target_clean})}\n\n"
+            while not future.done() or not queue.empty():
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=0.2)
+                    yield f"data: {json.dumps(item)}\n\n"
+                except TimeoutError:
+                    yield ": keep-alive\n\n"
+
             dossier = future.result()
+            if reservation_id:
+                auth_manager.commit_run(reservation_id)
+                committed = True
+            stream_prov = _build_campaign_provenance(
+                orchestrator=orch,
+                client_host=request.client.host if request.client else "127.0.0.1",
+                rdkit_ver=_detect_rdkit_version(),
+                elapsed_ms=0.0,
+            )
             done_payload = {
                 "event": "campaign_complete",
-                "target": dossier.target.name,
-                "pdb_id": dossier.target.pdb_id,
-                "nominated_lead": dossier.top_leads[0].id
-                if dossier.top_leads
-                else "None",
-                "binding_affinity": dossier.top_leads[0].binding_affinity
-                if dossier.top_leads
-                else 0.0,
-                "pareto_count": dossier.pareto_leads_count,
-                "screened": dossier.screened_count,
+                **_serialize_campaign_payload(
+                    orchestrator=orch,
+                    dossier=dossier,
+                    provenance=stream_prov,
+                    trial_info=ctx[2],
+                ),
             }
             yield f"data: {json.dumps(done_payload)}\n\n"
         except Exception as exc:
+            if reservation_id and not committed:
+                auth_manager.refund_run(reservation_id)
+                committed = True
             safe_msg = SecretScrubber.scrub(str(exc))
             err_payload = {
                 "event": "campaign_error",
@@ -447,8 +541,15 @@ async def stream_council_run(
                 "message": safe_msg,
             }
             yield f"data: {json.dumps(err_payload)}\n\n"
+        finally:
+            if reservation_id and not committed:
+                auth_manager.refund_run(reservation_id)
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # -------------------------------------------------------------------------
@@ -480,22 +581,53 @@ def get_hardware_speedup_benchmark() -> dict[str, Any]:
             _ = Descriptors.TPSA(mol)
     cpu_measured_sec = max(0.005, time.perf_counter() - t0)
 
-    esm2_cpu_ms = round(cpu_measured_sec * 3200 + 1800, 1)
-    esm2_h100_ms = 44.5
+    summary_path = os.path.join(RESULTS_DIR, "benchmark_summary.json")
+    summary_gpu_ms = {"ESM-2": 80.0, "MolMIM": 280.0, "DiffDock": 1150.0}
+    summary_cpu_ms = {"ESM-2": 3200.0, "MolMIM": 14800.0, "DiffDock": 68400.0}
+    try:
+        if os.path.exists(summary_path):
+            with open(summary_path, encoding="utf-8") as fh:
+                summary_payload = json.load(fh)
+            for row in summary_payload.get("benchmarks", []):
+                svc = str(row.get("nim_service", ""))
+                gpu_s = row.get("gpu_latency_s")
+                cpu_s = row.get("cpu_latency_s")
+                if isinstance(gpu_s, (int, float)) and gpu_s > 0:
+                    gpu_ms = round(float(gpu_s) * 1000.0, 1)
+                    if "ESM-2" in svc:
+                        summary_gpu_ms["ESM-2"] = gpu_ms
+                    elif "MolMIM" in svc:
+                        summary_gpu_ms["MolMIM"] = gpu_ms
+                    elif "DiffDock" in svc:
+                        summary_gpu_ms["DiffDock"] = gpu_ms
+                if isinstance(cpu_s, (int, float)) and cpu_s > 0:
+                    cpu_ms = round(float(cpu_s) * 1000.0, 1)
+                    if "ESM-2" in svc:
+                        summary_cpu_ms["ESM-2"] = cpu_ms
+                    elif "MolMIM" in svc:
+                        summary_cpu_ms["MolMIM"] = cpu_ms
+                    elif "DiffDock" in svc:
+                        summary_cpu_ms["DiffDock"] = cpu_ms
+    except Exception:
+        pass
 
-    molmim_cpu_ms = round(cpu_measured_sec * 4100 + 2200, 1)
-    molmim_h100_ms = 112.0
+    host_scale = min(1.35, max(0.85, 0.95 + cpu_measured_sec))
+    esm2_cpu_ms = round(summary_cpu_ms["ESM-2"] * host_scale, 1)
+    esm2_h100_ms = summary_gpu_ms["ESM-2"]
 
-    diffdock_cpu_ms = round(cpu_measured_sec * 12500 + 6500, 1)
-    diffdock_h100_ms = 245.0
+    molmim_cpu_ms = round(summary_cpu_ms["MolMIM"] * host_scale, 1)
+    molmim_h100_ms = summary_gpu_ms["MolMIM"]
+
+    diffdock_cpu_ms = round(summary_cpu_ms["DiffDock"] * host_scale, 1)
+    diffdock_h100_ms = summary_gpu_ms["DiffDock"]
 
     total_cpu_sec = round((esm2_cpu_ms + molmim_cpu_ms + diffdock_cpu_ms) / 1000.0, 2)
     total_h100_sec = round((esm2_h100_ms + molmim_h100_ms + diffdock_h100_ms) / 1000.0, 3)
 
     overall_speedup = round((total_cpu_sec / total_h100_sec), 1)
 
-    cpu_hours_10k = round((total_cpu_sec * 1000) / 3600.0, 1)
-    h100_hours_10k = round((total_h100_sec * 1000) / 3600.0, 2)
+    cpu_hours_10k = round((total_cpu_sec * 10000) / 3600.0, 1)
+    h100_hours_10k = round((total_h100_sec * 10000) / 3600.0, 2)
     time_saved_hours = round(cpu_hours_10k - h100_hours_10k, 1)
 
     green_metrics = GreenComputeProfiler.calculate_campaign_impact(
@@ -504,12 +636,16 @@ def get_hardware_speedup_benchmark() -> dict[str, Any]:
 
     return {
         "status": "success",
+        "basis": "Illustrative",
+        "gpu_latency_basis": "Illustrative NVIDIA H100 NIM reference container latencies",
         "cpu_hardware": cpu_info,
         "gpu_hardware": "NVIDIA H100 80GB SXM5 (TensorRT FP16/FP8 Accelerated)",
         "measured_local_cpu_ms": round(cpu_measured_sec * 1000, 2),
         "overall_speedup_multiplier": overall_speedup,
         "total_cpu_latency_sec": total_cpu_sec,
         "total_h100_latency_sec": total_h100_sec,
+        "cpu_hours_10k_campaign": cpu_hours_10k,
+        "h100_hours_10k_campaign": h100_hours_10k,
         "time_saved_hours_10k_campaign": time_saved_hours,
         "green_compute": green_metrics,
         "tasks": [

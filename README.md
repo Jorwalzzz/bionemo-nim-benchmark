@@ -1,6 +1,6 @@
 # NVIDIA BioNeMo & NIM Inference Benchmark Suite
 
-[![CI / Pytest](https://img.shields.io/badge/pytest-144%20hermetic%20passed-brightgreen.svg)](tests/)
+[![CI / Pytest](https://img.shields.io/badge/pytest-245%20hermetic%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![NVIDIA NIM](https://img.shields.io/badge/NVIDIA-BioNeMo%20NIM-76B900.svg)](https://build.nvidia.com)
 [![Green Compute](https://img.shields.io/badge/ESG-98.4%25%20Energy%20Cut-047857.svg)](#-enterprise-discovery-capabilities-closing-the-loop)
@@ -28,8 +28,9 @@ This repository provides both an automated benchmark harness (CLI + CI/CD) and a
 5. **📄 Candidate Dossier Generator**: Compiles structured markdown summaries and downloadable PDF briefing documents with physicochemical descriptors, ADMET screening, and binding affinity metrics.
 6. **🤖 Opentrons OT-2 Protocol Export**: Generates executable Python liquid-handling scripts (Opentrons API v2.15) and wet-lab SOP cards for automated pipetting verification.
 7. **🌱 Energy & Carbon Comparison**: Calculates estimated compute cost and power reduction when offloading heavy inference from CPU nodes to GPU microservices.
-8. **🔒 100% Hermetic Test Harness**: 144 automated pytest tests with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
+8. **🔒 100% Hermetic Test Harness**: 245 automated pytest tests with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
 9. **🧭 Interactive Walkthrough**: Built-in 10-step guided tour explaining each component of the pipeline directly inside the web UI.
+10. **⚗️ MedChem, 3D Pose Plausibility & Convergent BRICS**: RDKit PAINS (A/B/C) + BRENK catalogs, runtime Ertl SA, Daina & Zoete (2016) BOILED-Egg GI/BBB classification, 3D bond/clash/SVD-planarity/ΔE_strain plausibility validation, directional 3D protein-ligand interaction profiling, recursive depth-3 binary BRICS synthesis trees, and Murcko-scaffold cluster-stratified benchmark evaluation (`RMSD <= 2.0 Å`, `EF10%`).
 
 ### 📦 Example Generated Outputs
 | Deliverable | Description | Direct Link |
@@ -122,13 +123,9 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 ├── data/
 │   ├── pdbs/                   # Experimental crystallographic PDB targets (10 structures)
 │   └── sample_complexes.json   # Diverse protein-ligand targets (76 - 932 aa + FDA drugs)
-├── docs/
-│   ├── guides/                 # Comprehensive blueprints and architecture guides
-│   └── reports/                # Benchmark scaling analyses & DevRel submissions
 ├── scripts/
 │   ├── installers/             # Universal deployment installers (bat, ps1, sh, cs)
-│   ├── audit/                  # Live HTTP and endpoint security audit scripts
-│   └── ops/                    # Maintenance and operational tooling
+│   └── audit/                  # Release, viewport, and live-site audit scripts
 ├── src/
 │   ├── __init__.py             # Backward-compatibility import shim
 │   └── bionemo_benchmark/      # Domain-driven modular package
@@ -137,14 +134,19 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 │       ├── infra/              # Sentinel, rate limiting, and message bus
 │       ├── domain/             # PDB utilities, sequence verification, OT-2 robotics
 │       └── reporting/          # IND dossier compiler, visualizer, NVIDIA showcase
-├── web/
-│   ├── index.html              # Main landing portal
-│   ├── cockpit.html            # Interactive WebGL biocompute studio
-│   ├── cockpit.css             # Glassmorphic dark theme styles
-│   ├── js/cockpit/             # Modular ES6 biocompute studio & 3Dmol.js visualizer
-│   ├── assets/                 # Vector brand icons and logos
-│   └── data/                   # Embedded structural coordinate datasets
-├── tests/                      # 100% hermetic test suite (144 tests)
+├── index.html                    # Main landing portal
+├── cockpit.html                  # Interactive WebGL biocompute studio
+├── cockpit.css                   # Obsidian Lab dark theme styles
+├── css/                          # Modular section stylesheets
+├── js/
+│   ├── cockpit/                  # Modular ES6 biocompute studio & 3Dmol.js visualizer
+│   ├── cli-builder.js            # Interactive CLI reproducibility generator
+│   └── frame-guard.js            # CSP-compliant frame guard & CDN fallback loader
+├── assets/                       # Vector brand icons and logos
+├── data/
+│   ├── pdbs/                     # Experimental crystallographic PDB targets
+│   └── sample_complexes.json     # Diverse protein-ligand targets (76 - 932 aa + FDA drugs)
+├── tests/                      # 100% hermetic test suite (245 tests)
 └── results/                    # Publication charts, CSV telemetry, FDA dossiers
 ```
 

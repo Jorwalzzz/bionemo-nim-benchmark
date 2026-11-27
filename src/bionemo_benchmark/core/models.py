@@ -13,18 +13,20 @@ class TargetProfile:
     name: str  # e.g. "KRAS G12D"
     gene: str  # "KRAS"
     uniprot_id: str  # "P01116"
-    pdb_id: str  # "8AZV"
+    pdb_id: str  # "7RPZ"
     description: str  # Clinical oncology background
     canonical_sequence: str  # 20 IUPAC amino acid sequence
-    pocket_residues: list[str]  # ["Gly12Asp", "Gln61", "Tyr96", "Asp69"]
+    pocket_residues: list[str]  # ["Asp12", "Gln61", "Tyr96", "Asp69"]
     reference_ligand_name: str  # "MRTX1133"
     reference_ligand_smiles: str  # Parent chemical scaffold
     target_pocket_coords: dict[str, float] = field(
-        default_factory=lambda: {"x": 12.4, "y": -4.2, "z": 18.9}
+        default_factory=lambda: {"x": 1.71, "y": 4.93, "z": -23.16}
     )
     pdb_text: str = ""  # Full PDB coordinate string for 3D visualization
     is_esmfold: bool = False  # True if folded de novo via NVIDIA NIM ESMFold
     mean_plddt: float = 0.0  # Per-residue confidence metric (0-100%)
+    covalent_adduct: bool = False
+    covalent_residue: str | None = None
 
 
 @dataclass
@@ -42,9 +44,12 @@ class MoleculeCandidate:
     qed: float = 0.0
     sascore: float = 0.0  # Synthetic Accessibility Score (1=easy, 10=hard)
     pains_alerts: list[str] = field(default_factory=list)
+    brenk_alerts: list[str] = field(default_factory=list)
     passes_lipinski: bool = True
     passes_veber: bool = True
+    gi_absorption_high: bool = False
     bbb_permeable: bool = False
+    is_salt_desalted: bool = False
     herg_liability: bool = False  # Cardiac ion channel risk heuristic
     admet_verdict: str = "PENDING"  # "PASS", "FLAGGED", "REJECT"
     admet_notes: list[str] = field(default_factory=list)
@@ -52,6 +57,9 @@ class MoleculeCandidate:
     diffdock_confidence: float = 0.0  # 0.0 to 1.0
     contact_residues: list[str] = field(default_factory=list)
     pose_sdf: str = ""
+    poses: list[dict[str, Any]] = field(default_factory=list)
+    pose_validation: dict[str, Any] = field(default_factory=dict)
+    interaction_contacts: list[dict[str, Any]] = field(default_factory=list)
     strain_energy: float = 0.0  # MMFF94 conformational strain energy (kcal/mol)
     steric_clash_count: int = 0  # Inter/intra-atomic steric clash penalty
     is_pareto_optimal: bool = False
@@ -118,6 +126,8 @@ class RetrosynthesisPlan:
     steps: list[RetrosynthesisStep] = field(default_factory=list)
     starting_materials: list[str] = field(default_factory=list)
     estimated_turnaround_days: int = 7
+    route_tree: dict[str, Any] = field(default_factory=dict)
+    is_convergent: bool = False
 
 
 @dataclass

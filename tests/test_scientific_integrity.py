@@ -12,9 +12,8 @@ Copyright (C) 2026 Jorwalzzz.
 
 from __future__ import annotations
 
-import json
-import re
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -32,24 +31,25 @@ class TestBackendProvenanceContract:
     """Verifies that the FastAPI discovery endpoint adheres to the scientific provenance contract."""
 
     def test_run_endpoint_returns_provenance_object(self, client):
-        res = client.post("/api/run?target=KRAS+G12D&candidates=3")
+        res = client.post("/api/run?target=KRAS+G12D&candidates=3", headers={"X-BioNeMo-CSRF": "1"})
         assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
         data = res.json()
 
         assert "provenance" in data, "Response must include top-level 'provenance' dict"
         prov = data["provenance"]
 
-        assert "mode" in prov
-        assert prov["mode"] in ("LIVE_NVIDIA_NIM", "MOCK_SIMULATION")
+        assert prov["overall_mode"] in ("LIVE_NVIDIA_NIM", "HYBRID_FALLBACK", "HEURISTIC_SIMULATION")
+        assert prov["mode"] == prov["overall_mode"]
+        assert isinstance(prov["is_simulated"], bool)
         assert "backend_host" in prov
-        assert "nim_endpoints_called" in prov
         assert isinstance(prov["nim_endpoints_called"], list)
-        assert len(prov["nim_endpoints_called"]) > 0
-
-        assert "request_ids" in prov
         assert isinstance(prov["request_ids"], list)
-        assert len(prov["request_ids"]) > 0
-        assert any(r.startswith("req-nim-") for r in prov["request_ids"])
+        assert isinstance(prov["stages"], list) and len(prov["stages"]) >= 1
+        if prov["overall_mode"] == "HEURISTIC_SIMULATION":
+            assert prov["is_simulated"] is True
+            assert prov["nim_endpoints_called"] == []
+            assert prov["request_ids"] == []
+            assert prov["pdf_watermark"] == "HEURISTIC SIMULATION — NOT FOR CLINICAL USE"
 
         assert "rdkit_version" in prov
         assert "elapsed_ms" in prov
@@ -57,27 +57,23 @@ class TestBackendProvenanceContract:
         assert prov["elapsed_ms"] >= 0
 
         assert "timestamp_utc" in prov
-        # Must be valid ISO 8601 timestamp
         assert "T" in prov["timestamp_utc"]
 
     def test_leads_are_stamped_with_provenance_and_simulation_flags(self, client):
-        res = client.post("/api/run?target=KRAS+G12D&candidates=3")
+        res = client.post("/api/run?target=KRAS+G12D&candidates=3", headers={"X-BioNeMo-CSRF": "1"})
         assert res.status_code == 200
         data = res.json()
 
         leads = data.get("leads", [])
         assert len(leads) > 0, "Expected generated leads in discovery response"
 
-        mode = data["provenance"]["mode"]
+        mode = data["provenance"]["overall_mode"]
+        is_sim = data["provenance"]["is_simulated"]
         for lead in leads:
             assert "provenance" in lead, f"Lead {lead.get('id')} missing 'provenance'"
             assert lead["provenance"] == mode
             assert "is_simulated" in lead, f"Lead {lead.get('id')} missing 'is_simulated'"
-            assert isinstance(lead["is_simulated"], bool)
-            if mode == "MOCK_SIMULATION":
-                assert lead["is_simulated"] is True
-            elif mode == "LIVE_NVIDIA_NIM":
-                assert lead["is_simulated"] is False
+            assert lead["is_simulated"] is is_sim
 
 
 class TestTargetPresetsAndIsolation:

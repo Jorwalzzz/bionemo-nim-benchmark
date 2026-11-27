@@ -22,16 +22,27 @@ import secrets
 import sys
 from pathlib import Path
 
-# Add project root to sys.path so we can import infra modules
+# Add project root to sys.path so standalone invocation resolves src package
 ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT_DIR / "src"))
 
-from bionemo_benchmark.infra.owner_security import (
-    apply_strict_file_acls,
-    get_machine_guid_fingerprint,
-    get_owner_auth_path,
-    hash_password,
-)
+
+def _load_owner_security():
+    src_path = str(ROOT_DIR / "src")
+    if src_path not in sys.path:
+        sys.path.insert(0, src_path)
+    from bionemo_benchmark.infra.owner_security import (
+        apply_strict_file_acls,
+        get_machine_guid_fingerprint,
+        get_owner_auth_path,
+        hash_password,
+    )
+
+    return (
+        apply_strict_file_acls,
+        get_machine_guid_fingerprint,
+        get_owner_auth_path,
+        hash_password,
+    )
 
 
 def provision_owner_credentials(
@@ -40,6 +51,12 @@ def provision_owner_credentials(
     target_path: Path | None = None,
 ) -> int:
     """Provisions owner credentials, writes file, and sets strict ACLs."""
+    (
+        apply_strict_file_acls,
+        get_machine_guid_fingerprint,
+        get_owner_auth_path,
+        hash_password,
+    ) = _load_owner_security()
     print("=" * 72)
     print(" BioNeMo Cockpit - Machine-Bound Localhost Owner Provisioning")
     print("=" * 72)

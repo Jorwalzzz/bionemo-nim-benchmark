@@ -7,11 +7,16 @@
       ],
       "enabledTools": [
         "bionemo_validate_sequence",
-        "bionemo_estimate_molecular_weight",
         "bionemo_sanitize_smiles",
-        "bionemo_calculate_lipinski",
-        "bionemo_sanitize_pdb",
-        "bionemo_run_benchmark"
+        "bionemo_query_esm2_embedding",
+        "bionemo_query_diffdock",
+        "bionemo_run_benchmark",
+        "bionemo_fetch_rcsb_pdb",
+        "bionemo_query_esmfold",
+        "bionemo_compare_known_inhibitors",
+        "bionemo_screen_medchem",
+        "bionemo_validate_pose",
+        "bionemo_plan_retrosynthesis"
       ],
       "disabled": false
     },

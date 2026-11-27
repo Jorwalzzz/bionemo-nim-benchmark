@@ -9,22 +9,11 @@
  * 4. Animated one-click command copy with clipboard verification.
  */
 
-(function () {
-  'use strict';
-
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+import { escapeHtml, copyToClipboard } from './shared/dom-utils.js';
 
   const state = {
     endpoint: 'health.api.nvidia.com',
-    target: '8AZV',
+    target: '7RPZ',
     poses: 5,
     admetFilter: true,
     batchSize: 32,
@@ -81,7 +70,7 @@
   function applyPreset(presetKey) {
     if (presetKey === 'mock') {
       state.endpoint = 'health.api.nvidia.com';
-      state.target = '8AZV';
+      state.target = '7RPZ';
       state.poses = 5;
       state.admetFilter = true;
       state.batchSize = 16;
@@ -89,7 +78,7 @@
       state.mock = true;
     } else if (presetKey === 'kras') {
       state.endpoint = 'health.api.nvidia.com';
-      state.target = '8AZV';
+      state.target = '7RPZ';
       state.poses = 10;
       state.admetFilter = true;
       state.batchSize = 32;
@@ -188,26 +177,25 @@
 
     // Copy Button
     if (btnCopy) {
-      btnCopy.addEventListener('click', () => {
+      btnCopy.addEventListener('click', async () => {
         const raw = generateRawCommand();
-        navigator.clipboard.writeText(raw).then(() => {
+        const ok = await copyToClipboard(raw);
+        if (ok) {
           const original = btnCopy.innerHTML;
           btnCopy.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
             <span>Command Copied!</span>
           `;
           setTimeout(() => {
             btnCopy.innerHTML = original;
           }, 2000);
-        });
+        }
       });
     }
 
-    // Initial render
     updateTerminalView();
   }
 
-  // Bind to DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -218,4 +206,3 @@
     getState: () => ({ ...state }),
     applyPreset
   };
-})();

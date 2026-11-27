@@ -11,9 +11,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-from pathlib import Path
-
-import requests
 
 from bionemo_benchmark.infra.security_sentinel import SafeSanitizer
 
@@ -87,7 +84,7 @@ def fetch_rcsb_pdb(
     logger.info("Fetching PDB %s from RCSB (%s)...", clean_id, download_url)
 
     try:
-        response = requests.get(download_url, timeout=timeout, verify=True)
+        response = SafeSanitizer.safe_http_request("GET", download_url, timeout=timeout)
         if response.status_code != 200:
             raise RuntimeError(
                 f"RCSB PDB returned status {response.status_code} for ID '{clean_id}'"
@@ -245,3 +242,74 @@ def extract_sequence_from_pdb(pdb_content: str, chain_id: str = "A") -> str:
 def fetch_pdb_online_or_mock(pdb_id: str, cache_dir: str = "data/pdbs") -> str:
     """Fetches PDB from RCSB or returns cached clean structure."""
     return resolve_protein_structure(pdb_id=pdb_id, cache_dir=cache_dir)
+
+
+def parse_pdb_heavy_atoms(pdb_text: str) -> list[dict]:
+    """
+    Parses receptor PDB heavy ATOM records strictly from MODEL 1 (if present),
+    excluding HETATM records, hydrogens, and alternate locations outside (' ', 'A').
+    """
+    if not pdb_text or not pdb_text.strip():
+        return []
+
+    atoms: list[dict] = []
+    in_ignored_model = False
+    seen_model1 = False
+
+    for line in pdb_text.splitlines():
+        rec = line[:6].strip()
+        if rec == "MODEL":
+            parts = line.split()
+            try:
+                model_idx = int(parts[1]) if len(parts) > 1 else 1
+            except ValueError:
+                model_idx = 1
+            if model_idx == 1:
+                in_ignored_model = False
+                seen_model1 = True
+            else:
+                if seen_model1:
+                    break
+                in_ignored_model = True
+            continue
+        if rec == "ENDMDL":
+            if seen_model1 and not in_ignored_model:
+                break
+            in_ignored_model = False
+            continue
+        if in_ignored_model or rec != "ATOM" or len(line) < 54:
+            continue
+
+        altloc = line[16] if len(line) > 16 else " "
+        if altloc not in (" ", "A"):
+            continue
+
+        atom_name = line[12:16].strip()
+        resname = line[17:20].strip().upper()
+        chain = (line[21] if len(line) > 21 else "A").strip() or "A"
+        resnum = line[22:26].strip()
+        element = (line[76:78].strip() if len(line) >= 78 else atom_name[:1]).upper()
+        if element in ("H", "D") or (not element and atom_name.startswith("H")):
+            continue
+
+        try:
+            x = float(line[30:38].strip())
+            y = float(line[38:46].strip())
+            z = float(line[46:54].strip())
+        except ValueError:
+            continue
+
+        atoms.append(
+            {
+                "atom_name": atom_name,
+                "resname": resname,
+                "chain": chain,
+                "resnum": resnum,
+                "element": element or "C",
+                "x": x,
+                "y": y,
+                "z": z,
+            }
+        )
+    return atoms
+

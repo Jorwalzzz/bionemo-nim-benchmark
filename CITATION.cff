@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software in your research or applications, please cite it as below."
-title: "JORWAL™ NIM SWARM OS: Autonomous Multi-Agent AI Discovery Platform Powered by NVIDIA BioNeMo & NIM"
-abstract: "An autonomous multi-agent AI discovery platform orchestrating NVIDIA BioNeMo NIM microservices (MolMIM, DiffDock, ESM-2), RDKit, and automated wet-lab robotics for target-to-lead lead optimization. Exclusive trademark of Jorwal."
+title: "JORWAL NIM SWARM OS: Autonomous Multi-Agent AI Discovery Platform Powered by NVIDIA BioNeMo & NIM"
+abstract: "An autonomous multi-agent AI discovery platform orchestrating NVIDIA BioNeMo NIM microservices (MolMIM, DiffDock, ESM-2), RDKit, and automated wet-lab robotics for target-to-lead optimization."
 authors:
   - family-names: "Jorwal"
     given-names: "Jorwal"

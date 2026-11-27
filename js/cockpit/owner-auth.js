@@ -8,7 +8,8 @@
  */
 
 import { showToast } from './ui-controls.js';
-import { isLocalServer, isStaticHost } from './state.js';
+import { isLoopbackHost, isStaticHost, isBackendAvailable, probeBackendHealth } from './state.js';
+import { openModalDialog, closeModalDialog } from '../shared/dom-utils.js';
 
 let isOwnerActive = false;
 
@@ -17,11 +18,10 @@ export function isOwner() {
 }
 
 export function openOwnerModal() {
-  if (isStaticHost || !isLocalServer) return;
+  if (isStaticHost || !isLoopbackHost || !isBackendAvailable) return;
   const modal = document.getElementById('ownerModal');
   if (!modal) return;
-  modal.style.display = 'flex';
-  modal.classList.remove('hidden');
+  openModalDialog(modal);
   const msg = document.getElementById('ownerStatusMessage');
   if (msg) {
     msg.style.display = 'none';
@@ -35,21 +35,20 @@ export function openOwnerModal() {
 }
 
 export function closeOwnerModal() {
-  const modal = document.getElementById('ownerModal');
-  if (!modal) return;
-  modal.style.display = 'none';
-  modal.classList.add('hidden');
+  closeModalDialog(document.getElementById('ownerModal'));
 }
 
 export async function submitOwnerLogin() {
   const idInput = document.getElementById('ownerIdInput');
   const pwdInput = document.getElementById('ownerPasswordInput');
+  const tokenInput = document.getElementById('ownerBootTokenInput');
   const msg = document.getElementById('ownerStatusMessage');
   const submitBtn = document.getElementById('ownerLoginBtn');
 
   if (!idInput || !pwdInput) return;
   const ownerId = idInput.value.trim();
   const password = pwdInput.value;
+  const bootToken = tokenInput ? tokenInput.value.trim() : '';
 
   if (!ownerId || !password) {
     if (msg) {
@@ -67,10 +66,14 @@ export async function submitOwnerLogin() {
   }
 
   try {
-    const res = await fetch('/api/owner/login', {
+    const headers = { 'Content-Type': 'application/json', 'X-BioNeMo-CSRF': '1' };
+    if (bootToken) {
+      headers['X-Owner-Token'] = bootToken;
+    }
+    const res = await fetch('./api/owner/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ owner_id: ownerId, password: password })
+      headers,
+      body: JSON.stringify({ owner_id: ownerId, password: password, boot_token: bootToken || null })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -79,7 +82,8 @@ export async function submitOwnerLogin() {
       window.isOwner = true;
       closeOwnerModal();
       pwdInput.value = '';
-      showToast('⚡ Owner Verified: Unlimited Discovery & Benchmarks Activated');
+      if (tokenInput) tokenInput.value = '';
+      showToast('Owner Verified: Unlimited Discovery & Benchmarks Activated');
       renderOwnerHUD(data.owner_id);
       if (window.clientAuth) {
         window.clientAuth.init();
@@ -109,7 +113,10 @@ export async function submitOwnerLogin() {
 
 export async function handleOwnerLogout() {
   try {
-    const res = await fetch('/api/owner/logout', { method: 'POST' });
+    const res = await fetch('./api/owner/logout', {
+      method: 'POST',
+      headers: { 'X-BioNeMo-CSRF': '1' }
+    });
     if (res.ok) {
       isOwnerActive = false;
       window.isOwner = false;
@@ -154,12 +161,12 @@ export function renderOwnerHUD(ownerId) {
     logoutBtn.title = 'Logout Owner Session';
     logoutBtn.onclick = handleOwnerLogout;
     logoutBtn.className = 'px-2 py-1 rounded-lg text-xs font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition-colors';
-    logoutBtn.textContent = '✕';
+    logoutBtn.textContent = '×';
     container.appendChild(logoutBtn);
 
     const trialText = document.getElementById('trialText');
     if (trialText) {
-      trialText.textContent = '⚡ Owner Workstation Mode • Unlimited Discovery Active';
+      trialText.textContent = 'Owner Workstation Mode · Unlimited Discovery Active';
     }
     const banner = document.getElementById('authRequiredBanner');
     if (banner) {
@@ -174,15 +181,16 @@ export function renderOwnerHUD(ownerId) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.id = 'ownerAccessBtn';
-    btn.onclick = openOwnerModal;
+    btn.dataset.action = 'open-owner-modal';
     btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-mono font-semibold text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-1.5 transition-all';
-    btn.textContent = '🔒 Owner Access';
+    btn.textContent = 'Owner Access';
     container.appendChild(btn);
   }
 }
 
 export async function initOwnerAccess() {
-  if (isStaticHost || !isLocalServer) {
+  const backendUp = await probeBackendHealth();
+  if (isStaticHost || !isLoopbackHost || !backendUp) {
     const container = document.getElementById('ownerAccessContainer');
     if (container) {
       container.style.display = 'none';
@@ -192,7 +200,7 @@ export async function initOwnerAccess() {
   }
 
   try {
-    const res = await fetch('/api/owner/status');
+    const res = await fetch('./api/owner/status');
     if (!res.ok) return;
     const data = await res.json();
     if (data.configured) {
