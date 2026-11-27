@@ -540,9 +540,8 @@ async def api_resistance_evolve(request: Request) -> Response:
 @router.post("/api/molecule/svg")
 async def render_molecule_svg(request: Request) -> Response:
     """Render a 2D RDKit SVG depiction for a validated SMILES string."""
-    origin_err = verify_request_origin(request)
-    if origin_err:
-        return origin_err
+    if not verify_request_origin(request):
+        return JSONResponse(status_code=403, content={"error": "FORBIDDEN_ORIGIN"})
 
     try:
         body = await request.json()

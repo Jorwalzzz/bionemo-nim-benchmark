@@ -1104,7 +1104,9 @@ export async function redockModifiedLead(smiles, targetName) {
     state.leadRevision = (state.leadRevision || 0) + 1;
     updateKpisFromLeads(state.currentLeads);
     renderLeads();
-    renderPareto();
+    try {
+      renderPareto();
+    } catch (_) {}
     renderRedockDeltaStrip(lead);
   }
 
