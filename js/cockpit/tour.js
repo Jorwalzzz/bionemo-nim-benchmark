@@ -1,145 +1,79 @@
 /**
- * Interactive 10-Step Guided Tour Engine for BioNeMo Cockpit (Non-modal <dialog>).
+ * 5-Step Developer Quickstart Engine for BioNeMo Cockpit (Non-modal <dialog>).
  */
 
 import { state } from './state.js';
 import { showToast, updateTargetInfo, selectLead } from './ui-controls.js';
-import { openBenchmarkModal, openResistanceModal } from './modals.js';
-import { open3DModal, toggle3DSpin } from './viewer3d.js';
+import { open3DModal } from './viewer3d.js';
 import { runDiscovery } from './api.js';
-import { generateRobotProtocol, downloadIndPdf } from './exports.js';
+import { generateRobotProtocol } from './exports.js';
 import { openModalDialog, closeModalDialog } from '../shared/dom-utils.js';
 
 export const TOUR_STEPS = [
   {
     step: 1,
-    title: '1/10: 3-Panel Discovery Studio',
-    techBadge: 'Architecture',
-    whatIs: '• Left: Target selection & AI Council Swarm\n• Center: Multi-Agent Thought Stream & Pareto Frontier\n• Right: Live Clinical Lead Dossier & 3D Inspector',
-    whatToDo: 'Glance across the 3 columns to see how biology, 3D biophysics, and chemistry synchronize.',
-    action: () => {
-      showToast('Highlighting 3-Panel Discovery Studio.');
-      const aside = document.querySelector('aside');
-      if (aside) aside.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  },
-  {
-    step: 2,
-    title: '2/10: Hardware Speedup Benchmark',
-    techBadge: 'NVIDIA H100 vs CPU',
-    whatIs: '• Biomolecular AI takes hours on laptops\n• NVIDIA NIM on H100 delivers up to 54× acceleration in sub-seconds',
-    whatToDo: 'Click "Try This Step" to open the benchmark modal and compare local CPU against H100 Tensor Cores.',
-    action: () => {
-      openBenchmarkModal();
-    }
-  },
-  {
-    step: 3,
-    title: '3/10: Target Ingestion & ESMFold',
-    techBadge: 'ESMFold & RCSB PDB',
-    whatIs: '• Pick an oncology target, enter a PDB code, or paste a raw amino acid sequence\n• ESMFold predicts atomic 3D structures in seconds',
-    whatToDo: 'Click "Try This Step" to auto-select KRAS G12D (PDB: 7RPZ · MRTX1133, 1.30 Å) with Switch-II pocket coordinates.',
+    title: '1/5: Select Target Complex',
+    techBadge: 'Presets / RCSB / ESMFold',
+    whatIs: 'Choose one of 16 curated benchmark complexes, fetch a crystal structure by 4-char RCSB PDB ID, or supply a FASTA sequence for ESMFold.',
+    whatToDo: 'Click "Run Step" to load KRAS G12D (7RPZ) and inspect its Switch-II pocket coordinates.',
     action: () => {
       const select = document.getElementById('targetSelect');
       if (select) {
         select.value = '7RPZ';
         updateTargetInfo();
       }
-      const aside = document.querySelector('aside');
-      if (aside) aside.scrollTo({ top: 0, behavior: 'smooth' });
-      showToast('Target set to KRAS G12D (PDB: 7RPZ · MRTX1133, 1.30 Å)');
+      showToast('Loaded KRAS G12D (PDB: 7RPZ).');
+    }
+  },
+  {
+    step: 2,
+    title: '2/5: Run Discovery Pipeline',
+    techBadge: 'Council & ADMET',
+    whatIs: 'Executes target profiling, scaffold generation, RDKit PAINS/BRENK/BOILED-Egg screening, and docking, updating all 4 KPI tiles.',
+    whatToDo: 'Click "Run Step" to execute the pipeline and populate candidate leads.',
+    action: () => {
+      runDiscovery();
+    }
+  },
+  {
+    step: 3,
+    title: '3/5: Inspect 3D Pose & Contacts',
+    techBadge: '3Dmol.js & Plausibility',
+    whatIs: 'Switch between docked poses, verify bond/clash/planarity/ΔE_strain checks, and click H-bond, salt-bridge, or π-stacking contact chips.',
+    whatToDo: 'Click "Run Step" to select the top candidate and open the expanded 3D pocket inspector.',
+    action: () => {
+      if (state.currentLeads && state.currentLeads.length > 0) {
+        selectLead(0);
+      }
+      open3DModal();
     }
   },
   {
     step: 4,
-    title: '4/10: Launch 6-Agent AI Council',
-    techBadge: 'Autonomous Swarm',
-    whatIs: '• 6 AI agents collaborate: Scout, Chemist, Critic, Docker, Planner, and Arbiter\n• Generates and screens novel small molecule leads',
-    whatToDo: 'Click "Try This Step" (or "Run Autonomous Discovery") to watch the council stream results.',
-    action: () => {
-      runDiscovery();
-      showToast('Autonomous 6-Agent Council launched.');
-    }
-  },
-  {
-    step: 5,
-    title: '5/10: Pareto Frontier & Top Lead',
-    techBadge: 'Pareto Optimization',
-    whatIs: '• Balances binding affinity (ΔG) against drug-likeness (QED)\n• Nominates the #1 lead candidate on the optimal frontier',
-    whatToDo: 'Click "Try This Step" to highlight and select the highest-scoring candidate.',
-    action: () => {
-      if (state.currentLeads && state.currentLeads.length > 0) {
-        selectLead(0);
-        showToast(`Selected top nominated lead: ${state.currentLeads[0].id}`);
-      } else {
-        showToast('Launch the council in Step 4 first to generate candidate leads.');
-      }
-      const table = document.getElementById('leadsContainer');
-      if (table) table.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  },
-  {
-    step: 6,
-    title: '6/10: 3D Protein-Ligand Inspector',
-    techBadge: '3Dmol.js WebGL',
-    whatIs: '• Real-time 3D rendering of target binding pocket and docked ligand\n• Cyan sticks: active site | Green sticks: drug molecule',
-    whatToDo: 'Click "Try This Step" to open the high-res 3D inspector with pocket surfaces and auto-rotation.',
-    action: () => {
-      open3DModal();
-      toggle3DSpin();
-      showToast('3D Inspector opened with auto-rotation.');
-    }
-  },
-  {
-    step: 7,
-    title: '7/10: Chemical Workbench & Re-Docking',
-    techBadge: 'RDKit & Bioisosteres',
-    whatIs: '• Edit SMILES directly or click bioisosteric functional groups (F-swap, Me-cap)\n• Triggers instant re-scoring & Lipinski recalculation',
-    whatToDo: 'Click "Try This Step" to focus the workbench and test an analog substitution.',
+    title: '4/5: Chemical Workbench Re-Dock',
+    techBadge: 'RDKit Bioisosteres',
+    whatIs: 'Edit SMILES or apply single-click substitutions (+F, +Me, pyridine swap) to recompute QED, SAScore, and ΔG.',
+    whatToDo: 'Click "Run Step" to focus the Chemical Workbench SMILES editor.',
     action: () => {
       const wb = document.getElementById('workbenchCard') || document.getElementById('workbenchSmilesInput');
       if (wb) wb.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const input = document.getElementById('workbenchSmilesInput');
-      if (input && (!input.value || input.value.trim() === '')) {
-        input.value = 'COc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1';
-      }
-      showToast('Chemical Workbench active: ready for bioisosteric edits.');
+      if (input) input.focus();
     }
   },
   {
-    step: 8,
-    title: '8/10: Adaptive Resistance Engine',
-    techBadge: 'ESM-2 Counter-Design',
-    whatIs: '• Simulates target escape mutations (e.g. G12D→G12V illustrative scenario)\n• Generates counter-measure scaffolds that retain pocket fit',
-    whatToDo: 'Click "Try This Step" to open the Resistance Engine and evaluate escape resistance.',
-    action: () => {
-      openResistanceModal();
-      showToast('Resistance Engine opened.');
-    }
-  },
-  {
-    step: 9,
-    title: '9/10: Opentrons OT-2 Robot Protocol',
-    techBadge: 'Wet-Lab Robotics',
-    whatIs: '• Converts computational designs into automated wet-lab synthesis\n• Generates ready-to-run Python code for Opentrons OT-2 robots & 96-well SOP cards',
-    whatToDo: 'Click "Try This Step" to inspect and copy the executable liquid-handling protocol.',
+    step: 5,
+    title: '5/5: Export Protocol & Dossier',
+    techBadge: 'OT-2 & PDF Dossier',
+    whatIs: 'Inspect the depth-3 binary BRICS synthesis tree and export Opentrons OT-2 liquid-handling scripts or ReportLab IND briefings.',
+    whatToDo: 'Click "Run Step" to preview the executable Opentrons OT-2 synthesis protocol.',
     action: () => {
       generateRobotProtocol();
-      showToast('Opentrons OT-2 protocol dialog opened.');
-    }
-  },
-  {
-    step: 10,
-    title: '10/10: Pre-Clinical Candidate Dossier',
-    techBadge: 'ReportLab PDF Engine',
-    whatIs: '• Compiles pharmacology, safety margins, and binding metrics into a structured briefing\n• Exports print-ready dossier / ReportLab PDF',
-    whatToDo: 'Click "Try This Step" to download your Pre-Clinical Candidate Briefing Dossier.',
-    action: () => {
-      downloadIndPdf();
-      showToast('Generating Pre-Clinical Candidate Briefing Dossier...');
     }
   }
 ];
+
+let keyHandlerBound = false;
 
 export function startInteractiveTour() {
   state.currentTourStep = 0;
@@ -154,13 +88,29 @@ export function startInteractiveTour() {
       });
     }
   }
+  if (!keyHandlerBound) {
+    keyHandlerBound = true;
+    window.addEventListener('keydown', (e) => {
+      const m = document.getElementById('tourCardModal');
+      if (!m || !m.open) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        nextTourStep();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevTourStep();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeInteractiveTour();
+      }
+    });
+  }
   renderTourStep(0);
 }
 
 export function closeInteractiveTour() {
-  try { localStorage.setItem('bionemo_guide_seen', 'true'); } catch (e) {}
+  try { localStorage.setItem('bionemo_guide_seen', 'true'); } catch (_) {}
   closeModalDialog(document.getElementById('tourCardModal'));
-  showToast('Guided tour closed. Click "Guide" anytime to resume.');
 }
 
 export function renderTourStep(index) {
@@ -177,7 +127,7 @@ export function renderTourStep(index) {
   const btnPrev = document.getElementById('btnTourPrev');
   const btnNext = document.getElementById('btnTourNext');
 
-  if (badge) badge.textContent = `Step ${step.step} of 10`;
+  if (badge) badge.textContent = `Step ${step.step} of ${TOUR_STEPS.length}`;
   if (techBadge) techBadge.textContent = step.techBadge;
   if (progBar) progBar.style.width = `${((index + 1) / TOUR_STEPS.length) * 100}%`;
   if (title) title.textContent = step.title;
@@ -191,14 +141,13 @@ export function renderTourStep(index) {
   }
 
   if (btnNext) {
-    btnNext.textContent = index === TOUR_STEPS.length - 1 ? 'Finish Tour' : 'Next Step →';
+    btnNext.textContent = index === TOUR_STEPS.length - 1 ? 'Finish' : 'Next Step →';
   }
 }
 
 export function nextTourStep() {
   if (state.currentTourStep >= TOUR_STEPS.length - 1) {
     closeInteractiveTour();
-    showToast('Tour completed.');
     return;
   }
   renderTourStep(state.currentTourStep + 1);

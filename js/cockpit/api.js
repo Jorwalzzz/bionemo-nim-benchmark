@@ -827,28 +827,44 @@ export async function runDiscovery() {
         pdb: 'DE NOVO',
         pocket: 'Predicted Binding Pocket',
         mutant: 'De Novo',
-        color: '#a855f7',
+        color: '#10B981',
         ligandName: 'DE-NOVO',
-        pocketResidues: state.currentTargetPocketResidues || []
+        pocketResidues: state.currentTargetPocketResidues || [],
+        isCustomUnseen: true
       }
-    : (TARGETS['7RPZ'] || {
-        name: target,
-        pdb: target,
-        indication: 'Target Screening',
-        pocket: 'Active Binding Pocket',
-        mutant: '—',
-        color: '#76b900',
-        pocketResidues: []
-      }));
+    : (targetTab === 'rcsb'
+      ? {
+          name: `RCSB Target (${target})`,
+          pdb: target,
+          indication: 'Custom RCSB Complex',
+          pocket: 'User-Specified Binding Pocket',
+          mutant: '—',
+          color: '#06B6D4',
+          pocketResidues: state.currentTargetPocketResidues || [],
+          isCustomUnseen: true
+        }
+      : (TARGETS['7RPZ'] || {
+          name: target,
+          pdb: target,
+          indication: 'Target Screening',
+          pocket: 'Active Binding Pocket',
+          mutant: '—',
+          color: '#10B981',
+          pocketResidues: []
+        })));
   const safeTargetDisplay = escapeHtml(info.name || target);
   const safePdbDisplay = escapeHtml(info.pdb || target);
   const safePocketDisplay = escapeHtml(info.pocket || 'Binding Pocket');
 
+  ['kpiAffinity', 'kpiQed', 'kpiScreened', 'kpiPareto'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '…';
+  });
   document.getElementById('agentLog').innerHTML = '';
   document.getElementById('leadsContainer').innerHTML = '<div class="text-center text-gray-600 text-xs py-4">Preparing autonomous discovery pipeline...</div>';
   resetAgents();
   document.getElementById('progressBar').style.width = '5%';
-  document.getElementById('streamDot').style.background = '#76b900';
+  document.getElementById('streamDot').style.background = '#10B981';
   document.getElementById('runBtn').disabled = true;
   document.getElementById('runLabel').textContent = 'Running Pipeline...';
 
@@ -968,20 +984,38 @@ export async function runDiscovery() {
       updateTrialUI(q);
     }
 
-  // 1. Resolve active leads either from backend or generated in silico strictly from target metadata
+  // 1. Resolve active leads from backend, or curated static preset (ZERO fabricated metrics for unseen targets)
   let activeProvenance = null;
+  let customStaticBlocked = false;
   if (!state.currentLeads || state.currentLeads.length === 0) {
-    const targetPreset = (TARGET_PRESETS && TARGET_PRESETS.getTarget(info.pdb)) || 
-      (TARGET_PRESETS && TARGET_PRESETS.all.find(t => t.pdbId === info.pdb || t.name === info.name)) || 
-      info;
-    const ligandClean = (targetPreset.ligandName || info.ligandName || 'LEAD').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) || 'CANDIDATE';
-    const baseAffinity = targetPreset.affinity?.delta_g_kcal_mol || info.affinity?.delta_g_kcal_mol || -9.5;
-    const baseResidues = (targetPreset.pocketResidues && targetPreset.pocketResidues.length > 0) 
-      ? targetPreset.pocketResidues 
-      : ((info.pocketResidues && info.pocketResidues.length > 0) ? info.pocketResidues : ['Lys100', 'Asp105', 'Glu110']);
-    const refSmiles = targetPreset.referenceSmiles || info.referenceSmiles || 'CC(=O)Nc1ccc(O)cc1';
-    const baseMw = targetPreset.admet?.mw_da || info.admet?.mw_da || 420.0;
-    const baseLogp = targetPreset.admet?.logp || info.admet?.logp || 2.8;
+    const matchedPreset = TARGET_PRESETS && (
+      TARGET_PRESETS.getTarget(info.pdb) ||
+      TARGET_PRESETS.all.find(t => t.pdbId === info.pdb || t.name === info.name)
+    );
+
+    if (info.isCustomUnseen || !matchedPreset) {
+      customStaticBlocked = true;
+      state.currentLeads = [];
+      activeProvenance = {
+        mode: 'STATIC_REQUIRES_LOCAL_BACKEND',
+        provenance: 'SIMULATED',
+        backend_host: window.location.hostname || 'localhost',
+        target_pdb: info.pdb,
+        target_name: info.name,
+        contact_residues: [],
+        timestamp_utc: new Date().toISOString(),
+        notice: 'Static GitHub Pages demo — start local FastAPI backend (python serve_cockpit.py) to dock arbitrary RCSB/ESMFold targets.'
+      };
+    } else {
+      const targetPreset = matchedPreset;
+      const ligandClean = (targetPreset.ligandName || info.ligandName || 'LEAD').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) || 'CANDIDATE';
+      const baseAffinity = targetPreset.affinity?.delta_g_kcal_mol ?? info.affinity?.delta_g_kcal_mol ?? -9.5;
+      const baseResidues = (targetPreset.pocketResidues && targetPreset.pocketResidues.length > 0)
+        ? targetPreset.pocketResidues
+        : ['Lys100', 'Asp105', 'Glu110'];
+      const refSmiles = targetPreset.referenceSmiles || info.referenceSmiles || 'CC(=O)Nc1ccc(O)cc1';
+      const baseMw = targetPreset.admet?.mw_da ?? info.admet?.mw_da ?? 420.0;
+      const baseLogp = targetPreset.admet?.logp ?? info.admet?.logp ?? 2.8;
 
     const simLeads = [];
     const count = Math.min(Math.max(candidates, 1), 10);
@@ -1084,6 +1118,18 @@ export async function runDiscovery() {
 
   // Update Provenance Banner
   updateProvenanceBanner(activeProvenance);
+
+  if (customStaticBlocked) {
+    ['kpiAffinity', 'kpiQed', 'kpiScreened', 'kpiPareto'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    logEntry('', 'Target Router', 'LIVE_BACKEND_REQUIRED', `Static GitHub Pages demo — start local FastAPI backend (<code class="font-mono">python serve_cockpit.py</code>) to dock arbitrary RCSB/ESMFold target <strong style="color:${info.color}">${safeTargetDisplay}</strong>.`, '#f59e0b');
+    showToast('Live local backend required for custom target docking.');
+    renderLeads();
+    renderPareto();
+    return;
+  }
 
   // 2. Establish Unified Run Result (Single Source of Truth)
   const leads = state.currentLeads || [];
