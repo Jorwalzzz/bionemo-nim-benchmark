@@ -1107,6 +1107,7 @@ export async function runDiscovery() {
       timestamp_utc: new Date().toISOString(),
       notice: 'Executed in client simulation mode. Zero hardcoded KRAS leads leaked.'
     };
+    }
   } else {
     activeProvenance = backendData?.provenance || {
       mode: 'LIVE_NVIDIA_NIM',
