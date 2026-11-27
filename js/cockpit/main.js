@@ -39,7 +39,9 @@ import {
   onCustomTargetInput,
   evaluateClientRedock,
   triggerRedockFromWorkbench,
-  redockModifiedLead
+  redockModifiedLead,
+  selectDockedPose,
+  focusContactIn3D
 } from './viewer3d.js';
 
 import {
@@ -312,6 +314,8 @@ function dispatchAction(action, el, event) {
     case 'download-dossier': return downloadDossier();
     case 'download-sdf': return downloadSDF();
     case 'select-lead': return selectLead(parseInt(el.dataset.leadIndex || '0', 10));
+    case 'select-docked-pose': return selectDockedPose(parseInt(el.dataset.arg || '0', 10));
+    case 'focus-contact': return focusContactIn3D(parseInt(el.dataset.arg || '0', 10));
     case 'load-wb-preset': return loadWorkbenchPreset(el.dataset.arg);
     case 'tweak-smiles': return tweakSmiles(el.dataset.arg);
     case 'trigger-redock': return triggerRedockFromWorkbench();

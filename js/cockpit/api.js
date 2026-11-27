@@ -997,6 +997,33 @@ export async function runDiscovery() {
       const isPareto = idx === 0 || idx === 1 || (idx === 2 && count > 4);
       const verdict = idx === count - 1 && count > 5 ? 'FLAGGED' : 'PASS';
 
+      const mockValidation = {
+        passes_all: true,
+        bond_geometry_pass: true,
+        intra_clash_pass: true,
+        receptor_clash_pass: true,
+        planarity_pass: true,
+        strain_pass: true,
+        receptor_clash_count: 0,
+        intra_clash_count: 0,
+        max_planarity_dev_a: 0.012,
+        strain_energy_kcal_mol: 1.4,
+        covalent_proximity: false
+      };
+      const mockContacts = [
+        {
+          type: 'H-Bond',
+          residue: baseResidues[0] || 'Asp12',
+          chain: 'A',
+          atom_label: 'OD1',
+          lig_atom_label: 'N1',
+          distance_a: 2.84,
+          angle_deg: 164.0,
+          lig_coords: [0.0, 0.0, 0.0],
+          rec_coords: [1.6, 1.4, 1.8]
+        }
+      ];
+
       simLeads.push({
         id: leadId,
         smiles: refSmiles,
@@ -1008,11 +1035,29 @@ export async function runDiscovery() {
         sascore: sascore,
         verdict: verdict,
         admet_verdict: verdict,
+        pains_alerts: [],
+        brenk_alerts: verdict === 'FLAGGED' ? ['brenk_alert_simulated'] : [],
+        gi_absorption_high: true,
+        bbb_permeable: idx % 2 === 0,
+        is_salt_desalted: false,
         pareto: isPareto,
         is_pareto: isPareto,
         round: idx < 3 ? 1 : 2,
         provenance: 'SIMULATED',
         is_simulated: true,
+        pose_validation: mockValidation,
+        interaction_contacts: mockContacts,
+        poses: [
+          {
+            rank: 1,
+            confidence_score: -0.35,
+            predicted_affinity_kcal_mol: affinity,
+            rmsd: 0.0,
+            sdf_data: '',
+            provenance: 'UNBOUND_MOCK',
+            interaction_contacts: mockContacts
+          }
+        ],
         contact_residues: baseResidues.slice(0, 3).join(', ')
       });
     }
@@ -1048,6 +1093,38 @@ export async function runDiscovery() {
   const paretoCount = leads.filter(l => l.pareto || l.is_pareto).length;
   const topLead = leads[0] || { id: 'NIM-LEAD-01', affinity: -9.5, qed: 0.75, mw: 450, sascore: 2.5 };
 
+  const simRetroPlan = {
+    num_steps: 2,
+    feasibility: 'BRICS Retrosynthetic Disconnections (2 steps — Heuristic Demo)',
+    is_convergent: true,
+    starting_materials: ['Heuristic Terminal Fragment A', 'Heuristic Terminal Fragment B'],
+    route_tree: {
+      smiles: topLead.smiles || info.referenceSmiles || 'CC(=O)Nc1ccc(O)cc1',
+      depth: 0,
+      reaction_type: 'Amide / Cross-Coupling',
+      reagents: ['HATU', 'DIPEA'],
+      status: 'Disconnection Step',
+      children: [
+        {
+          smiles: 'c1ccc(N)cc1',
+          depth: 1,
+          reaction_type: 'Terminal Building Block',
+          reagents: [],
+          status: 'Heuristic Terminal Fragment',
+          children: []
+        },
+        {
+          smiles: 'CC(=O)O',
+          depth: 1,
+          reaction_type: 'Terminal Building Block',
+          reagents: [],
+          status: 'Heuristic Terminal Fragment',
+          children: []
+        }
+      ]
+    }
+  };
+
   const runResult = {
     target: info.name || target,
     pdbId: info.pdb,
@@ -1058,6 +1135,7 @@ export async function runDiscovery() {
     paretoCount: paretoCount,
     leads: leads,
     topLead: topLead,
+    retrosynthesis: backendData?.retrosynthesis || simRetroPlan,
     provenance: activeProvenance,
     timestamp: new Date().toISOString()
   };

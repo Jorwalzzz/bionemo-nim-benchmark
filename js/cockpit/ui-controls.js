@@ -437,6 +437,7 @@ export function selectLead(i) {
   const lead = leads[i];
   if (!lead) return;
   state.currentSelectedLead = lead;
+  state.activePoseIndex = 0;
   state.currentOt2Code = '';
   state.currentOt2Key = '';
   state.latestResistanceData = null;
@@ -494,6 +495,63 @@ export function selectLead(i) {
         </div>
       </div>
 
+      <!-- Multi-Pose Selector & 3D Contacts & Pose Plausibility -->
+      ${Array.isArray(lead.poses) && lead.poses.length > 0 ? `
+      <div class="p-2 rounded-xl border border-surface-border bg-black/30 space-y-1.5">
+        <div class="text-[10px] font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
+          <span>Docked Poses (${lead.poses.length})</span>
+          <span class="text-[9px] font-mono text-cyan-400">${esc(lead.poses[0]?.provenance || 'SIMULATED')}</span>
+        </div>
+        <div class="flex flex-wrap gap-1">
+          ${lead.poses.map((p, pIdx) => `
+            <button type="button" data-action="select-docked-pose" data-arg="${pIdx}" class="px-2 py-0.5 text-[10px] font-mono rounded border ${pIdx === 0 ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-white/5 border-surface-border text-gray-300 hover:border-cyan-500/50'} transition-colors">
+              Pose #${Number(p.rank || pIdx + 1)} (${typeof p.predicted_affinity_kcal_mol === 'number' ? p.predicted_affinity_kcal_mol.toFixed(1) : '—'})
+            </button>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- MedChem BOILED-Egg & Structural Alerts -->
+      <div class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
+        <div class="flex items-center justify-between font-bold text-gray-300 uppercase tracking-wider">
+          <span>MedChem Profiling</span>
+          ${lead.is_salt_desalted ? '<span class="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 text-[9px] font-mono">Salt Desalted</span>' : ''}
+        </div>
+        <div class="flex flex-wrap gap-1">
+          <span class="px-1.5 py-0.5 rounded font-mono ${lead.gi_absorption_high ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-gray-400 border border-white/10'}">GI: ${lead.gi_absorption_high ? 'High' : 'Low'}</span>
+          <span class="px-1.5 py-0.5 rounded font-mono ${lead.bbb_permeable ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-gray-400 border border-white/10'}">BBB: ${lead.bbb_permeable ? 'Permeant' : 'Peripheral'}</span>
+          <span class="px-1.5 py-0.5 rounded font-mono ${(lead.brenk_alerts || []).length === 0 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}">BRENK: ${(lead.brenk_alerts || []).length}</span>
+          <span class="px-1.5 py-0.5 rounded font-mono ${(lead.pains_alerts || []).length === 0 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/40'}">PAINS: ${(lead.pains_alerts || []).length}</span>
+        </div>
+      </div>
+
+      ${lead.pose_validation && typeof lead.pose_validation === 'object' ? `
+      <div class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
+        <div class="flex items-center justify-between font-bold text-gray-300 uppercase tracking-wider">
+          <span>3D Pose Plausibility</span>
+          <span class="font-mono text-[9px] ${lead.pose_validation.passes_all ? 'text-emerald-400' : 'text-amber-400'}">${lead.pose_validation.passes_all ? 'PLAUSIBLE' : 'REVIEW'}</span>
+        </div>
+        <div class="flex flex-wrap gap-1 font-mono text-[9px]">
+          <span class="px-1.5 py-0.5 rounded ${lead.pose_validation.bond_geometry_pass ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'}">${lead.pose_validation.bond_geometry_pass ? '✓' : '✗'} Bonds</span>
+          <span class="px-1.5 py-0.5 rounded ${lead.pose_validation.receptor_clash_pass ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'}">${lead.pose_validation.receptor_clash_pass ? '✓' : '✗'} Clashes (${Number(lead.pose_validation.receptor_clash_count || 0)})</span>
+          <span class="px-1.5 py-0.5 rounded ${lead.pose_validation.planarity_pass ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/20 text-red-300'}">${lead.pose_validation.planarity_pass ? '✓' : '✗'} Planarity</span>
+          <span class="px-1.5 py-0.5 rounded bg-slate-800 text-cyan-300">ΔE ${lead.pose_validation.strain_energy_kcal_mol !== null && lead.pose_validation.strain_energy_kcal_mol !== undefined ? Number(lead.pose_validation.strain_energy_kcal_mol).toFixed(1) + ' kcal/mol' : 'N/A'}</span>
+          ${lead.pose_validation.covalent_proximity ? '<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">Covalent Prox</span>' : ''}
+        </div>
+      </div>` : ''}
+
+      ${Array.isArray(lead.interaction_contacts) && lead.interaction_contacts.length > 0 ? `
+      <div class="p-2 rounded-xl border border-surface-border bg-black/25 space-y-1 text-[10px]">
+        <div class="font-bold text-gray-300 uppercase tracking-wider">3D Binding Contacts (Click to Focus)</div>
+        <div class="flex flex-wrap gap-1">
+          ${lead.interaction_contacts.slice(0, 8).map((c, cIdx) => `
+            <button type="button" data-action="focus-contact" data-arg="${cIdx}" data-contact-index="${cIdx}" class="px-1.5 py-0.5 text-[9px] font-mono rounded bg-white/5 hover:bg-cyan-500/15 border border-surface-border text-gray-200 transition-colors">
+              ${esc(c.type || 'Contact')}: ${esc(c.residue || '')} (${Number(c.distance_a || 0).toFixed(2)}Å)
+            </button>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
       <!-- Physicochemical Key Properties -->
       <div class="space-y-1 text-xs">
         <div class="flex justify-between py-1 border-b border-surface-border">
@@ -549,16 +607,16 @@ export function selectLead(i) {
         <div id="redockAffinityDisplay" class="mt-1.5 text-center text-xs"></div>
       </div>
 
-      <!-- Dr. Chen's Retrosynthesis Procedure Card -->
+      <!-- Dr. Chen's Retrosynthesis Tree & Procedure Card -->
       <div class="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5">
         <div class="text-[11px] font-bold text-amber-400 mb-1 flex items-center justify-between">
           <span>Wet-Lab Synthesis Route</span>
-          <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-300">Robotics Ready</span>
+          <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-300">${state.activeRunResult?.retrosynthesis?.is_convergent ? 'Convergent BRICS' : 'Linear / Heuristic'}</span>
         </div>
         <div class="text-[10px] text-gray-300 space-y-1 mb-2">
-          <div><strong class="text-white">Route:</strong> Suzuki Coupling + Amide Condensation (Yield ~78%)</div>
-          <div class="text-gray-400"><strong>Commercial Precursors:</strong> Aryl Boronic Acid + Substituted Amine</div>
+          <div><strong class="text-white">Feasibility:</strong> ${esc(state.activeRunResult?.retrosynthesis?.feasibility || 'Suzuki Coupling + Amide Condensation (Heuristic)')}</div>
         </div>
+        ${state.activeRunResult?.retrosynthesis?.route_tree ? renderRetroTreeMarkup(state.activeRunResult.retrosynthesis.route_tree, esc) : ''}
         <div class="pt-2 border-t border-amber-500/20 flex gap-1.5">
           <button type="button" data-action="robot-protocol" class="flex-1 py-1.5 text-[10px] font-bold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 flex items-center justify-center gap-1 transition-all">
             <span>Opentrons OT-2 Code</span>
@@ -598,6 +656,31 @@ export function selectLead(i) {
   `;
 
   setTimeout(() => updateLead3DView(lead), 40);
+}
+
+function renderRetroNodeList(node, esc) {
+  if (!node || typeof node !== 'object') return '';
+  const smi = esc(String(node.smiles || '').slice(0, 36));
+  const rxn = esc(node.reaction_type || 'Step');
+  const status = esc(node.status || 'Disconnection Step');
+  const isTerminal = !Array.isArray(node.children) || node.children.length === 0;
+  const childrenHtml = isTerminal
+    ? ''
+    : `<ul>${node.children.map(c => renderRetroNodeList(c, esc)).join('')}</ul>`;
+  return `
+    <li>
+      <div class="retro-node ${isTerminal ? 'retro-terminal' : ''}">
+        <div class="font-mono text-[9px] text-cyan-300 truncate">${smi || 'Fragment'}</div>
+        <div class="text-[9px] font-bold ${isTerminal ? 'text-amber-300' : 'text-emerald-300'}">${rxn}</div>
+        <div class="text-[8px] text-gray-400">${status}</div>
+      </div>
+      ${childrenHtml}
+    </li>`;
+}
+
+function renderRetroTreeMarkup(tree, esc) {
+  if (!tree || typeof tree !== 'object' || !tree.smiles) return '';
+  return `<div class="retro-tree-wrap overflow-x-auto pb-2 mb-2"><ul class="retro-tree">${renderRetroNodeList(tree, esc)}</ul></div>`;
 }
 
 export function switchTab(tab) {

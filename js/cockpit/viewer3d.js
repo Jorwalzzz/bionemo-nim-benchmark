@@ -176,6 +176,122 @@ export let is3DSpinning = false;
 export let is3DSurfaceOn = false;
 export let surfaceObj = null;
 export let currentPoseSdf = '';
+export let activeContactShapes = [];
+export let activeContactLabels = [];
+
+const CONTACT_TYPE_COLORS = {
+  'H-Bond': '#facc15',
+  'Salt Bridge': '#5CE1FF',
+  'Hydrophobic': '#a3e635',
+  'Pi-Stacking': '#c084fc',
+  'Halogen Bond': '#fb923c'
+};
+
+export function clearContactOverlays() {
+  if (primaryViewer) {
+    for (const shape of activeContactShapes) {
+      try { primaryViewer.removeShape(shape); } catch (_) { /* noop */ }
+    }
+    for (const lbl of activeContactLabels) {
+      try { primaryViewer.removeLabel(lbl); } catch (_) { /* noop */ }
+    }
+  }
+  activeContactShapes = [];
+  activeContactLabels = [];
+}
+
+function renderContactOverlays(contacts, highlightIndex = -1) {
+  if (!primaryViewer || !Array.isArray(contacts) || contacts.length === 0) return;
+  clearContactOverlays();
+  contacts.forEach((c, idx) => {
+    const lig = Array.isArray(c.lig_coords) ? c.lig_coords : null;
+    const rec = Array.isArray(c.rec_coords) ? c.rec_coords : null;
+    if (!lig || !rec || lig.length < 3 || rec.length < 3) return;
+    const start = { x: Number(lig[0]), y: Number(lig[1]), z: Number(lig[2]) };
+    const end = { x: Number(rec[0]), y: Number(rec[1]), z: Number(rec[2]) };
+    const isFocused = idx === highlightIndex;
+    const color = CONTACT_TYPE_COLORS[c.type] || '#facc15';
+    const shape = primaryViewer.addCylinder({
+      start,
+      end,
+      radius: isFocused ? 0.14 : 0.08,
+      color,
+      dashed: true
+    });
+    if (shape) activeContactShapes.push(shape);
+    if (isFocused || idx < 4) {
+      const mid = {
+        x: (start.x + end.x) / 2,
+        y: (start.y + end.y) / 2,
+        z: (start.z + end.z) / 2
+      };
+      const lblText = `${c.type || 'Contact'} · ${c.residue || ''} (${Number(c.distance_a || 0).toFixed(2)}Å)`;
+      const lbl = primaryViewer.addLabel(lblText, {
+        position: mid,
+        backgroundColor: 'rgba(5, 7, 10, 0.88)',
+        fontColor: color,
+        fontSize: isFocused ? 11 : 9,
+        showBackground: true
+      });
+      if (lbl) activeContactLabels.push(lbl);
+    }
+  });
+  primaryViewer.render();
+}
+
+export function focusContactIn3D(contactIndex) {
+  const lead = state.currentSelectedLead;
+  if (!lead || !primaryViewer) return;
+  const poses = Array.isArray(lead.poses) ? lead.poses : [];
+  const activePose = poses[state.activePoseIndex || 0] || null;
+  const contacts = (activePose && Array.isArray(activePose.interaction_contacts) && activePose.interaction_contacts.length > 0)
+    ? activePose.interaction_contacts
+    : (Array.isArray(lead.interaction_contacts) ? lead.interaction_contacts : []);
+  const idx = Number.isFinite(contactIndex) ? contactIndex : 0;
+  const targetContact = contacts[idx];
+  if (!targetContact) return;
+
+  renderContactOverlays(contacts, idx);
+  document.querySelectorAll('[data-action="focus-contact"]').forEach((btn, bIdx) => {
+    btn.classList.toggle('ring-1', bIdx === idx);
+    btn.classList.toggle('ring-cyan-400', bIdx === idx);
+  });
+  const distTxt = typeof targetContact.distance_a === 'number' ? `${targetContact.distance_a.toFixed(2)}Å` : '';
+  const angTxt = typeof targetContact.angle_deg === 'number' ? ` · ${targetContact.angle_deg.toFixed(1)}°` : '';
+  showToast(`Focused ${targetContact.type || 'contact'} with ${targetContact.residue || 'pocket'} (${distTxt}${angTxt})`);
+}
+
+export function selectDockedPose(poseIndex) {
+  const lead = state.currentSelectedLead;
+  if (!lead) return;
+  const poses = Array.isArray(lead.poses) ? lead.poses : [];
+  const idx = Math.max(0, Math.min(poses.length - 1, Number(poseIndex) || 0));
+  state.activePoseIndex = idx;
+  const chosenPose = poses[idx];
+  if (!chosenPose) return;
+
+  const sdf = chosenPose.sdf_data || lead.pose_sdf || '';
+  const contacts = Array.isArray(chosenPose.interaction_contacts)
+    ? chosenPose.interaction_contacts
+    : (lead.interaction_contacts || []);
+
+  state.currentPoseSdf = sdf;
+  render3DComplex(
+    state.currentTargetPdbText,
+    sdf || null,
+    state.currentTargetPocketResidues,
+    state.currentTargetIsEsmfold,
+    state.currentTargetMeanPlddt,
+    contacts
+  );
+  document.querySelectorAll('[data-action="select-docked-pose"]').forEach((btn, bIdx) => {
+    const active = bIdx === idx;
+    btn.classList.toggle('bg-cyan-500/20', active);
+    btn.classList.toggle('border-cyan-400', active);
+    btn.classList.toggle('text-cyan-300', active);
+  });
+  showToast(`Loaded Pose #${chosenPose.rank || idx + 1} (${chosenPose.provenance || 'SIMULATED'})`);
+}
 
 export function init3DViewer() {
   const container = document.getElementById('molViewer3D');
@@ -282,11 +398,12 @@ export function computeBindingPocketCentroid(pdbText, pocketResidues, fallbackCo
   return null;
 }
 
-export function render3DComplex(pdbText, sdfText, pocketResidues, isEsmfold, plddt) {
+export function render3DComplex(pdbText, sdfText, pocketResidues, isEsmfold, plddt, contacts = null) {
   const container = document.getElementById('molViewer3D');
   if (!container || typeof $3Dmol === 'undefined') return;
 
   container.innerHTML = '';
+  clearContactOverlays();
   primaryViewer = $3Dmol.createViewer(container, { backgroundColor: '#05070A' });
   is3DSurfaceOn = false;
   surfaceObj = null;
@@ -342,44 +459,39 @@ export function render3DComplex(pdbText, sdfText, pocketResidues, isEsmfold, pld
       stick: { color: '#76F5A2', radius: 0.28 }
     });
 
-    // Draw active-site interaction cylinders (Hydrogen Bond Vectors: 2.8Å - 3.2Å)
-    try {
-      const selTargetVal = document.getElementById('targetSelect')?.value || '7RPZ';
-      const targetMeta = (typeof TARGETS !== 'undefined') ? (TARGETS[selTargetVal] || TARGETS['7RPZ']) : null;
-      const pocketCenter = computeBindingPocketCentroid(
-        pdbText,
-        resiNums,
-        targetMeta?.pocketCoords || state.currentTargetPocketCoords || null
-      );
-      if (pocketCenter) {
-        // Render representative key active-site H-bond interaction lines
-        const hbondTarget1 = { x: pocketCenter.x + 1.2, y: pocketCenter.y - 0.8, z: pocketCenter.z + 1.1 };
-        const hbondTarget2 = { x: pocketCenter.x - 1.5, y: pocketCenter.y + 1.2, z: pocketCenter.z - 0.9 };
-
-        primaryViewer.addCylinder({
-          start: pocketCenter,
-          end: hbondTarget1,
-          radius: 0.08,
-          color: '#facc15', // Yellow dashed H-bond
-          dashed: true
-        });
-        primaryViewer.addCylinder({
-          start: pocketCenter,
-          end: hbondTarget2,
-          radius: 0.08,
-          color: '#5CE1FF', // Cyan salt bridge
-          dashed: true
-        });
-        primaryViewer.addLabel("H-Bond (2.84Å)", {
-          position: hbondTarget1,
-          backgroundColor: "rgba(15,23,42,0.85)",
-          fontColor: "#facc15",
-          fontSize: 10,
-          showBackground: true
-        });
+    if (Array.isArray(contacts) && contacts.length > 0) {
+      renderContactOverlays(contacts, -1);
+    } else {
+      try {
+        const selTargetVal = document.getElementById('targetSelect')?.value || '7RPZ';
+        const targetMeta = (typeof TARGETS !== 'undefined') ? (TARGETS[selTargetVal] || TARGETS['7RPZ']) : null;
+        const pocketCenter = computeBindingPocketCentroid(
+          pdbText,
+          resiNums,
+          targetMeta?.pocketCoords || state.currentTargetPocketCoords || null
+        );
+        if (pocketCenter) {
+          const hbondTarget1 = { x: pocketCenter.x + 1.2, y: pocketCenter.y - 0.8, z: pocketCenter.z + 1.1 };
+          const s1 = primaryViewer.addCylinder({
+            start: pocketCenter,
+            end: hbondTarget1,
+            radius: 0.08,
+            color: '#facc15',
+            dashed: true
+          });
+          if (s1) activeContactShapes.push(s1);
+          const l1 = primaryViewer.addLabel("Approx Pocket Center", {
+            position: hbondTarget1,
+            backgroundColor: "rgba(15,23,42,0.85)",
+            fontColor: "#facc15",
+            fontSize: 9,
+            showBackground: true
+          });
+          if (l1) activeContactLabels.push(l1);
+        }
+      } catch (e) {
+        console.warn("Contact vector calculation non-critical:", e);
       }
-    } catch (e) {
-      console.warn("Contact vector calculation non-critical:", e);
     }
   }
 
@@ -577,13 +689,21 @@ export async function updateLead3DView(lead) {
     }
   }
 
-  state.currentPoseSdf = lead.pose_sdf || '';
+  const poses = Array.isArray(lead.poses) ? lead.poses : [];
+  const activePose = poses[state.activePoseIndex || 0] || null;
+  const activeSdf = (activePose && activePose.sdf_data) ? activePose.sdf_data : (lead.pose_sdf || '');
+  const activeContacts = (activePose && Array.isArray(activePose.interaction_contacts) && activePose.interaction_contacts.length > 0)
+    ? activePose.interaction_contacts
+    : (Array.isArray(lead.interaction_contacts) ? lead.interaction_contacts : []);
+
+  state.currentPoseSdf = activeSdf;
   render3DComplex(
     state.currentTargetPdbText,
-    lead.pose_sdf || null,
+    activeSdf || null,
     state.currentTargetPocketResidues,
     state.currentTargetIsEsmfold,
-    state.currentTargetMeanPlddt
+    state.currentTargetMeanPlddt,
+    activeContacts
   );
 }
 

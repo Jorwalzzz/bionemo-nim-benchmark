@@ -450,3 +450,39 @@ dialog#tourCardModal {
     scroll-behavior: auto !important;
   }
 }
+
+/* Horizontal-Scroll Binary BRICS Retrosynthesis Tree */
+.retro-tree-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.retro-tree, .retro-tree ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.retro-tree ul {
+  margin-left: 0.85rem;
+  padding-left: 0.65rem;
+  border-left: 1px dashed rgba(245, 158, 11, 0.35);
+}
+.retro-node {
+  min-width: 11rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.retro-node.retro-terminal {
+  border-style: dashed;
+  border-color: rgba(255, 138, 76, 0.5);
+  background: rgba(255, 138, 76, 0.1);
+}
+[data-theme="light"] .retro-node {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
