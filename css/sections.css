@@ -657,8 +657,6 @@
   border-radius: 14px;
   padding: 2rem 1.75rem;
   box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .calc-controls-grid {
