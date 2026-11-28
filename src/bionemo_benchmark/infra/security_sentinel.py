@@ -371,16 +371,24 @@ class SafeSanitizer:
     @staticmethod
     def sanitize_csv_cell(value: Any) -> str:
         """
-        Sanitizes a string for safe CSV serialization and tabular rendering.
-        Neutralizes CSV Formula Injection (CWE-1236) by prepending a single quote
-        if cell starts with '=', '+', '-', '@', '\\t', or '\\r'.
-        Also escapes HTML markup to prevent DOM XSS when CSV is viewed in dashboards.
+        Sanitizes a value for safe CSV serialization and tabular rendering.
+        Preserves finite numbers and pure numeric literals (including negative floats),
+        while neutralizing formula injection (CWE-1236) on non-numeric strings
+        starting with optional whitespace + '=', '+', '-', '@', '\\t', or '\\r'.
         """
         if value is None:
             return ""
+        if isinstance(value, bool):
+            return str(value)
+        if isinstance(value, (int, float)):
+            import math
+
+            return str(value) if math.isfinite(value) else ""
         s = str(value).replace("\x00", "")
+        if re.fullmatch(r"\s*[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\s*", s):
+            return s.strip()
         # Formula injection mitigation
-        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        if re.match(r"^\s*[=+\-@\t\r]", s):
             s = "'" + s
         # HTML tag neutralization
         s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")

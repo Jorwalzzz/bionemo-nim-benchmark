@@ -684,6 +684,38 @@ def audit_repo_parity(
                     )
                 )
 
+    ver_sources: dict[str, str] = {}
+    pyproj_path = repo_root / "pyproject.toml"
+    if pyproj_path.exists():
+        m = re.search(r'(?m)^version\s*=\s*"([^"]+)"', pyproj_path.read_text(encoding="utf-8"))
+        if m:
+            ver_sources["pyproject.toml"] = m.group(1)
+    init_path = repo_root / "src" / "bionemo_benchmark" / "__init__.py"
+    if init_path.exists():
+        m = re.search(r'(?m)^__version__\s*=\s*"([^"]+)"', init_path.read_text(encoding="utf-8"))
+        if m:
+            ver_sources["src/bionemo_benchmark/__init__.py"] = m.group(1)
+    cit_path = repo_root / "CITATION.cff"
+    if cit_path.exists():
+        m = re.search(r'(?m)^version:\s*"([^"]+)"', cit_path.read_text(encoding="utf-8"))
+        if m:
+            ver_sources["CITATION.cff"] = m.group(1)
+    idx_path = repo_root / "index.html"
+    if idx_path.exists():
+        m = re.search(r'SUITE v([0-9]+\.[0-9]+\.[0-9]+)', idx_path.read_text(encoding="utf-8"))
+        if m:
+            ver_sources["index.html"] = m.group(1)
+    if len(set(ver_sources.values())) > 1:
+        issues.append(
+            AuditIssue(
+                severity="ERROR",
+                category="PARITY",
+                file="pyproject.toml",
+                line=1,
+                message=f"Version mismatch across release manifests: {ver_sources}",
+            )
+        )
+
     return issues
 
 

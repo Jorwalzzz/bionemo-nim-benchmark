@@ -132,7 +132,9 @@ class TestCSVFormulaInjectionAndXSSSanitization:
         # Cells beginning with formula triggers are prepended with a single quote
         assert SafeSanitizer.sanitize_csv_cell("=cmd|' /C calc'!A0") == "'=cmd|' /C calc'!A0"
         assert SafeSanitizer.sanitize_csv_cell("+1+1") == "'+1+1"
-        assert SafeSanitizer.sanitize_csv_cell("-10.82") == "'-10.82"
+        assert SafeSanitizer.sanitize_csv_cell("-10.82") == "-10.82"
+        assert SafeSanitizer.sanitize_csv_cell(-9.5) == "-9.5"
+        assert SafeSanitizer.sanitize_csv_cell(" -1+1") == "' -1+1"
         assert SafeSanitizer.sanitize_csv_cell("@SUM(A1:A10)") == "'@SUM(A1:A10)"
         assert SafeSanitizer.sanitize_csv_cell("\tDANGEROUS") == "'\tDANGEROUS"
 
