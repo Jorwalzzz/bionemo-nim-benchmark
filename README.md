@@ -1,6 +1,6 @@
 # NVIDIA BioNeMo & NIM Inference Benchmark Suite
 
-[![CI / Pytest](https://img.shields.io/badge/pytest-245%20hermetic%20passed-brightgreen.svg)](tests/)
+[![CI / Pytest](https://img.shields.io/badge/pytest-100%25%20hermetic%20passed-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
 [![NVIDIA NIM](https://img.shields.io/badge/NVIDIA-BioNeMo%20NIM-76B900.svg)](https://build.nvidia.com)
 [![Green Compute](https://img.shields.io/badge/ESG-98.4%25%20Energy%20Cut-047857.svg)](#-enterprise-discovery-capabilities-closing-the-loop)
@@ -28,7 +28,7 @@ This repository provides both an automated benchmark harness (CLI + CI/CD) and a
 5. **📄 Candidate Dossier Generator**: Compiles structured markdown summaries and downloadable PDF briefing documents with physicochemical descriptors, ADMET screening, and binding affinity metrics.
 6. **🤖 Opentrons OT-2 Protocol Export**: Generates executable Python liquid-handling scripts (Opentrons API v2.15) and wet-lab SOP cards for automated pipetting verification.
 7. **🌱 Energy & Carbon Comparison**: Calculates estimated compute cost and power reduction when offloading heavy inference from CPU nodes to GPU microservices.
-8. **🔒 100% Hermetic Test Harness**: 245 automated pytest tests with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
+8. **🔒 100% Hermetic Test Harness**: 100% hermetic pytest suite with zero-credit mock support (`--mock`) so anyone can test the entire pipeline locally without spending API credits.
 9. **🧭 Interactive Walkthrough**: Built-in 10-step guided tour explaining each component of the pipeline directly inside the web UI.
 10. **⚗️ MedChem, 3D Pose Plausibility & Convergent BRICS**: RDKit PAINS (A/B/C) + BRENK catalogs, runtime Ertl SA, Daina & Zoete (2016) BOILED-Egg GI/BBB classification, 3D bond/clash/SVD-planarity/ΔE_strain plausibility validation, directional 3D protein-ligand interaction profiling, recursive depth-3 binary BRICS synthesis trees, and Murcko-scaffold cluster-stratified benchmark evaluation (`RMSD <= 2.0 Å`, `EF10%`).
 
@@ -146,7 +146,7 @@ Molecular docking via DiffDock relies on reverse diffusion stochastic differenti
 ├── data/
 │   ├── pdbs/                     # Experimental crystallographic PDB targets
 │   └── sample_complexes.json     # Diverse protein-ligand targets (76 - 932 aa + FDA drugs)
-├── tests/                      # 100% hermetic test suite (245 tests)
+├── tests/                      # 100% hermetic pytest suite
 └── results/                    # Publication charts, CSV telemetry, FDA dossiers
 ```
 

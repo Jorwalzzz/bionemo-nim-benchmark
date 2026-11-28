@@ -12,6 +12,8 @@ import os
 import platform
 import sys
 import time
+import uuid
+from collections import OrderedDict
 from typing import Any
 
 from fastapi import APIRouter, Query, Request, Response
@@ -160,20 +162,62 @@ def get_cockpit(request: Request) -> Response:
     return HTMLResponse(content="<h1>Cockpit template not found.</h1>", status_code=404)
 
 
+_RUN_DOSSIER_CACHE: OrderedDict[str, str] = OrderedDict()
+_RUN_DOSSIER_CACHE_MAX = 32
+
+
+def _render_live_run_dossier_md(run_id: str, dossier: Any, provenance: dict[str, Any]) -> str:
+    mode = str(provenance.get("overall_mode", "SIMULATED"))
+    lines = [
+        "# BioNeMo NIM Benchmark Suite — Candidate Selection Dossier",
+        "",
+        f"- **Run ID:** `{run_id}`",
+        f"- **Target:** {dossier.target.name} (`{dossier.target.pdb_id}`)",
+        f"- **Provenance:** {mode}",
+        f"- **Screened:** {dossier.screened_count} | **Pareto:** {dossier.pareto_leads_count}",
+        "",
+        "## Screened Leads",
+        "| ID | SMILES | dG (kcal/mol) | QED | SAScore | Verdict |",
+        "| :--- | :--- | :---: | :---: | :---: | :---: |",
+    ]
+    for lead in dossier.top_leads:
+        lines.append(
+            f"| {lead.id} | `{lead.smiles}` | {lead.binding_affinity:.2f} | {lead.qed:.3f} | {lead.sascore:.2f} | {lead.admet_verdict} |"
+        )
+    return "\n".join(lines) + "\n"
+
+
 @router.get("/api/health")
 @router.get("/healthz")
 def get_health() -> dict[str, Any]:
     return {
         "status": "healthy",
         "service": "Agentic BioNeMo Cockpit API",
-        "version": "2.2.0",
+        "version": "2.3.0",
         "trial_limit": trial_limiter.max_runs,
         "global_daily_cap": trial_limiter.max_global_daily_runs,
     }
 
 
 @router.get("/api/dossier")
-def get_dossier() -> Response:
+def get_dossier(run_id: str | None = Query(default=None)) -> Response:
+    if run_id is not None:
+        cached = _RUN_DOSSIER_CACHE.get(run_id)
+        if cached is None:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "DOSSIER_NOT_FOUND", "run_id": run_id},
+            )
+        _RUN_DOSSIER_CACHE.move_to_end(run_id)
+        return Response(
+            content=cached,
+            media_type="text/markdown",
+            headers={
+                "Content-Disposition": f"attachment; filename=DOSSIER_{run_id}.md",
+                "X-Dossier-Source": "live-run",
+            },
+        )
+
     dossier_path = os.path.join(RESULTS_DIR, "CANDIDATE_SELECTION_DOSSIER.md")
     abs_dossier = os.path.abspath(dossier_path)
     abs_results = os.path.abspath(RESULTS_DIR)
@@ -182,7 +226,8 @@ def get_dossier() -> Response:
             {
                 "status": "pending",
                 "content": "No active dossier yet. Trigger a run first.",
-            }
+            },
+            headers={"X-Dossier-Source": "static-archive"},
         )
     with open(abs_dossier, encoding="utf-8") as f:
         content = f.read()
@@ -190,7 +235,8 @@ def get_dossier() -> Response:
         content=content,
         media_type="text/markdown",
         headers={
-            "Content-Disposition": "attachment; filename=CANDIDATE_SELECTION_DOSSIER.md"
+            "Content-Disposition": "attachment; filename=CANDIDATE_SELECTION_DOSSIER.md",
+            "X-Dossier-Source": "static-archive",
         },
     )
 
@@ -328,9 +374,15 @@ def _serialize_campaign_payload(
         }
 
     council_summary = orchestrator.bus.get_council_summary()
+    run_id = f"run-{uuid.uuid4().hex[:12]}"
+    _RUN_DOSSIER_CACHE[run_id] = _render_live_run_dossier_md(run_id, dossier, provenance)
+    _RUN_DOSSIER_CACHE.move_to_end(run_id)
+    while len(_RUN_DOSSIER_CACHE) > _RUN_DOSSIER_CACHE_MAX:
+        _RUN_DOSSIER_CACHE.popitem(last=False)
 
     payload = {
         "status": "completed",
+        "run_id": run_id,
         "trial_status": trial_info,
         "provenance": provenance,
         "target": dossier.target.name,

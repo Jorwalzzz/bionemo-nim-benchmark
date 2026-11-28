@@ -1,7 +1,7 @@
 {
   "benchmark_metadata": {
     "suite_name": "BioNeMo NIM Performance Benchmark",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "date": "2026-10-30",
     "gpu_hardware": "NVIDIA H100 80GB SXM5 (TensorRT FP16/FP8 Accelerated)",
     "cpu_hardware": "AMD EPYC 7763 (16 Cores allocated, PyTorch 2.2 / RDKit C++ baseline)",
